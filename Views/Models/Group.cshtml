@@ -1,0 +1,43 @@
+@model StudentTracking.Models.GroupModel
+@{
+    ViewData["Title"] = "Группа";
+}
+<div class="container">
+    <h2 class="col-12 text-center">Имя группы(генерируется)</h2>
+    <h2 class="col-12 text-center" id="group_name">@Model.GroupName</h2>
+    <div class="row">
+        <div class="col-2 text-left">Специальность</div>
+        <select id="speciality" class="col-7" asp-rec="@Model.SpecialityId">
+
+        </select>
+    </div>
+    <div class="row">
+        <div class="col-2 text-left">Номер курса</div>
+        <select id="course_number" class="col-2" asp-rec="@Model.CourseNumber">
+
+        </select>
+    </div>
+    <div class="row">
+        <div class="col-2 text-left">Тип группы</div>
+        <select id="group_type" class="col-2" asp-rec="@Model.GroupTypeId">
+
+        </select>
+    </div>
+    <div class="row">
+        <div class="col-2 text-left">Форма обучения</div>
+        <select id="education_form" class="col-2" asp-rec="@Model.EducationalFormId">
+
+        </select>
+    </div>
+    <div class="row">
+        <div class="col-2 text-left">Год создания</div>
+        <input id="creation_year" class="col-2" value="@Model.CreationYear" />
+    </div>
+    <div id="year_err"></div>
+    <input type="hidden" id="group_id" value="@Model.Id" />
+    <button id="save">
+        Сохранить
+    </button>
+</div>
+<script src="~/js/site.js"></script>
+<script src="~/js/groups.js"></script>

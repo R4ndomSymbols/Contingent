@@ -1,0 +1,42 @@
+@model StudentTracking.Models.OrderModel
+@{
+    ViewData["Title"] = "Приказ";
+}
+<div class="container">
+    <h2 class="col-12 text-center">Идентификатор приказа (генерируется)</h2>
+    <h2 class="col-12 text-center" id="order_name">@Model.OrderInOrganisationId</h2>
+    <div class="row">
+        <div class="col-2 text-left">Дата вступления в силу</div>
+        @{
+            DateTime date = Model.EffectiveDate;
+            string resultingDate = String.Format("{0}-{1}-{2}", date.Year, date.Month, date.Day);
+        }
+
+        <input id="effective_date" class="col-2" value="@resultingDate"/>
+    </div>
+    <div id="effective_date_err"></div>
+    <div class="row">
+        <div class="col-2 text-left">Описание приказа</div>
+        <input id="order_description" class="col-7" value="@Model.OrderDescription"/>
+    </div>
+    <div id="order_description_err"></div>
+    <div class="row">
+        <div class="col-2 text-left">Серийный номер</div>
+        <input id="serial_number" class="col-2" value="@Model.SerialNumber">
+    </div>
+    <div id="serial_number_err"></div>
+    <div class="row">
+        <div class="col-2 text-left">Тип приказа</div>
+        <select id="order_type" class="col-4" asp-rec="@Model.OrderTypeId">
+
+        </select>
+    </div>
+    <input type="hidden" id="order_id" value="@Model.Id" />
+    
+    <button id="save">
+        Сохранить
+    </button>
+</div>
+<script src="~/js/site.js"></script>
+<script src="~/js/orders.js"></script>
+

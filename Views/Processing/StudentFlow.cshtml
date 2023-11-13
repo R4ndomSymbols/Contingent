@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Движение студентов";
+}
+<div class="row">
+    <h6 class="col-2">Текущий приказ</h6>
+    <input id = "current_order" class="col-8"/>@*  *@ 
+</div>
+<div id = "order_err"></div>
+
+<div class="row">
+    <h6 class="col-9">Фильтр ФИО</h6>
+    <h6 class="col-2">Фильтр группы</h6>
+</div>
+<div class="row">
+    <input class="col-9" id = "fullname_filter" disabled/>
+    <input class="col-2" id = "group_filter" disabled/>
+    <button class="col-1" id = "find_students" disabled>Поиск</button>
+<div class = "row">
+    <div class="col-6 d-flex">
+    <table class ="align-self-start table">
+        <thead>
+            <tr class ="d-flex">
+                <th colspan="3">Доступная выборка</th>
+            </tr>
+            <tr>
+                <th>Фио</th>
+                <th>Группа</th>
+                <th>Добавить</th>
+            </tr>
+        </thead>
+        <tbody id="students_not_in_order">
+
+        </tbody>
+    </table>
+    </div>
+    <div class="col-6 d-flex">
+    <table class ="align-self-start table">
+        <thead >
+            <tr>
+                <th colspan="3">Студенты в приказе</th>
+            </tr>
+            <tr>
+                <th>Фио</th>
+                <th>Группа</th>
+                <th>Исключить</th>
+            </tr>
+        </thead>
+        <tbody id="students_in_order">
+
+        </tbody>
+    </table>
+    </div>
+</div>
+<div class ="d-flex align-items-end col-12">
+    <button type="button" id = "save_changes"class= "align-self-end btn btn-primary">
+        Сохранить
+    </button>
+</div>
+
+
+
+<script src="~/js/studentflow.js"></script>

@@ -1,0 +1,86 @@
+@model StudentTracking.Models.Domain.StudentModel
+@{
+    ViewData["Title"] = "Студент";
+}
+<div class="container">
+    <div class="row">
+        <label for="grade_book" class="col-2">Номер зачетки</label>
+        <input id="grade_book" class="col-2" value="@Model.GradeBookNumber"/>
+        <div id = "grade_book_err"></div>
+    </div>
+    <div class="row">
+        <label for="snils" class="col-2">Снилс</label>
+        <input id="snils" class="col-2" value="@Model.Snils"/>
+        <div id = "snils_err"></div>
+    </div>
+    <div div class="row" >
+        <label for="inn" class="col-2">Инн</label>
+        <input id="inn" class="col-2" value="@Model.Inn"/>
+        <div id = "inn_err"></div>
+    </div>
+    
+    <div>
+        @{
+            string correctDate = Utilities.Utils.FormatDateTime(Model.DateOfBirth);  
+        }
+        <label for="date_of_birth" class="col-2">Дата Рождения</label>
+        <input id="date_of_birth" class="col-2" value="@correctDate"/>
+        <div id = "data_err"></div>
+    </div>
+    
+    <div class="row">
+        <label for="gender" class="col-2">Пол</label>
+        <select id="gender" class="col-2" hint = "@Model.Gender" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.Genders.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+
+    <div class="row">
+        <label for="target" class="col-2">Договор о целевом обучении</label>
+        <select id="target" class="col-2" hint = "@Model.TargetAgreementType" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.TargetEduAgreement.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+    <div class="row">
+        <label for="paid" class="col-2">Договор об обучении на платной основе</label>
+        <select id="paid" class="col-2" hint = "@Model.PaidAgreementType" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.PaidEduAgreement.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+    <div>
+        <label for="addmission_score">Вступительный балл</label>
+         <input id="admission_score" class="col-2" value="@Model.AdmissionScore"/>
+    </div>
+    <div>
+        <label for="gia_mark" class=>Балл ГИА</label>
+        <input id="gia_mark" class="col-2" value="@Model.GiaMark"/>
+    </div>
+    <div>
+        <label for="gia_demo_exam">Балл ГИА (демэкзамен)</label>
+        <input id="gia_demo_exam" class="col-2" value="@Model.GiaDemoExamMark"/>
+    </div>
+
+
+
+    <button id="save">
+        Сохранить
+    </button>
+
+    <input type="hidden" id="student_id"value="@Model.Id"/>
+</div>
+
+
+
+
+
+
+<script src="~/js/site.js"></script>
+<script src="~/js/students.js"></script>
+
+

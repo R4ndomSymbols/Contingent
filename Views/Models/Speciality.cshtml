@@ -1,0 +1,61 @@
+@model StudentTracking.Models.SpecialityModel
+
+@{
+    ViewData["Title"] = "Специальность";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-3 text-left">Код ФГОС</div>
+        <input id="fgos_code" class="col-2" value="@Model.FgosCode"/>
+    </div>
+    <div id="code_err"></div>
+
+    <div class="row">
+        <div class="col-3 text-left">Название основного ФГОС</div>
+        <input id="fgos_name" class="col-7" value="@Model.FgosName"/>
+    </div>
+    <div id="name_err"></div>
+
+    <div class="row">
+        <div class="col-3 text-left">Профессиональный стандарт</div>
+        <input id="qualification" class="col-7" value="@Model.Qualification"/>
+    </div>
+    <div id="qualification_err"></div>
+    <div class="row">
+        <div class="col-3 text-left">Префикс имени группы</div>
+        <input id="group_name_prefix" class="col-2" value="@Model.MainNamePrefix"/>
+    </div>
+    <div id="prefix_err"></div>
+    <div class="row">
+        <div class="col-3 text-left">Постфикс имени группы (квалификация)</div>
+        <input id="group_name_postfix" class="col-2" value="@Model.QualificationPostfix"/>
+    </div>
+    
+    
+    <div id="postfix_err"></div>
+
+    <div class="row">
+        <div class="col-3 text-left">Количество курсов</div>
+        <select id="course_count" class="col-2" value_recieved="@Model.CourseCount">
+        </select>
+    </div>
+    <div id="course_err"></div>
+
+    <div class="row">
+        <div class="col-3 text-left">Тип специальности</div>
+        <select id="speciality_type" class="col-2" value_recieved="@Model.SpecialityTypeId">
+
+        </select>
+    </div>
+    <div id="speciality_err"></div>
+
+
+    <input type="hidden" id="speciality_id" value="@Model.Id"/>
+    <button id="save">
+        Сохранить
+    </button>
+</div>
+
+<script src="~/js/site.js"></script>
+<script src="~/js/specialities.js"></script>

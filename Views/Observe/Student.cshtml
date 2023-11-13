@@ -1,0 +1,127 @@
+@using StudentTracking.Models.Domain;
+@using StudentTracking.Models.Domain.Misc;
+@model StudentTracking.Models.Domain.StudentModel
+@{
+    ViewData["Title"] = "Просмотр";
+}
+<div class="container">
+    <div class="d-flex flex-row">
+        <h5 class="col-3">Номер зачетки</h5>
+        <p class="col-3">@Model.GradeBookNumber</p>
+    </div>
+     @{
+            string correctDate = Model.DateOfBirth;  
+    }
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Дата рождения</h5>
+        <p class="col-3">@correctDate</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Снилс</h5>
+        <p class="col-3">@Model.Snils</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Инн</h5>
+        <p class="col-3">@Model.Inn</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Пол</h5>
+        @{
+            string genderName = StudentTracking.Models.Domain.Misc.Genders.Names
+                [(StudentTracking.Models.Domain.Misc.Genders.GenderCodes)Model.Gender];
+        }
+        <p class="col-3">@genderName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Договор о целевом обучении</h5>
+        @{
+            string targetAgrName = TargetEduAgreement.Names
+                [(TargetEduAgreement.Types)Model.TargetAgreementType];
+        }
+        <p class="col-3">@targetAgrName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Договор об обучении на платной основе</h5>
+        @{
+            string paidAgrName = PaidEduAgreement.Names
+                [(PaidEduAgreement.Types)Model.TargetAgreementType];
+        }
+        <p class="col-3">@paidAgrName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Вступительный балл</h5>
+        <p class="col-3">@Model.AdmissionScore</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Балл ГИА</h5>
+        <p class="col-3">@Model.GiaMark</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-3">Балл ГИА (демэкзамен)</h5>
+        <p class="col-3">@Model.GiaDemoExamMark</p>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-3">Фактический адресс</h5>
+        @{
+           string factAddress =  Model.AddressObject == null ? "Не указан" : Model.AddressObject.Address;
+        }
+        <p class="col-3">@factAddress</p>
+    </div>
+    @{
+        RussianCitizenship? citizenship = RussianCitizenship.GetById(Model.RussianCitizenshipId);
+    }
+    @if(citizenship != null){
+        <div>
+            <h2>Гражданство (РФ)</h2>
+            <input type="hidden" value="@citizenship.Id"/>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Фамилия</h5>
+                <p class="col-3">@citizenship.Surname</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Имя</h5>
+                <p class="col-3">@citizenship.Name</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Отчество</h5>
+                <p class="col-3">@citizenship.Patronymic</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Номер паспорта</h5>
+                <p class="col-3">@citizenship.PassportNumber</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Серия паспорта</h5>
+                <p class="col-3">@citizenship.PassportSeries</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Прописка</h5>
+                @{
+                   string fullAddress = citizenship.
+                }
+                <p class="col-3">@citizenship.</p>
+            </div>
+        </div>
+    }
+    
+
+
+
+
+
+    <button id="save">
+        Сохранить
+    </button>
+
+    <input type="hidden" id="student_id"value="@Model.Id"/>
+</div>
+
+
+
+
+
+
+<script src="~/js/site.js"></script>
+<script src="~/js/students.js"></script>
+
+
