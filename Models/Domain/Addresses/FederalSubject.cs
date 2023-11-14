@@ -6,7 +6,7 @@ using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 
 
-public class FederalSubject : ValidatedObject<FederalSubject>
+public class FederalSubject : InDbValidatedObject<FederalSubject>
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -19,18 +19,7 @@ public class FederalSubject : ValidatedObject<FederalSubject>
 
     private int _code;
     private string _subjectUntypedName;
-    private bool _dbValid;
     private Types _regionType;
-
-    private bool IsDBvalid {
-        get => _dbValid;
-        set {
-            _dbValid = _dbValid == value;
-        }
-    }
-    public bool IsDBHolistic {
-        get => _dbValid;
-    } 
     public string Code
     {
         get => _code.ToString();
@@ -46,8 +35,8 @@ public class FederalSubject : ValidatedObject<FederalSubject>
                     () => ValidatorCollection.CheckRange(r, 0, 300),
                     new ValidationError<FederalSubject>(nameof(Code), "Код региона не может быть таким")
                 ))
-                {   IsDBvalid = r == _code;
-                    _code = r;
+                {  
+                     _code = r;
                 }
             }
 
@@ -63,7 +52,6 @@ public class FederalSubject : ValidatedObject<FederalSubject>
                 new ValidationError<FederalSubject>(nameof(FederalSubjectType), "Неверно указан тип субъекта")
             ))
             {
-                IsDBvalid = _regionType == (Types)value; 
                 _regionType = (Types)value;
             }
 
@@ -86,7 +74,6 @@ public class FederalSubject : ValidatedObject<FederalSubject>
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
                         new ValidationError<FederalSubject>(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
-                        IsDBvalid = _subjectUntypedName == value;
                         _subjectUntypedName = value;
                     }
                 }
@@ -99,15 +86,14 @@ public class FederalSubject : ValidatedObject<FederalSubject>
         }
     }
 
-    protected FederalSubject(int code, string name, Types type, bool isValid)
-    {   _dbValid = isValid;
+    protected FederalSubject(int code, string name, Types type)
+    {  
         _code = code;
         _subjectUntypedName = name;
         _regionType = type;
         _validationErrors = new List<ValidationError<FederalSubject>>();
     }
     protected FederalSubject(){
-        _dbValid = false;
         _subjectUntypedName = "";
         _code = Utils.INVALID_ID;
         AddError(new ValidationError<FederalSubject>(nameof(UntypedName), "Название субъекта должно быть указано"));
@@ -138,24 +124,10 @@ public class FederalSubject : ValidatedObject<FederalSubject>
 
     public void Save()
     {
-        if (CheckErrorsExist())
-        {
+        ValidateDbIntegrity();
+        if (_dbRelation != RelationTypes.Pending){
             return;
         }
-        FederalSubject? alter = GetByCode(_code);
-        if (alter != null){
-            if (alter._regionType != this._regionType){
-                AddError(new ValidationError<FederalSubject>(nameof(FederalSubjectType), "Несовпадение типа субъекта с зарегистрированным"));
-            }
-            if (alter._subjectUntypedName != this._subjectUntypedName){
-                AddError(new ValidationError<FederalSubject>(nameof(UntypedName), "Несовпадение названия субъекта с зарегистрированным"));
-            }
-            if (!CheckErrorsExist()){
-                _dbValid = true;
-            }
-            return;
-        }
-
         using (var conn = Utils.GetConnectionFactory())
         {
             conn.Open();
@@ -169,15 +141,8 @@ public class FederalSubject : ValidatedObject<FederalSubject>
                     }
             })
             {
-                try
-                {
-                    var reader = cmd.ExecuteNonQuery();
-                    _dbValid = true;
-                }
-                catch (NpgsqlException)
-                {
-                    AddError(new ValidationError<FederalSubject>(nameof(Code), "Такой код уже зарегистирован"));
-                }
+                var reader = cmd.ExecuteNonQuery();
+                _dbRelation = RelationTypes.Bound;
             }
         }
     }
@@ -250,5 +215,33 @@ public class FederalSubject : ValidatedObject<FederalSubject>
             } 
         }
         return null;
+    }
+
+    protected override void ValidateDbIntegrity()
+    {
+        if (CheckErrorsExist()){
+            _dbRelation = RelationTypes.UnboundInvalid;
+            return;
+        }
+
+        FederalSubject? alter = GetByCode(_code);
+        if (alter != null){
+            if (alter._regionType != this._regionType){
+                AddError(new DbIntegrityValidationError<FederalSubject>(nameof(FederalSubjectType), "Несовпадение типа субъекта с зарегистрированным"));
+            }
+            if (alter._subjectUntypedName != this._subjectUntypedName){
+                AddError(new DbIntegrityValidationError<FederalSubject>(nameof(UntypedName), "Несовпадение названия субъекта с зарегистрированным"));
+            }
+            if (CheckErrorsExist()){
+                _dbRelation = RelationTypes.Modified;
+            }
+            else{
+                _dbRelation = RelationTypes.Bound;
+            }
+            return;
+        }
+        else{
+            _dbRelation = RelationTypes.Pending;
+        }
     }
 }

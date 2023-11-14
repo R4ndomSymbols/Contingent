@@ -50,6 +50,15 @@ public class ValidationError<T> {
 
 }
 
+public class DbIntegrityValidationError<T> : ValidationError<T>
+{
+    public DbIntegrityValidationError(string propName, string exceptionMessage) : base(propName, exceptionMessage)
+    {
+        
+    }
+}
+
+
 public static class ValidatorCollection {
 
     public static readonly Regex OnlyDigits = new Regex(@"^[0-9]+\z");

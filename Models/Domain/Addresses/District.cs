@@ -4,7 +4,7 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 
-public class District : ValidatedObject<District>
+public class District : InDbValidatedObject<District>
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -85,11 +85,22 @@ public class District : ValidatedObject<District>
             }
         }
     }
-    private FederalSubject Parent {
+    public FederalSubject? Parent {
         get {
-            _parentFederalSubject ??= FederalSubject.GetByCode(_federalSubjectCode);
-            if (_parentFederalSubject == null){
-                throw new AddressIntegrityViolationExeption("У верхнего муниципалитета не указан родитель");
+            return _parentFederalSubject;
+        }
+        set {
+            if (PerformValidation(
+                () => {
+                    if (value == null){
+                        return false;
+                    }
+                    if (value.CurrentState == RelationTypes.Invalid || value.CurrentState == RelationTypes.UnboundInvalid){
+                        return false;
+                    }
+                    return true;
+                }, new DbIntegrityValidationError<District>(nameof(Parent), "Неверно указан субъект федерации"))){
+                _parentFederalSubject = value;
             }
         }
     } 
@@ -106,11 +117,13 @@ public class District : ValidatedObject<District>
         _districtType = type;
         _validationErrors = new List<ValidationError<District>>(); 
     }
-    protected District(FederalSubject parent){
+    protected District(FederalSubject? parent){
+
+        Parent = parent;
         _fullName = "";
         _districtType = Types.NotMentioned;
-        _parentFederalSubject = parent;
-        _federalSubjectCode = int.Parse(parent.Code);
+        _id = Utils.INVALID_ID;
+        
         AddError(new ValidationError<District>(nameof(UntypedName), "Имя района не может быть пустым"));
         AddError(new ValidationError<District>(nameof(DistrictType), "Тип района должен быть указан"));
     }
@@ -242,5 +255,48 @@ public class District : ValidatedObject<District>
             } 
         }
         return null;
+    }
+
+    protected override void ValidateDbIntegrity()
+    {
+        if (_id == Utils.INVALID_ID){
+            if (CheckErrorsExist()){
+                _dbRelation = RelationTypes.UnboundInvalid;
+            }
+        }
+        else{
+            var alter = GetById(_id);
+            if (alter == null){
+                if (CheckErrorsExist()){
+                    _dbRelation = RelationTypes.UnboundInvalid;
+                }
+                else{
+                    _dbRelation = RelationTypes.Pending;
+                }
+            }
+            else if (alter.Parent != ){
+                
+            }
+        }
+        if (CheckErrorsExist()){
+            _dbRelation = RelationTypes.UnboundInvalid;
+            return;
+        }
+        else {
+
+        }
+        PerformValidation()
+
+    }
+
+    public static bool operator == (District? left, District? right){
+        if (left is null || right is null ){
+            return false;
+        }
+        else{
+            return left._districtType == right._districtType &&
+            left._fullName == right._fullName &&
+            left._federalSubjectCode == 
+        }
     }
 }

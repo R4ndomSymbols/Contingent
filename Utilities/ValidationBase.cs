@@ -22,7 +22,7 @@ public abstract class ValidatedObject<T> {
     private void ClearState(string propName){
         _validationErrors = _validationErrors.Where(x => x.PropertyName != propName);
     }
-    protected bool PerformValidation(Func<bool> validation, ValidationError<T> err){
+    protected virtual bool PerformValidation(Func<bool> validation, ValidationError<T> err){
         ClearState(err.PropertyName);
         bool validationResult = validation.Invoke();
         if (!validationResult){
