@@ -9,11 +9,12 @@ using System.Security.Principal;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Utilities;
+using Utilities.Validation;
 
-public class AddressModel : ValidatedObject<AddressModel>
+public class AddressModel : ValidatedObject
 {
 
-    private int _id;
+    private int? _id;
     private FederalSubject? _subjectPart;
     private District? _districtPart;
     private SettlementArea? _settlementAreaPart;
@@ -32,7 +33,7 @@ public class AddressModel : ValidatedObject<AddressModel>
                 {
                     var parsed = FederalSubject.BuildByName(value);
                     return !(parsed == null || parsed.CheckErrorsExist());
-                }, new ValidationError<AddressModel>(nameof(SubjectPart), "Субъект не указан или указан не верно")
+                }, new ValidationError(nameof(SubjectPart), "Субъект не указан или указан не верно")
             ))
             {
                 _subjectPart = FederalSubject.BuildByName(value);
@@ -51,14 +52,14 @@ public class AddressModel : ValidatedObject<AddressModel>
                     {
                         return false;
                     }
-                    var parsed = District.BuildByName(value, _subjectPart);
+                    var parsed = District.BuildByName(value);
                     return !(parsed == null || parsed.CheckErrorsExist());
-                }, new ValidationError<AddressModel>(nameof(DistrictPart), "Район не указан, указан неверно либо не соотнесен с субъектом")
+                }, new ValidationError(nameof(DistrictPart), "Район не указан, указан неверно либо не соотнесен с субъектом")
             ))
             {
                 if (_subjectPart != null)
                 {
-                    _districtPart = District.BuildByName(value, _subjectPart);
+                    _districtPart = District.BuildByName(value);
                 }
             }
         }
@@ -82,17 +83,17 @@ public class AddressModel : ValidatedObject<AddressModel>
                     }
                     else
                     {
-                        var parsed = SettlementArea.BuildByName(value, _districtPart);
+                        var parsed = SettlementArea.BuildByName(value);
                         return !(parsed == null || parsed.CheckErrorsExist());
                     }
-                }, new ValidationError<AddressModel>(nameof(SettlementAreaPart), "Поселение не указано, указано неверно либо не соотнесено с районом")
+                }, new ValidationError(nameof(SettlementAreaPart), "Поселение не указано, указано неверно либо не соотнесено с районом")
             ))
             {
                 if (_districtPart == null)
                 {
                     return;
                 }
-                _settlementAreaPart = SettlementArea.BuildByName(value, _districtPart);
+                _settlementAreaPart = SettlementArea.BuildByName(value);
             }
         }
     }
@@ -106,17 +107,17 @@ public class AddressModel : ValidatedObject<AddressModel>
                 {
                     try
                     {
-                        var parsed = Settlement.BuildByName(value, _settlementAreaPart, _districtPart);
+                        var parsed = Settlement.BuildByName(value);
                         return !(parsed == null || parsed.CheckErrorsExist());
                     }
                     catch (ArgumentException)
                     {
                         return false;
                     }
-                }, new ValidationError<AddressModel>(nameof(SettlementPart), "Населенный пункт не указан, указан неверно либо не определен предшествующий адрес")
+                }, new ValidationError(nameof(SettlementPart), "Населенный пункт не указан, указан неверно либо не определен предшествующий адрес")
             ))
             {
-                _settlementPart = Settlement.BuildByName(value, _settlementAreaPart, _districtPart);
+                _settlementPart = Settlement.BuildByName(value);
             }
         }
     }
@@ -134,15 +135,15 @@ public class AddressModel : ValidatedObject<AddressModel>
                     }
                     else
                     {
-                        var parsed = Street.BuildByName(value, _settlementPart);
+                        var parsed = Street.BuildByName(value);
                         return !(parsed == null || parsed.CheckErrorsExist());
                     }
-                }, new ValidationError<AddressModel>(nameof(StreetPart), "Улица не указана, указана неверно либо не определен предшествующий адрес")
+                }, new ValidationError(nameof(StreetPart), "Улица не указана, указана неверно либо не определен предшествующий адрес")
             ))
             {
                 if (_settlementPart != null)
                 {
-                    _streetPart = Street.BuildByName(value, _settlementPart);
+                    _streetPart = Street.BuildByName(value);
                 }
             }
         }
@@ -161,15 +162,15 @@ public class AddressModel : ValidatedObject<AddressModel>
                     }
                     else
                     {
-                        var parsed = Building.BuildByName(value, _streetPart);
+                        var parsed = Building.BuildByName(value);
                         return !(parsed == null || parsed.CheckErrorsExist());
                     }
-                }, new ValidationError<AddressModel>(nameof(BuildingPart), "Дом не указан, указан неверно либо не определен предшествующий адрес")
+                }, new ValidationError(nameof(BuildingPart), "Дом не указан, указан неверно либо не определен предшествующий адрес")
             ))
             {
                 if (_streetPart != null)
                 {
-                    _buildingPart = Building.BuildByName(value, _streetPart);
+                    _buildingPart = Building.BuildByName(value);
                 }
             }
         }
@@ -188,15 +189,15 @@ public class AddressModel : ValidatedObject<AddressModel>
                     }
                     else
                     {
-                        var parsed = Apartment.BuildByName(value, _buildingPart);
+                        var parsed = Apartment.BuildByName(value);
                         return !(parsed == null || parsed.CheckErrorsExist());
                     }
-                }, new ValidationError<AddressModel>(nameof(ApartmentPart), "Квартира указана неверно либо не определен предшествующий адрес")
+                }, new ValidationError(nameof(ApartmentPart), "Квартира указана неверно либо не определен предшествующий адрес")
             ))
             {
                 if (_buildingPart != null)
                 {
-                    _apartmentPart = Apartment.BuildByName(value, _buildingPart);
+                    _apartmentPart = Apartment.BuildByName(value);
                 }
             }
         }
@@ -206,32 +207,42 @@ public class AddressModel : ValidatedObject<AddressModel>
 
     public string FullAddressString
     {
-        get {
-            if (CheckErrorsExist()){
+        get
+        {
+            if (CheckErrorsExist())
+            {
                 return "";
             }
-            else {
-                
+            else
+            {
+
                 List<string> parts = new List<string>();
-                if (SubjectPart!=null){
+                if (SubjectPart != null)
+                {
                     parts.Add(SubjectPart);
                 }
-                if (DistrictPart!=null){
+                if (DistrictPart != null)
+                {
                     parts.Add(DistrictPart);
                 }
-                if (SettlementAreaPart!=null){
+                if (SettlementAreaPart != null)
+                {
                     parts.Add(SettlementAreaPart);
                 }
-                if (SettlementPart!=null){
+                if (SettlementPart != null)
+                {
                     parts.Add(SettlementPart);
                 }
-                if (StreetPart!=null){
+                if (StreetPart != null)
+                {
                     parts.Add(StreetPart);
                 }
-                if (BuildingPart!=null){
+                if (BuildingPart != null)
+                {
                     parts.Add(BuildingPart);
                 }
-                if (ApartmentPart!=null){
+                if (ApartmentPart != null)
+                {
                     parts.Add(ApartmentPart);
                 }
                 return string.Join(", ", parts);
@@ -253,13 +264,14 @@ public class AddressModel : ValidatedObject<AddressModel>
         _buildingPart = b;
         _apartmentPart = a;
     }
-    protected AddressModel(){
+    protected AddressModel()
+    {
         _id = Utils.INVALID_ID;
-        AddError(new ValidationError<AddressModel>(nameof(SubjectPart), "Субъект федерации должен быть указан"));
-        AddError(new ValidationError<AddressModel>(nameof(DistrictPart), "Муниципальное образование верхнего уровня должно быть указано"));
-        AddError(new ValidationError<AddressModel>(nameof(SettlementPart), "Населенный пункт должен быть указан"));
-        AddError(new ValidationError<AddressModel>(nameof(StreetPart), "Объект дорожной инфраструктуры должен быть указан"));
-        AddError(new ValidationError<AddressModel>(nameof(BuildingPart), "Дом должен быть указан"));
+        AddError(new ValidationError(nameof(SubjectPart), "Субъект федерации должен быть указан"));
+        AddError(new ValidationError(nameof(DistrictPart), "Муниципальное образование верхнего уровня должно быть указано"));
+        AddError(new ValidationError(nameof(SettlementPart), "Населенный пункт должен быть указан"));
+        AddError(new ValidationError(nameof(StreetPart), "Объект дорожной инфраструктуры должен быть указан"));
+        AddError(new ValidationError(nameof(BuildingPart), "Дом должен быть указан"));
 
     }
 
@@ -318,7 +330,7 @@ public class AddressModel : ValidatedObject<AddressModel>
                     apartment = Apartment.GetById((int)reader["apartment"]);
                     if (apartment != null)
                     {
-                        building = Building.GetById(apartment.BuildingParentId);
+                        building = Building.GetById(apartment.ParentBuildingId);
                     }
                 }
                 else
@@ -368,43 +380,75 @@ public class AddressModel : ValidatedObject<AddressModel>
         }
         else
         {
-            AddressModel built = new AddressModel(); 
+            AddressModel built = new AddressModel();
             string[] parts = address.Split(',').Select(x => x.Trim()).ToArray();
             if (parts.Length < 5 || parts.Length > 7)
             {
-                built.AddError(new ValidationError<AddressModel>(nameof(AddressModel), "Неверное количество частей адреса"));
+                built.AddError(new ValidationError(nameof(AddressModel), "Неверное количество частей адреса"));
             }
-            else {
+            else
+            {
                 int offset = 0;
                 built.SubjectPart = parts[0];
                 built.DistrictPart = parts[1];
                 built.SettlementAreaPart = parts[2];
-                if (built._settlementAreaPart != null){
-                    offset+=1;
+                if (built._settlementAreaPart != null)
+                {
+                    offset += 1;
                 }
-                built.SettlementPart = parts[2+offset];
-                built.StreetPart = parts[3+offset];
-                built.BuildingPart = parts[4+offset];
-                if (parts.Length >= 6){
-                    built.ApartmentPart = parts[5+offset];
+                built.SettlementPart = parts[2 + offset];
+                built.StreetPart = parts[3 + offset];
+                built.BuildingPart = parts[4 + offset];
+                if (parts.Length >= 6)
+                {
+                    built.ApartmentPart = parts[5 + offset];
                 }
             }
             return built;
         }
     }
-    public int Save(){
-        if (CheckErrorsExist()){
-            return Utils.INVALID_ID;
+    public void Save()
+    {
+        if (CheckErrorsExist())
+        {
+            return;
         }
-        else{
-            if (_subjectPart != null){
-                _subjectPart.Save();
-            }
-            if (_districtPart != null){
-                _districtPart.Save();
-            }
-        }
+        else
+        {
+            if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
+                _streetPart == null || _buildingPart == null){
+                    return;
+                }
 
+            if (_subjectPart.Save()) {
+                _districtPart.SubjectParentId = int.Parse(_subjectPart.Code);
+                    if (_districtPart.Save()) {
+                        int? saId = null;
+                        if (_settlementAreaPart != null){
+                            _settlementAreaPart.DistrictParentId = _districtPart.Id;
+                            if (_settlementAreaPart.Save()){
+                                saId = _settlementAreaPart.Id;
+                            }
+                        }
+                        if (saId!=null){
+                            _settlementPart.SettlementAreaParentId = saId; 
+                        }
+                        else{
+                            _settlementPart.DistrictParentId = _districtPart.Id;
+                        }
+                        if (_settlementPart.Save()){
+                            _streetPart.SettlementParentId = _streetPart.Id;
+                            if (_streetPart.Save()){
+                                _buildingPart.StreetParentId = _streetPart.Id;
+                                if (_buildingPart.Save()){
+
+                                }
+                            }
+                        }
+                    }
+               
+            }
+        }
     }
 }
 

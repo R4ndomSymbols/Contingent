@@ -1,12 +1,14 @@
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain.Address;
 
 
-public class FederalSubject : InDbValidatedObject
+public class FederalSubject : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -27,13 +29,13 @@ public class FederalSubject : InDbValidatedObject
         {
             if (PerformValidation(
                 () => int.TryParse(value, out int res),
-                new ValidationError(this, nameof(Code), "Код региона не может содержать буквы")
+                new ValidationError(nameof(Code), "Код региона не может содержать буквы")
             ))
             {
                 var r = int.Parse(value);
                 if (PerformValidation(
                     () => ValidatorCollection.CheckRange(r, 0, 300),
-                    new ValidationError(this, nameof(Code), "Код региона не может быть таким")
+                    new ValidationError(nameof(Code), "Код региона не может быть таким")
                 ))
                 {  
                      _code = r;
@@ -49,7 +51,7 @@ public class FederalSubject : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(this, nameof(FederalSubjectType), "Неверно указан тип субъекта")
+                new ValidationError(nameof(FederalSubjectType), "Неверно указан тип субъекта")
             ))
             {
                 _regionType = (Types)value;
@@ -64,15 +66,15 @@ public class FederalSubject : InDbValidatedObject
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(this, nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 100),
-                    new ValidationError(this,nameof(UntypedName), "Название превышает допустимый лимит символов")))
+                    new ValidationError(nameof(UntypedName), "Название превышает допустимый лимит символов")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError(this,nameof(UntypedName), "Название содержит недопустимые символы")))
+                        new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
                         _subjectUntypedName = value;
                     }
@@ -92,10 +94,9 @@ public class FederalSubject : InDbValidatedObject
         _subjectUntypedName = name;
         _regionType = type;
     }
-    protected FederalSubject(){
+    protected FederalSubject() : base(){
         _subjectUntypedName = "";
         _code = Utils.INVALID_ID;
-        _validationErrors = new List<ValidationError>();
     }
 
     public enum Types
@@ -119,11 +120,10 @@ public class FederalSubject : InDbValidatedObject
         {Types.Region, new NameFormatting("обл.", "Область", NameFormatting.BEFORE)},
     };
 
-    public void Save()
+    public bool Save()
     {
-        UpdateObjectIntegrityState(GetByCode(_code));
-        if (_dbRelation != RelationTypes.Pending){
-            return;
+        if (CurrentState != RelationTypes.Pending){
+            return false;
         }
         using (var conn = Utils.GetConnectionFactory())
         {
@@ -139,7 +139,8 @@ public class FederalSubject : InDbValidatedObject
             })
             {
                 var reader = cmd.ExecuteNonQuery();
-                _dbRelation = RelationTypes.Bound;
+                SetBound();
+                return true;
             }
         }
     }
@@ -158,11 +159,13 @@ public class FederalSubject : InDbValidatedObject
                 }
                 while (reader.Read())
                 {
-                    found.Add(new FederalSubject(
+                    var f = new FederalSubject(
                         code: (int)reader["code"],
                         name: (string)reader["full_name"],
                         type: (Types)reader["subject_type"]
-                    ));
+                    );
+                    f.SetBound();
+                    found.Add(f);
                 }
                 return found;
             }
@@ -183,10 +186,12 @@ public class FederalSubject : InDbValidatedObject
                 {
                     return null;
                 }
-                return new FederalSubject(
+                var f = new FederalSubject(
                         code: (int)reader["code"],
                         name: (string)reader["full_name"],
                         type: (Types)reader["subject_type"]);
+                f.SetBound();
+                return f;
             }
         }
     }
@@ -203,6 +208,11 @@ public class FederalSubject : InDbValidatedObject
         else{
             toBuild.Code = parts[0];
         }
+        int codeDelimiter = fullname.IndexOf(' ');
+        if (fullname.Length-1 == codeDelimiter){
+            return toBuild;
+        }
+        string fullnameWithoutCode = fullname.Substring(codeDelimiter+1); 
         foreach (var pair in Names){
             extracted = pair.Value.ExtractToken(fullname);
             if (extracted != null){
@@ -213,4 +223,38 @@ public class FederalSubject : InDbValidatedObject
         }
         return null;
     }
+    public static bool IsCodeExists(int id){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlements WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+               return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    } 
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetByCode(_code);
+    }
+    public override bool Equals(IDbObjectValidated? obj)
+    {
+        if (obj == null){
+            return false;
+        }
+        if (obj.GetType() != typeof(FederalSubject)){
+            return false;
+        }
+        var unboxed = (FederalSubject)obj;
+        return _code == unboxed._code &&
+        _subjectUntypedName == unboxed._subjectUntypedName &&
+        _regionType == unboxed._regionType;
+    }
+
+
 }

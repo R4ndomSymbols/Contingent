@@ -71,13 +71,4 @@ public static class Utils {
     }
 }
 
-public class AddressIntegrityViolationExeption : Exception {
-
-    public AddressIntegrityViolationExeption(string message) : base(message)
-    {
-        
-    }
-
-}
-
 

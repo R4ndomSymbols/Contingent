@@ -4,9 +4,10 @@ using System.Xml;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Settlement : InDbValidatedObject
+public class Settlement : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -37,9 +38,7 @@ public class Settlement : InDbValidatedObject
     private int _id;
     private int? _parentSettlementAreaId;
     private int? _parentDistrictId;
-    private District? _parentDistrict;
-    private SettlementArea? _parentSettlementArea;
-    private string _fullName;
+    private string _untypedName;
     private Types _settlementType;
     public int Id
     {
@@ -72,7 +71,7 @@ public class Settlement : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(this,nameof(SettlementType), "Неверно указан тип населенного пункта")
+                new ValidationError(nameof(SettlementType), "Неверно указан тип населенного пункта")
             ))
             {
                 _settlementType = (Types)value;
@@ -82,84 +81,38 @@ public class Settlement : InDbValidatedObject
     }
     public string UntypedName
     {
-        get => _fullName;
+        get => _untypedName;
         set
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(this,nameof(UntypedName), "Название населенного пункта содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название населенного пункта содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 200),
-                    new ValidationError(this,nameof(UntypedName), "Название населенного пункта вне допустимых пределов длины")))
+                    new ValidationError(nameof(UntypedName), "Название населенного пункта вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError(this,nameof(UntypedName), "Название населенного пункта содержит недопустимые символы")))
+                        new ValidationError(nameof(UntypedName), "Название населенного пункта содержит недопустимые символы")))
                     {
-                        _fullName = value;
+                        _untypedName = value;
                     }
                 }
             }
         }
     }
+    public string LongTypedName {
+        get {
+            return Names[_settlementType].FormatLong(_untypedName);
+        }
+    }
     // валидация не проверяет типы, внутри которых возможно размещение городов, добавить
-    public District? ParentDistrict {
-        get {
-            return _parentDistrict;
-        }
-        set {
-            if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return false;
-                    }
-                    if (value.CurrentState == RelationTypes.Invalid || value.CurrentState == RelationTypes.UnboundInvalid){
-                        return false;
-                    }
-                    return true;
-                }, new DbIntegrityValidationError(this, nameof(ParentDistrict), "Неверно указан муниципалитет верхнего уровня"))){
-                if (value != null){
-                    _parentSettlementArea = null;
-                    _parentSettlementAreaId = null;
-                    _parentDistrict = value;
-                    _parentDistrictId = value.Id;
-                }   
-        }
-        }
-    }
-    public SettlementArea? ParentSettlementArea {
-        get {
-            return _parentSettlementArea;
-        }
-        set {
-            if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return false;
-                    }
-                    if (value.CurrentState == RelationTypes.Invalid || value.CurrentState == RelationTypes.UnboundInvalid){
-                        return false;
-                    }
-                    return true;
-                }, new DbIntegrityValidationError(this, nameof(ParentSettlementArea), "Неверно указано поселение"))){
-                if (value != null){
-                    _parentSettlementArea = value;
-                    _parentSettlementAreaId = value.Id;
-                    _parentDistrict = null;
-                    _parentDistrictId = null;
-                }   
-        }
-        }
-    }
-    private Settlement(){
-        _fullName = "";
+
+    private Settlement() : base(){
+        _untypedName = "";
         _settlementType = Types.NotMentioned;
-        _validationErrors = new List<ValidationError>();
-        _dbRelation = RelationTypes.UnboundInvalid;
         _id = Utils.INVALID_ID;
-        _parentDistrict = null;
-        _parentSettlementArea = null;
         _parentDistrictId = null;
         _parentSettlementAreaId = null;
     }
@@ -176,18 +129,20 @@ public class Settlement : InDbValidatedObject
 
         _parentSettlementAreaId = parentSettlementArea;
         _parentDistrictId = parentDistrict;
-        _fullName = name;
+        _untypedName = name;
         _settlementType = type;
     }
-    public void Save()
+
+    // ошибка для привлечения внимания, переделать сохранение (неверные NULL значения)
+    --
+    public bool Save()
     {
-        if (CheckErrorsExist())
-        {
-            return;
-        }
-        UpdateObjectIntegrityState(GetById(_id));
-        if (CurrentState != RelationTypes.Pending){
-            return;
+        if (CurrentState != RelationTypes.Pending || 
+            ((_parentSettlementAreaId == null ? false : !SettlementArea.IsIdExists((int)_parentSettlementAreaId))
+            ^
+            (_parentDistrictId == null ? false : !District.IsIdExists((int)_parentDistrictId))
+            )){
+            return false; 
         }
         using (var conn = Utils.GetConnectionFactory())
         {
@@ -199,12 +154,14 @@ public class Settlement : InDbValidatedObject
                 Parameters = {
                         new("p1", _parentSettlementAreaId),
                         new("p2", _settlementType),
-                        new("p3", _fullName),
+                        new("p3", _untypedName),
                     }
             })
             {
                 var reader = cmd.ExecuteReader();
                 _id = (int)reader["id"];
+                SetBound();
+                return true;
             }
         }
     }
@@ -238,7 +195,9 @@ public class Settlement : InDbValidatedObject
                         if (reader["district"].GetType() != typeof(DBNull)){
                             parentDistrict = (int)reader["district"];
                         }
-                        result.Add(new Settlement((int)reader["id"], parentSettlementArea, parentDistrict, (string)reader["full_name"], (Types)(int)reader["settlement_type"]));
+                        var s = new Settlement((int)reader["id"], parentSettlementArea, parentDistrict, (string)reader["full_name"], (Types)(int)reader["settlement_type"]);
+                        s.SetBound();
+                        result.Add(s);
                     }
                     return result;
                 }
@@ -268,25 +227,12 @@ public class Settlement : InDbValidatedObject
                 if (reader["district"].GetType() != typeof(DBNull)){
                     parentDistrict = (int)reader["district"];
                 }
-                return new Settlement((int)reader["id"], parentDistrict, parentSettlementArea, (string)reader["full_name"], (Types)(int)reader["settlement_area_type"]);
+                var s = new Settlement((int)reader["id"], parentDistrict, parentSettlementArea, (string)reader["full_name"], (Types)(int)reader["settlement_area_type"]); 
+                return s; 
             }
         }
     }
-    public static Settlement? BuildByName(string fullname, District? dparent){
-        var built = BuildByName(fullname);
-        if (built is not null){
-            built.ParentDistrict = dparent;
-        }
-        return built;
-    }
-    public static Settlement? BuildByName(string fullname, SettlementArea? sparent){
-        var built = BuildByName(fullname);
-        if (built is not null){
-            built.ParentSettlementArea = sparent;
-        }
-        return built;
-    }
-    private static Settlement? BuildByName(string fullname){
+    public static Settlement? BuildByName(string fullname){
         if (fullname == null){
             return null;
         }
@@ -302,7 +248,26 @@ public class Settlement : InDbValidatedObject
         }
         return null;
     }
-    public override bool Equals(object? obj)
+    public static bool IsIdExists(int id){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlements WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+               return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    } 
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetById(_id);
+    }
+    public override bool Equals(IDbObjectValidated? obj)
     {
         if (obj == null){
             return false;
@@ -312,7 +277,7 @@ public class Settlement : InDbValidatedObject
         }
         var unboxed = (Settlement)obj;
         return _id == unboxed._id &&
-        _fullName == unboxed._fullName &&
+        _untypedName == unboxed._untypedName &&
         _parentDistrictId == unboxed._parentDistrictId &&
         _parentSettlementAreaId == unboxed._parentSettlementAreaId &&
         _settlementType == unboxed._settlementType;

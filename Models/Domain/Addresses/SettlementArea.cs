@@ -3,9 +3,10 @@ using System.Xml;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class SettlementArea : InDbValidatedObject
+public class SettlementArea : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -25,8 +26,7 @@ public class SettlementArea : InDbValidatedObject
 
     private int _id;
     private int _parentDistrictId;
-    private District? _parentDistrict;
-    private string _nameWithoutType;
+    private string _untypedName;
     private Types _settlementAreaType;
     public int Id
     {
@@ -51,7 +51,7 @@ public class SettlementArea : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(this, nameof(SettlementAreaType), "Неверно указан тип поселения")
+                new ValidationError(nameof(SettlementAreaType), "Неверно указан тип поселения")
             ))
             {
                 _settlementAreaType = (Types)value;
@@ -61,48 +61,30 @@ public class SettlementArea : InDbValidatedObject
     }
     public string UntypedName
     {
-        get => _nameWithoutType;
+        get => _untypedName;
         set
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(this,nameof(UntypedName), "Название поселения содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название поселения содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 200),
-                    new ValidationError(this,nameof(UntypedName), "Название поселения вне допустимых пределов длины")))
+                    new ValidationError(nameof(UntypedName), "Название поселения вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError(this,nameof(UntypedName), "Название поселения содержит недопустимые символы")))
+                        new ValidationError(nameof(UntypedName), "Название поселения содержит недопустимые символы")))
                     {
-                        _nameWithoutType = value;
+                        _untypedName = value;
                     }
                 }
             }
         }
     }
-    
-    public District? Parent {
+     public string LongTypedName {
         get {
-            return _parentDistrict;
-        }
-        set {
-            if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return false;
-                    }
-                    if (value.CurrentState == RelationTypes.Invalid || value.CurrentState == RelationTypes.UnboundInvalid){
-                        return false;
-                    }
-                    return true;
-                }, new DbIntegrityValidationError(this, nameof(Parent), "Неверно указан муниципалитет верхнего уровня"))){
-                if (value != null){
-                    _parentDistrict = value;
-                    _parentDistrictId = value.Id;
-                }   
-        }
+            return Names[_settlementAreaType].FormatLong(_untypedName);
         }
     }
 
@@ -110,24 +92,18 @@ public class SettlementArea : InDbValidatedObject
     {
         _id = id;
         _parentDistrictId = parentId;
-        _nameWithoutType = name;
+        _untypedName = name;
         _settlementAreaType = type;
     }
-    protected SettlementArea(){
-        _nameWithoutType = "";
+    protected SettlementArea() : base() {
+        _untypedName = "";
         _settlementAreaType = Types.NotMentioned;
-        _validationErrors = new List<ValidationError>();
     }
     
-    public void Save()
+    public bool Save()
     {
-        if (CheckErrorsExist())
-        {
-            return;
-        }
-        UpdateObjectIntegrityState(GetById(_id));
-        if (CurrentState != RelationTypes.Pending){
-            return;
+        if (CurrentState != RelationTypes.Pending || !District.IsIdExists(_parentDistrictId)){
+            return false;
         }
 
         using (var conn = Utils.GetConnectionFactory())
@@ -140,12 +116,14 @@ public class SettlementArea : InDbValidatedObject
                 Parameters = {
                         new("p1", _parentDistrictId),
                         new("p2", _settlementAreaType),
-                        new("p3", _nameWithoutType),
+                        new("p3", _untypedName),
                     }
             })
             {
                 var reader = cmd.ExecuteReader();
                 _id = (int)reader["id"];
+                SetBound();
+                return true;
             }
         }
     }
@@ -171,7 +149,9 @@ public class SettlementArea : InDbValidatedObject
                     var result = new List<SettlementArea>();
                     while (reader.Read())
                     {
-                        result.Add(new SettlementArea((int)reader["id"], districtId, (string)reader["full_name"], (Types)reader["settlement_area_type"]));
+                        var sa = new SettlementArea((int)reader["id"], districtId, (string)reader["full_name"], (Types)reader["settlement_area_type"]);
+                        sa.SetBound();
+                        result.Add(sa);
                     }
                     return result;
                 }
@@ -193,11 +173,13 @@ public class SettlementArea : InDbValidatedObject
                 {
                     return null;
                 }
-                return new SettlementArea((int)reader["id"], (int)reader["district"], (string)reader["full_name"], (Types)(int)reader["settlement_area_type"]);
+                var sa = new SettlementArea((int)reader["id"], (int)reader["district"], (string)reader["full_name"], (Types)(int)reader["settlement_area_type"]); 
+                sa.SetBound();
+                return sa;
             }
         }
     }
-    public static SettlementArea? BuildByName(string? fullname, District parent){
+    public static SettlementArea? BuildByName(string? fullname){
         if (fullname == null){
             return null;
         }
@@ -208,13 +190,31 @@ public class SettlementArea : InDbValidatedObject
             if (extracted != null){
                 toBuild.SettlementAreaType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
-                toBuild._parentDistrict = parent;
                 return toBuild;
             } 
         }
         return null;
     }
-    public override bool Equals(object? obj)
+     public static bool IsIdExists(int id){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlement_areas WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+               return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    } 
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetById(_id);
+    }
+    public override bool Equals(IDbObjectValidated? obj)
     {
         if (obj == null){
             return false;
@@ -223,7 +223,7 @@ public class SettlementArea : InDbValidatedObject
             return false;
         }
         var unboxed = (SettlementArea)obj;
-        return _id == unboxed._id && _nameWithoutType == unboxed._nameWithoutType &&
+        return _id == unboxed._id && _untypedName == unboxed._untypedName &&
         _parentDistrictId == unboxed._parentDistrictId && _settlementAreaType == unboxed._settlementAreaType;
     }
 

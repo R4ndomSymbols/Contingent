@@ -2,9 +2,10 @@ using System.Text.RegularExpressions;
 using Npgsql;
 using Utilities;
 using StudentTracking.Models.Domain.Misc;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Street : InDbValidatedObject
+public class Street : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -44,7 +45,6 @@ public class Street : InDbValidatedObject
     private int _id;
     private int _parentSettlementId;
     private string _untypedName;
-    private Settlement? _parentSettlement;
     private Types _streetType;
     public int Id
     {
@@ -69,7 +69,7 @@ public class Street : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(this,nameof(StreetType), "Неверно указан тип улицы")
+                new ValidationError(nameof(StreetType), "Неверно указан тип улицы")
             ))
             {
                 _streetType = (Types)value;
@@ -84,20 +84,25 @@ public class Street : InDbValidatedObject
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(this, nameof(UntypedName), "Название улицы содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название улицы содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 1, 200),
-                    new ValidationError(this, nameof(UntypedName), "Название улицы вне допустимых пределов длины")))
+                    new ValidationError(nameof(UntypedName), "Название улицы вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError(this, nameof(UntypedName), "Название улицы содержит недопустимые символы")))
+                        new ValidationError(nameof(UntypedName), "Название улицы содержит недопустимые символы")))
                     {
                         _untypedName = value;
                     }
                 }
             }
+        }
+    }
+    public string LongTypedName {
+        get {
+            return Names[_streetType].FormatLong(_untypedName);
         }
     }
 
@@ -109,24 +114,16 @@ public class Street : InDbValidatedObject
         _untypedName = name;
         _streetType = type;
     }
-    protected Street(){
+    protected Street() : base() {
         _id = Utils.INVALID_ID;
         _untypedName = "";
         _streetType = Types.NotMentioned;
-        _validationErrors = new List<ValidationError>();
         _parentSettlementId = Utils.INVALID_ID;
-        _parentSettlement = null;
-        _dbRelation = RelationTypes.UnboundInvalid;
     }
-    public void Save()
+    public bool Save()
     {
-        if (CheckErrorsExist())
-        {
-            return;
-        }
-        UpdateObjectIntegrityState(GetById(_id));
-        if (CurrentState != RelationTypes.Pending){
-            return;
+        if (CurrentState != RelationTypes.Pending || !Settlement.IsIdExists(_parentSettlementId)){
+            return false;
         }
 
         using (var conn = Utils.GetConnectionFactory())
@@ -145,7 +142,8 @@ public class Street : InDbValidatedObject
             {
                 var reader = cmd.ExecuteReader();
                 _id = (int)reader["id"];
-                _dbRelation = RelationTypes.Bound;
+                SetBound();
+                return true;
             }
         }
     }
@@ -171,7 +169,9 @@ public class Street : InDbValidatedObject
                     var result = new List<Street>();
                     while (reader.Read())
                     {
-                        result.Add(new Street((int)reader["id"], settlementId, (string)reader["full_name"], (Types)reader["street_type"]));
+                        var st = new Street((int)reader["id"], settlementId, (string)reader["full_name"], (Types)reader["street_type"]);
+                        st.SetBound();
+                        result.Add(st);
                     }
                     return result;
                 }
@@ -193,15 +193,17 @@ public class Street : InDbValidatedObject
                 {
                     return null;
                 }
-                return new Street(
+                var st = new Street(
                         id: (int)reader["id"],
                         name: (string)reader["full_name"],
                         parentId: (int)reader["settlement"],
                         type: (Types)(int)reader["street_type"]);
+                st.SetBound();
+                return st;
             }
         }
     }
-    public static Street? BuildByName(string? fullname, Settlement parent){
+    public static Street? BuildByName(string? fullname){
         if (fullname == null){
             return null;
         }
@@ -212,10 +214,44 @@ public class Street : InDbValidatedObject
             if (extracted != null){
                 toBuild.StreetType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
-                toBuild._parentSettlement = parent;
                 return toBuild;
             } 
         }
         return null;
+    }
+
+    public static bool IsIdExists(int id){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM streets WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+               return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    } 
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetById(_id);
+    }
+
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null){
+            return false;
+        }
+        if (other.GetType() != typeof(Street)){
+            return false;
+        }
+        var parsed = (Street)other;
+        return parsed._id == _id && parsed._parentSettlementId == _parentSettlementId 
+            && parsed._streetType == _streetType 
+            && parsed._untypedName == _untypedName;  
+        
     }
 }

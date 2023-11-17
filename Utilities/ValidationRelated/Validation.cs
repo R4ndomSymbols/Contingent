@@ -2,64 +2,7 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Utilities;
-
-[Serializable]
-public class ValidationError {
-
-    private Type _matchType;
-    private string _message;
-    private string _propertyName;
-    [JsonPropertyName("Err")]
-    public string ErrorMessage {get => _message;}
-    [JsonPropertyName("Field")]
-    public string PropertyName {get => _propertyName;}
-    
-    public ValidationError(object? validatedObject, string propName, string exceptionMessage){
-        if (validatedObject == null){
-            throw new ArgumentNullException("Валидации может подвергаться только существующий объект");
-        }
-        _matchType = validatedObject.GetType();
-        _message = exceptionMessage;
-        _propertyName = propName;
-    }
-
-    public static bool operator == (ValidationError? left, ValidationError? right){
-        if (left is null){
-            return false;
-        }
-        if (right is null){
-            return false;
-        }
-        return left._matchType == right._matchType && left._propertyName == right._propertyName;
-    }
-    public static bool operator != (ValidationError? left, ValidationError? right){
-        return !(left == right);
-    }
-    public override bool Equals(object? obj)
-    {   if (obj == null){
-            return false; 
-        }
-        if (obj.GetType() != _matchType){
-            return false;
-        }
-        return this == (ValidationError)obj;
-    }
-    public override int GetHashCode()
-    {
-        return base.GetHashCode();
-    }
-
-}
-
-public class DbIntegrityValidationError : ValidationError
-{
-    public DbIntegrityValidationError(object? validtedObj, string propName, string exceptionMessage) : base(validtedObj, propName, exceptionMessage)
-    {
-        
-    }
-}
-
+namespace Utilities.Validation;
 
 public static class ValidatorCollection {
 

@@ -2,9 +2,10 @@ using System.Text.RegularExpressions;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class District : InDbValidatedObject
+public class District : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -28,7 +29,6 @@ public class District : InDbValidatedObject
 
     private int _id;
     private int _federalSubjectCode;
-    private FederalSubject? _parentFederalSubject;
     private string _fullName;
     private Types _districtType;
     public int Id
@@ -54,7 +54,7 @@ public class District : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(this, nameof(DistrictType), "Неверно указан тип района")
+                new ValidationError(nameof(DistrictType), "Неверно указан тип района")
             ))
             {
                 _districtType = (Types)value;
@@ -69,15 +69,15 @@ public class District : InDbValidatedObject
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(this,nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 200),
-                    new ValidationError(this,nameof(UntypedName), "Название превышает допустимый лимит символов")))
+                    new ValidationError(nameof(UntypedName), "Название превышает допустимый лимит символов")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError(this,nameof(UntypedName), "Название содержит недопустимые символы")))
+                        new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
                         _fullName = value;
                     }
@@ -85,61 +85,28 @@ public class District : InDbValidatedObject
             }
         }
     }
-    public FederalSubject? Parent {
-        get {
-            return _parentFederalSubject;
-        }
-        set {
-            if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return false;
-                    }
-                    if (value.CurrentState == RelationTypes.Invalid || value.CurrentState == RelationTypes.UnboundInvalid){
-                        return false;
-                    }
-                    return true;
-                }, new DbIntegrityValidationError(this, nameof(Parent), "Неверно указан субъект федерации"))){
-                _parentFederalSubject = value;
-            }
-        }
-    } 
+
     public string LongTypedName {
         get => Names[_districtType].FormatLong(_fullName);
     }
 
 
-    protected District(int id, int parentCode, string name, Types type) : this(parentCode)
+    protected District(int id, int parentCode, string name, Types type) : base()
     {
         _id = id;
         _fullName = name;
         _districtType = type;
     }
-    protected District(FederalSubject? parent){
+    protected District() : base() {
 
-        Parent = parent;
         _fullName = "";
         _districtType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
-        _validationErrors = new List<ValidationError>(); 
     }
-    protected District(int parentCode){
-
-        _federalSubjectCode = parentCode;
-        _fullName = "";
-        _districtType = Types.NotMentioned;
-        _id = Utils.INVALID_ID;
-        _validationErrors = new List<ValidationError>(); 
-    }
-    public void Save()
+    public bool Save()
     {
-        if (CheckErrorsExist())
-        {
-            return;
-        }
-        UpdateObjectIntegrityState(GetById(_id));
-        if (CurrentState != RelationTypes.Pending){
-            return;
+        if (CurrentState != RelationTypes.Pending || !FederalSubject.IsCodeExists(_federalSubjectCode)){
+            return false;
         }
 
         using (var conn = Utils.GetConnectionFactory())
@@ -230,12 +197,12 @@ public class District : InDbValidatedObject
             }
         }
     }
-    public static District? BuildByName(string? fullname, FederalSubject parent){
+    public static District? BuildByName(string? fullname){
         if (fullname == null){
             return null;
         }
         NameToken? extracted;
-        District toBuild = new District(parent); 
+        District toBuild = new District(); 
         foreach (var pair in Names){
             extracted = pair.Value.ExtractToken(fullname);
             if (extracted != null){
@@ -245,6 +212,25 @@ public class District : InDbValidatedObject
             } 
         }
         return null;
+    }
+    public static bool IsIdExists(int id){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlements WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+               return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    } 
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetById(_id);
     }
 
     public override bool Equals(object? obj){

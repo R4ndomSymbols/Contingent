@@ -1,12 +1,13 @@
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Building : ValidatedObject<Building>
+public class Building : DbValidatedObject
 {
-
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"дом"),
         new Regex(@"д\u002E"),
@@ -19,12 +20,11 @@ public class Building : ValidatedObject<Building>
     {
         NotMentioned = -1,
         Building = 1
-    } 
+    }
 
     private int _id;
-    private int _streetId;
+    private int _parentStreetId;
     private Types _buildingType;
-    private Street? _streetParent;
     private string _untypedName;
     public int Id
     {
@@ -36,10 +36,10 @@ public class Building : ValidatedObject<Building>
     }
     public int StreetParentId
     {
-        get => _streetId;
+        get => _parentStreetId;
         set
         {
-            _streetId = value;
+            _parentStreetId = value;
         }
     }
     public int BuildingType
@@ -49,7 +49,7 @@ public class Building : ValidatedObject<Building>
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError<Building>(nameof(BuildingType), "Неверно указан тип дома")
+                new ValidationError(nameof(BuildingType), "Неверно указан тип дома")
             ))
             {
                 _buildingType = (Types)value;
@@ -64,64 +64,61 @@ public class Building : ValidatedObject<Building>
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError<Building>(nameof(UntypedName), "Название дома содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Название дома содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 1, 10),
-                    new ValidationError<Building>(nameof(UntypedName), "Название дома вне допустимых пределов длины")))
+                    new ValidationError(nameof(UntypedName), "Название дома вне допустимых пределов длины")))
                 {
                     _untypedName = value;
                 }
             }
         }
     }
-    public string LongTypedName {
-        get => "дом" + " " + _untypedName;
+    public string LongTypedName
+    {
+        get
+        {
+            return Names[_buildingType].FormatLong(_untypedName);
+        }
     }
 
-    protected Building(int id, int parentId, string name)
+    protected Building(int id, int parentId, string name) : this()
     {
         _id = id;
-        _streetId = parentId;
+        _parentStreetId = parentId;
         _untypedName = name;
-        _validationErrors = new List<ValidationError<Building>>();
     }
-    protected Building(){
+    protected Building() : base()
+    {
         _untypedName = "";
         _buildingType = Types.NotMentioned;
-        AddError(new ValidationError<Building>(nameof(UntypedName), "Номер дома должен быть указан"));
-        AddError(new ValidationError<Building>(nameof(BuildingType), "Тип дома должен быть указан"));
     }
 
-    public void Save()
+    public bool Save()
     {
-        if (CheckErrorsExist())
+        if (CurrentState != RelationTypes.Pending || !Street.IsIdExists(_parentStreetId))
         {
-            return;
+            return false;
         }
 
         using (var conn = Utils.GetConnectionFactory())
         {
             conn.Open();
             using (var cmd = new NpgsqlCommand("INSERT INTO buildings( " +
-	                " street, full_name) " +
-	                " VALUES (@p1, @p2) RETURNING id", conn) 
+                    " street, full_name) " +
+                    " VALUES (@p1, @p2) RETURNING id", conn)
             {
                 Parameters = {
-                        new("p1", _streetId),
+                        new("p1", _parentStreetId),
                         new("p2", _untypedName),
                     }
             })
             {
-                try
-                {
-                    var reader = cmd.ExecuteReader();
-                    _id = (int)reader["id"];
-                }
-                catch (NpgsqlException)
-                {
-                    AddError(new ValidationError<Building>(nameof(StreetParentId), "Неверно указан родитель"));
-                }
+                var reader = cmd.ExecuteReader();
+                _id = (int)reader["id"];
+                SetBound();
+                return true;
             }
         }
     }
@@ -147,18 +144,22 @@ public class Building : ValidatedObject<Building>
                     var result = new List<Building>();
                     while (reader.Read())
                     {
-                        result.Add(new Building((int)reader["id"], streetId, (string)reader["full_name"]));
+                        var b = new Building((int)reader["id"], streetId, (string)reader["full_name"]);
+                        b.SetBound();
+                        result.Add(b);
                     }
                     return result;
                 }
             }
         }
     }
-    public static Building? GetById(int bId){
+    public static Building? GetById(int bId)
+    {
         using (var conn = Utils.GetConnectionFactory())
         {
             conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM buildings WHERE id = @p1", conn){
+            using (var cmd = new NpgsqlCommand($"SELECT * FROM buildings WHERE id = @p1", conn)
+            {
                 Parameters = {
                     new ("p1", bId)
                 }
@@ -169,28 +170,72 @@ public class Building : ValidatedObject<Building>
                 {
                     return null;
                 }
-                return new Building(
+                var b = new Building(
                         id: (int)reader["id"],
                         name: (string)reader["full_name"],
                         parentId: (int)reader["street"]);
+                b.SetBound();
+                return b;
             }
         }
     }
-    public static Building? BuildByName(string? fullname, Street parent){
-        if (fullname == null){
+    public static Building? BuildByName(string? fullname)
+    {
+        if (fullname == null)
+        {
             return null;
         }
         NameToken? extracted;
-        Building toBuild = new Building(); 
-        foreach (var pair in Names){
+        Building toBuild = new Building();
+        foreach (var pair in Names)
+        {
             extracted = pair.Value.ExtractToken(fullname);
-            if (extracted != null){
+            if (extracted != null)
+            {
                 toBuild.BuildingType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
-                toBuild._streetParent = parent;
                 return toBuild;
-            } 
+            }
         }
         return null;
     }
+
+    public static bool IsIdExists(int id)
+    {
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM buildings WHERE id = @p1)", conn)
+            {
+                Parameters = {
+                    new("p1", id),
+                }
+            })
+            {
+                return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    }
+    public override IDbObjectValidated? GetDbRepresentation()
+    {
+        return GetById(_id);
+    }
+
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+        if (other.GetType() != typeof(Building))
+        {
+            return false;
+        }
+        var parsed = (Building)other;
+        return parsed._id == _id && parsed._parentStreetId == _parentStreetId
+            && parsed._buildingType == _buildingType
+            && parsed._untypedName == _untypedName;
+
+    }
+
 }

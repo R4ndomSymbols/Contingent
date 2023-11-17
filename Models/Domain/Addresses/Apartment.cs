@@ -1,10 +1,12 @@
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Npgsql;
 using StudentTracking.Models.Domain.Misc;
 using Utilities;
+using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Apartment : InDbValidatedObject
+public class Apartment : DbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -19,10 +21,10 @@ public class Apartment : InDbValidatedObject
     {
         NotMentioned = -1,
         Apartment = 1
-    } 
+    }
 
-    private int _buildingId;
-    private Building? _parentBuiding;
+    private int _id; 
+    private int _parentBuildingId;
     private Types _apartmentType;
     private string _untypedName;
     public int Id
@@ -30,16 +32,15 @@ public class Apartment : InDbValidatedObject
         get => _id;
         set
         {
-            if(GetById())
             _id = value;
         }
     }
-    public int BuildingParentId
+    public int ParentBuildingId
     {
-        get => _buildingId;
+        get => _parentBuildingId;
         set
         {
-            _buildingId = value;
+            _parentBuildingId = value;
         }
     }
     public int ApartmentType
@@ -49,7 +50,7 @@ public class Apartment : InDbValidatedObject
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError<Apartment>(nameof(ApartmentType), "Неверно указан тип квартиры")
+                new ValidationError(nameof(ApartmentType), "Неверно указан тип квартиры")
             ))
             {
                 _apartmentType = (Types)value;
@@ -64,11 +65,11 @@ public class Apartment : InDbValidatedObject
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError<Apartment>(nameof(UntypedName), "Номер квартиры содержит недопустимые слова")))
+                new ValidationError(nameof(UntypedName), "Номер квартиры содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 1, 10),
-                    new ValidationError<Apartment>(nameof(UntypedName), "Название квартиры слишком длинное или короткое")))
+                    new ValidationError(nameof(UntypedName), "Название квартиры слишком длинное или короткое")))
                 {
                     _untypedName = value;
                 }
@@ -79,21 +80,24 @@ public class Apartment : InDbValidatedObject
         get => Names[_apartmentType].FormatLong(_untypedName); 
     }
 
-    protected Apartment(int id, int parentId, string name)
+    protected Apartment(int id, int parentId, string name) : this()
     {
         _id = id;
-        _buildingId = parentId;
+        _parentBuildingId = parentId;
         _untypedName = name;
-        _validationErrors = new List<ValidationError<Apartment>>();
     }
-    protected Apartment(){
+    protected Apartment() : base() {
         _untypedName = "";
         _apartmentType = Types.NotMentioned;
+        _id = Utils.INVALID_ID;
     }
     public void Save()
     {
-        if (CheckErrorsExist())
-        {
+        if (IsIdExists()){
+            return;
+        }
+
+        if (CurrentState != RelationTypes.Pending || !Building.IsIdExists(_parentBuildingId)){
             return;
         }
 
@@ -105,20 +109,14 @@ public class Apartment : InDbValidatedObject
 	                " VALUES (@p1, @p2) RETURNING id", conn) 
             {
                 Parameters = {
-                        new("p1", _buildingId),
+                        new("p1", _parentBuildingId),
                         new("p2", _untypedName),
                     }
             })
             {
-                try
-                {
-                    var reader = cmd.ExecuteReader();
-                    _id = (int)reader["id"];
-                }
-                catch (NpgsqlException)
-                {
-                    AddError(new ValidationError<Apartment>(nameof(BuildingParentId), "Неверно указан родитель"));
-                }
+                var reader = cmd.ExecuteReader();
+                _id = (int)reader["id"];
+                SetBound();
             }
         }
     }
@@ -144,7 +142,9 @@ public class Apartment : InDbValidatedObject
                     var result = new List<Apartment>();
                     while (reader.Read())
                     {
-                        result.Add(new Apartment((int)reader["id"], buildingId, (string)reader["full_name"]));
+                        var apt = new Apartment((int)reader["id"], buildingId, (string)reader["full_name"]);
+                        apt.SetBound();
+                        result.Add(apt);
                     }
                     return result;
                 }
@@ -166,14 +166,16 @@ public class Apartment : InDbValidatedObject
                 {
                     return null;
                 }
-                return new Apartment(
+                var apt = new Apartment(
                         id: (int)reader["id"],
                         name: (string)reader["apartmentNumber"],
                         parentId: (int)reader["building"]);
+                apt.SetBound();
+                return apt;
             }
         }
     }
-    public static Apartment? BuildByName(string? fullname, Building parent){
+    public static Apartment? BuildByName(string? fullname){
         if (fullname == null){
             return null;
         }
@@ -184,15 +186,45 @@ public class Apartment : InDbValidatedObject
             if (extracted != null){
                 toBuild.ApartmentType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
-                toBuild._parentBuiding = parent;
                 return toBuild;
             } 
         }
         return null;
     }
 
-    public override InDbValidatedObject? GetById(int id)
+    private bool IsIdExists(){
+        using (var conn = Utils.GetConnectionFactory())
+        {
+            conn.Open();
+            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM apartments WHERE id = @p1)", conn) 
+            {
+                Parameters = {
+                    new("p1", _id),
+                }
+            })
+            {
+                return (bool)cmd.ExecuteReader()["exists"];
+            }
+        }
+    }
+
+    public override IDbObjectValidated? GetDbRepresentation()
     {
-        throw new NotImplementedException();
+        return GetById(_id);
+    }
+
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null){
+            return false;
+        }
+        if (other.GetType() != typeof(Apartment)){
+            return false;
+        }
+        var parsed = (Apartment)other;
+        return parsed._id == _id && parsed._parentBuildingId == _parentBuildingId 
+            && parsed._apartmentType == _apartmentType 
+            && parsed._untypedName == _untypedName;  
+        
     }
 }
