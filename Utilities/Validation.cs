@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Utilities;
 
 [Serializable]
-public class ValidationError<T> {
+public class ValidationError {
 
     private Type _matchType;
     private string _message;
@@ -15,23 +15,25 @@ public class ValidationError<T> {
     [JsonPropertyName("Field")]
     public string PropertyName {get => _propertyName;}
     
-    public ValidationError(string propName, string exceptionMessage){
-        _matchType = typeof(T);
+    public ValidationError(object? validatedObject, string propName, string exceptionMessage){
+        if (validatedObject == null){
+            throw new ArgumentNullException("Валидации может подвергаться только существующий объект");
+        }
+        _matchType = validatedObject.GetType();
         _message = exceptionMessage;
         _propertyName = propName;
     }
 
-    public static bool operator == (ValidationError<T>? left, ValidationError<T>? right){
-        if (left == null){
+    public static bool operator == (ValidationError? left, ValidationError? right){
+        if (left is null){
             return false;
         }
-        if (right == null){
+        if (right is null){
             return false;
         }
-
         return left._matchType == right._matchType && left._propertyName == right._propertyName;
     }
-    public static bool operator != (ValidationError<T>? left, ValidationError<T>? right){
+    public static bool operator != (ValidationError? left, ValidationError? right){
         return !(left == right);
     }
     public override bool Equals(object? obj)
@@ -41,7 +43,7 @@ public class ValidationError<T> {
         if (obj.GetType() != _matchType){
             return false;
         }
-        return this == (ValidationError<T>)obj;
+        return this == (ValidationError)obj;
     }
     public override int GetHashCode()
     {
@@ -50,9 +52,9 @@ public class ValidationError<T> {
 
 }
 
-public class DbIntegrityValidationError<T> : ValidationError<T>
+public class DbIntegrityValidationError : ValidationError
 {
-    public DbIntegrityValidationError(string propName, string exceptionMessage) : base(propName, exceptionMessage)
+    public DbIntegrityValidationError(object? validtedObj, string propName, string exceptionMessage) : base(validtedObj, propName, exceptionMessage)
     {
         
     }

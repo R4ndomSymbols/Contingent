@@ -4,7 +4,7 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 
-public class District : InDbValidatedObject<District>
+public class District : InDbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -54,7 +54,7 @@ public class District : InDbValidatedObject<District>
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError<District>(nameof(DistrictType), "Неверно указан тип района")
+                new ValidationError(this, nameof(DistrictType), "Неверно указан тип района")
             ))
             {
                 _districtType = (Types)value;
@@ -69,15 +69,15 @@ public class District : InDbValidatedObject<District>
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError<District>(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
+                new ValidationError(this,nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 200),
-                    new ValidationError<District>(nameof(UntypedName), "Название превышает допустимый лимит символов")))
+                    new ValidationError(this,nameof(UntypedName), "Название превышает допустимый лимит символов")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError<District>(nameof(UntypedName), "Название содержит недопустимые символы")))
+                        new ValidationError(this,nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
                         _fullName = value;
                     }
@@ -99,7 +99,7 @@ public class District : InDbValidatedObject<District>
                         return false;
                     }
                     return true;
-                }, new DbIntegrityValidationError<District>(nameof(Parent), "Неверно указан субъект федерации"))){
+                }, new DbIntegrityValidationError(this, nameof(Parent), "Неверно указан субъект федерации"))){
                 _parentFederalSubject = value;
             }
         }
@@ -109,13 +109,11 @@ public class District : InDbValidatedObject<District>
     }
 
 
-    protected District(int id, int parentCode, string name, Types type)
+    protected District(int id, int parentCode, string name, Types type) : this(parentCode)
     {
         _id = id;
-        _federalSubjectCode = parentCode;
         _fullName = name;
         _districtType = type;
-        _validationErrors = new List<ValidationError<District>>(); 
     }
     protected District(FederalSubject? parent){
 
@@ -123,9 +121,15 @@ public class District : InDbValidatedObject<District>
         _fullName = "";
         _districtType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
-        
-        AddError(new ValidationError<District>(nameof(UntypedName), "Имя района не может быть пустым"));
-        AddError(new ValidationError<District>(nameof(DistrictType), "Тип района должен быть указан"));
+        _validationErrors = new List<ValidationError>(); 
+    }
+    protected District(int parentCode){
+
+        _federalSubjectCode = parentCode;
+        _fullName = "";
+        _districtType = Types.NotMentioned;
+        _id = Utils.INVALID_ID;
+        _validationErrors = new List<ValidationError>(); 
     }
     public void Save()
     {
@@ -133,15 +137,8 @@ public class District : InDbValidatedObject<District>
         {
             return;
         }
-        if (_)
-        District? alter = GetAllDistrictsWithin();
-        if (alter != null){
-            if (alter._districtType != this._districtType){
-                AddError(new ValidationError<District>(nameof(DistrictType), "Несовпадение типа муниципального образования с зарегистрированным"));
-            }
-            if (alter._fullName != this._fullName){
-                AddError(new ValidationError<District>(nameof(UntypedName), "Несовпадение названия муниципального образования с зарегистрированным"));
-            }
+        UpdateObjectIntegrityState(GetById(_id));
+        if (CurrentState != RelationTypes.Pending){
             return;
         }
 
@@ -159,15 +156,8 @@ public class District : InDbValidatedObject<District>
                     }
             })
             {
-                try
-                {
-                    var reader = cmd.ExecuteReader();
-                    _id = (int)reader["id"];
-                }
-                catch (NpgsqlException)
-                {
-                    AddError(new ValidationError<District>(nameof(SubjectParentId), "Неверно указан родитель"));
-                }
+                var reader = cmd.ExecuteReader();
+                _id = (int)reader["id"];
             }
         }
     }
@@ -257,46 +247,21 @@ public class District : InDbValidatedObject<District>
         return null;
     }
 
-    protected override void ValidateDbIntegrity()
-    {
-        if (_id == Utils.INVALID_ID){
-            if (CheckErrorsExist()){
-                _dbRelation = RelationTypes.UnboundInvalid;
-            }
-        }
-        else{
-            var alter = GetById(_id);
-            if (alter == null){
-                if (CheckErrorsExist()){
-                    _dbRelation = RelationTypes.UnboundInvalid;
-                }
-                else{
-                    _dbRelation = RelationTypes.Pending;
-                }
-            }
-            else if (alter.Parent != ){
-                
-            }
-        }
-        if (CheckErrorsExist()){
-            _dbRelation = RelationTypes.UnboundInvalid;
-            return;
-        }
-        else {
-
-        }
-        PerformValidation()
-
-    }
-
-    public static bool operator == (District? left, District? right){
-        if (left is null || right is null ){
+    public override bool Equals(object? obj){
+        if (obj is null){
             return false;
         }
         else{
-            return left._districtType == right._districtType &&
-            left._fullName == right._fullName &&
-            left._federalSubjectCode == 
+            if (obj.GetType() != typeof(District)){
+                return false;
+            }
+            else{
+                var right = (District)obj;
+                return _districtType == right._districtType &&
+                _fullName == right._fullName &&
+                _federalSubjectCode == right._federalSubjectCode &&
+                _id == right._id;
+            }        
         }
     }
 }

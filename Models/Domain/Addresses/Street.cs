@@ -4,7 +4,7 @@ using Utilities;
 using StudentTracking.Models.Domain.Misc;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Street : ValidatedObject<Street>
+public class Street : InDbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -42,9 +42,9 @@ public class Street : ValidatedObject<Street>
     }
 
     private int _id;
-    private int _settlementId;
+    private int _parentSettlementId;
     private string _untypedName;
-    private Settlement? _settlementParent;
+    private Settlement? _parentSettlement;
     private Types _streetType;
     public int Id
     {
@@ -56,10 +56,10 @@ public class Street : ValidatedObject<Street>
     }
     public int SettlementParentId
     {
-        get => _settlementId;
+        get => _parentSettlementId;
         set
         {
-            _settlementId = value;
+            _parentSettlementId = value;
         }
     }
     public int StreetType
@@ -69,7 +69,7 @@ public class Street : ValidatedObject<Street>
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError<Street>(nameof(StreetType), "Неверно указан тип улицы")
+                new ValidationError(this,nameof(StreetType), "Неверно указан тип улицы")
             ))
             {
                 _streetType = (Types)value;
@@ -84,15 +84,15 @@ public class Street : ValidatedObject<Street>
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError<Street>(nameof(UntypedName), "Название улицы содержит недопустимые слова")))
+                new ValidationError(this, nameof(UntypedName), "Название улицы содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 1, 200),
-                    new ValidationError<Street>(nameof(UntypedName), "Название улицы вне допустимых пределов длины")))
+                    new ValidationError(this, nameof(UntypedName), "Название улицы вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError<Street>(nameof(UntypedName), "Название улицы содержит недопустимые символы")))
+                        new ValidationError(this, nameof(UntypedName), "Название улицы содержит недопустимые символы")))
                     {
                         _untypedName = value;
                     }
@@ -100,28 +100,32 @@ public class Street : ValidatedObject<Street>
             }
         }
     }
-    public string LongTypedName {
-        get => Names[_streetType].FormatLong(_untypedName);
-    }
 
-    protected Street(int id, int parentId, string name, Types type)
+
+    protected Street(int id, int parentId, string name, Types type) : this()
     {
         _id = id;
-        _settlementId = parentId;
+        _parentSettlementId = parentId;
         _untypedName = name;
         _streetType = type;
-        _validationErrors = new List<ValidationError<Street>>();
     }
     protected Street(){
+        _id = Utils.INVALID_ID;
         _untypedName = "";
         _streetType = Types.NotMentioned;
-        AddError(new ValidationError<Street>(nameof(UntypedName), "Название улицы должно быть указано"));
-        AddError(new ValidationError<Street>(nameof(StreetType), "Тип улицы должен быть указан"));
+        _validationErrors = new List<ValidationError>();
+        _parentSettlementId = Utils.INVALID_ID;
+        _parentSettlement = null;
+        _dbRelation = RelationTypes.UnboundInvalid;
     }
     public void Save()
     {
         if (CheckErrorsExist())
         {
+            return;
+        }
+        UpdateObjectIntegrityState(GetById(_id));
+        if (CurrentState != RelationTypes.Pending){
             return;
         }
 
@@ -133,21 +137,15 @@ public class Street : ValidatedObject<Street>
 	            " VALUES (@p1, @p2, @p3); RETURNING id", conn) 
             {
                 Parameters = {
-                        new("p1", _settlementId),
+                        new("p1", _parentSettlementId),
                         new("p2", _streetType),
                         new("p3", _untypedName),
                     }
             })
             {
-                try
-                {
-                    var reader = cmd.ExecuteReader();
-                    _id = (int)reader["id"];
-                }
-                catch (NpgsqlException)
-                {
-                    AddError(new ValidationError<Street>(nameof(SettlementParentId), "Неверно указан родитель"));
-                }
+                var reader = cmd.ExecuteReader();
+                _id = (int)reader["id"];
+                _dbRelation = RelationTypes.Bound;
             }
         }
     }
@@ -214,7 +212,7 @@ public class Street : ValidatedObject<Street>
             if (extracted != null){
                 toBuild.StreetType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
-                toBuild._settlementParent = parent;
+                toBuild._parentSettlement = parent;
                 return toBuild;
             } 
         }

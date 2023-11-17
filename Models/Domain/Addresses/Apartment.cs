@@ -4,7 +4,7 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Apartment : ValidatedObject<Apartment>
+public class Apartment : InDbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -21,7 +21,6 @@ public class Apartment : ValidatedObject<Apartment>
         Apartment = 1
     } 
 
-    private int _id;
     private int _buildingId;
     private Building? _parentBuiding;
     private Types _apartmentType;
@@ -31,6 +30,7 @@ public class Apartment : ValidatedObject<Apartment>
         get => _id;
         set
         {
+            if(GetById())
             _id = value;
         }
     }
@@ -189,5 +189,10 @@ public class Apartment : ValidatedObject<Apartment>
             } 
         }
         return null;
+    }
+
+    public override InDbValidatedObject? GetById(int id)
+    {
+        throw new NotImplementedException();
     }
 }

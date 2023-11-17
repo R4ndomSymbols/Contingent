@@ -14,19 +14,56 @@ public enum RelationTypes {
         Bound = 5
     }
 
-public abstract class InDbValidatedObject<T> : ValidatedObject<T>{
+public abstract class InDbValidatedObject : ValidatedObject{
     
-    protected RelationTypes _dbRelation = RelationTypes.UnboundInvalid;
+    private RelationTypes _dbRelation;
+    protected int _id;
+    private bool _synced;
+    protected RelationTypes ObjectState {
+        get {
+            if (_synced){
+                return _dbRelation;
+            }
+            else{
+                UpdateObjectIntegrityState();
+                return _dbRelation;
+            }
+        }
+    }
 
     public RelationTypes CurrentState {
         get => _dbRelation;
     }
-    protected bool PerformValidation(Func<bool> validation, DbIntegrityValidationError<T> err) {
+    protected bool PerformValidation(Func<bool> validation, DbIntegrityValidationError err)
+    {
+        _synced = false;
         return base.PerformValidation(validation, err);
     }
     public bool CheckIntegrityErrorsExist(){
-        return _validationErrors.Any(x => x.GetType() == typeof(DbIntegrityValidationError<T>));
+        return _validationErrors.Any(x => x.GetType() == typeof(DbIntegrityValidationError));
     }
+    public static virtual InDbValidatedObject? GetById(int id);
 
-    protected abstract void ValidateDbIntegrity();     
+    private void UpdateObjectIntegrityState(){
+        var alter = GetById(_id);
+        if (alter == null){
+            if (CheckIntegrityErrorsExist()){
+                _dbRelation = RelationTypes.UnboundInvalid;
+            }
+            else{
+                _dbRelation = RelationTypes.Pending;
+            }
+        } 
+        else if (alter.Equals(this)){
+            _dbRelation = RelationTypes.Bound;
+        }
+        else{
+            if(CheckIntegrityErrorsExist()){
+                _dbRelation = RelationTypes.Invalid;
+            }
+            else{
+                _dbRelation = RelationTypes.Modified;
+            }
+        }
+    }        
 }

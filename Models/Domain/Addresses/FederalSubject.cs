@@ -6,7 +6,7 @@ using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 
 
-public class FederalSubject : InDbValidatedObject<FederalSubject>
+public class FederalSubject : InDbValidatedObject
 {
 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -27,13 +27,13 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
         {
             if (PerformValidation(
                 () => int.TryParse(value, out int res),
-                new ValidationError<FederalSubject>(nameof(Code), "Код региона не может содержать буквы")
+                new ValidationError(this, nameof(Code), "Код региона не может содержать буквы")
             ))
             {
                 var r = int.Parse(value);
                 if (PerformValidation(
                     () => ValidatorCollection.CheckRange(r, 0, 300),
-                    new ValidationError<FederalSubject>(nameof(Code), "Код региона не может быть таким")
+                    new ValidationError(this, nameof(Code), "Код региона не может быть таким")
                 ))
                 {  
                      _code = r;
@@ -49,7 +49,7 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError<FederalSubject>(nameof(FederalSubjectType), "Неверно указан тип субъекта")
+                new ValidationError(this, nameof(FederalSubjectType), "Неверно указан тип субъекта")
             ))
             {
                 _regionType = (Types)value;
@@ -64,15 +64,15 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
         {
             if (PerformValidation(
                 () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError<FederalSubject>(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
+                new ValidationError(this, nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
             {
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringLength(value, 2, 100),
-                    new ValidationError<FederalSubject>(nameof(UntypedName), "Название превышает допустимый лимит символов")))
+                    new ValidationError(this,nameof(UntypedName), "Название превышает допустимый лимит символов")))
                 {
                     if (PerformValidation(
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
-                        new ValidationError<FederalSubject>(nameof(UntypedName), "Название содержит недопустимые символы")))
+                        new ValidationError(this,nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
                         _subjectUntypedName = value;
                     }
@@ -86,19 +86,16 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
         }
     }
 
-    protected FederalSubject(int code, string name, Types type)
-    {  
+    protected FederalSubject(int code, string name, Types type) : this()
+    {   
         _code = code;
         _subjectUntypedName = name;
         _regionType = type;
-        _validationErrors = new List<ValidationError<FederalSubject>>();
     }
     protected FederalSubject(){
         _subjectUntypedName = "";
         _code = Utils.INVALID_ID;
-        AddError(new ValidationError<FederalSubject>(nameof(UntypedName), "Название субъекта должно быть указано"));
-        AddError(new ValidationError<FederalSubject>(nameof(FederalSubjectType), "Тип субъекта должен быть указан"));
-        AddError(new ValidationError<FederalSubject>(nameof(Code), "Код субъекта должен быть указан"));
+        _validationErrors = new List<ValidationError>();
     }
 
     public enum Types
@@ -124,7 +121,7 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
 
     public void Save()
     {
-        ValidateDbIntegrity();
+        UpdateObjectIntegrityState(GetByCode(_code));
         if (_dbRelation != RelationTypes.Pending){
             return;
         }
@@ -215,33 +212,5 @@ public class FederalSubject : InDbValidatedObject<FederalSubject>
             } 
         }
         return null;
-    }
-
-    protected override void ValidateDbIntegrity()
-    {
-        if (CheckErrorsExist()){
-            _dbRelation = RelationTypes.UnboundInvalid;
-            return;
-        }
-
-        FederalSubject? alter = GetByCode(_code);
-        if (alter != null){
-            if (alter._regionType != this._regionType){
-                AddError(new DbIntegrityValidationError<FederalSubject>(nameof(FederalSubjectType), "Несовпадение типа субъекта с зарегистрированным"));
-            }
-            if (alter._subjectUntypedName != this._subjectUntypedName){
-                AddError(new DbIntegrityValidationError<FederalSubject>(nameof(UntypedName), "Несовпадение названия субъекта с зарегистрированным"));
-            }
-            if (CheckErrorsExist()){
-                _dbRelation = RelationTypes.Modified;
-            }
-            else{
-                _dbRelation = RelationTypes.Bound;
-            }
-            return;
-        }
-        else{
-            _dbRelation = RelationTypes.Pending;
-        }
     }
 }
