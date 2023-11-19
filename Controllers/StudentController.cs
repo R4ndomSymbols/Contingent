@@ -20,14 +20,14 @@ public class StudentController : Controller
     public IActionResult ProcessStudent(string query)
     {   
         if (query == "new"){
-            return View(@"Views/Models/StudentModify.cshtml", new StudentModel());
+            return View(@"Views/Modify/StudentModify.cshtml", new StudentModel());
         }
         if (int.TryParse(query, out int id)){
             StudentModel? student = StudentModel.GetStudentById(id);
             if (student == null){
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
-            return View(@"Views/Models/StudentModify.cshtml", student);
+            return View(@"Views/Modify/StudentModify.cshtml", student);
         }
         else{
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
@@ -46,11 +46,5 @@ public class StudentController : Controller
             }
         }
         return Ok();
-    }
-    [HttpGet]
-    [Route("/student/genders")]
-    public JsonResult GetGenders(){
-        var toSend = StudentModel.GetGenders();
-        return Json(toSend.ToArray());
     }
 }

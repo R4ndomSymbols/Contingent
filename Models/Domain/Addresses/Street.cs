@@ -3,6 +3,7 @@ using Npgsql;
 using Utilities;
 using StudentTracking.Models.Domain.Misc;
 using Utilities.Validation;
+using StudentTracking.Models.JSON;
 namespace StudentTracking.Models.Domain.Address;
 
 public class Street : DbValidatedObject
@@ -120,6 +121,16 @@ public class Street : DbValidatedObject
         _streetType = Types.NotMentioned;
         _parentSettlementId = Utils.INVALID_ID;
     }
+    public static Street MakeUnsafe(int id, string untypedName, int type){
+        var dist = new Street
+        {
+            _id = id,
+            _untypedName = untypedName,
+            _streetType = (Types)type 
+        };
+        return dist;
+    }
+
     public bool Save()
     {
         if (CurrentState != RelationTypes.Pending || !Settlement.IsIdExists(_parentSettlementId)){

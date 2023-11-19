@@ -6,10 +6,11 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Utilities;
+using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain;
 
-public class StudentModel : ValidatedObject<StudentModel>
+public class StudentModel : ValidatedObject
 {
 
     private int _id;
@@ -43,7 +44,7 @@ public class StudentModel : ValidatedObject<StudentModel>
             if (PerformValidation(
             
             () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.Snils)
-            , new ValidationError<StudentModel>(nameof(Snils), "Неверный формат СНИЛС")))
+            , new ValidationError(nameof(Snils), "Неверный формат СНИЛС")))
             {
                 _snils = value;
             }
@@ -56,7 +57,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             var address = AddressModel.GetAddressById(value);
             if (PerformValidation(
-                () => address != null, new ValidationError<StudentModel>(nameof(ActualAddressId), "Неверно заданный адрес"))
+                () => address != null, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
             ){
                 _actualAddress = address;
             }
@@ -72,7 +73,7 @@ public class StudentModel : ValidatedObject<StudentModel>
             () =>
             {
                 return ValidatorCollection.CheckStringLength(value, 12, 12);
-            }, new ValidationError<StudentModel>(nameof(Inn), "Неверный формат ИНН")))
+            }, new ValidationError(nameof(Inn), "Неверный формат ИНН")))
             {
                 _snils = value;
             }
@@ -84,7 +85,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         set
         {
             if (PerformValidation(
-            () => Utils.TryParseDate(value), new ValidationError<StudentModel>(nameof(DateOfBirth), "Неверный формат даты либо дата некорректна")))
+            () => Utils.TryParseDate(value), new ValidationError(nameof(DateOfBirth), "Неверный формат даты либо дата некорректна")))
             {
                 _dateOfBirth = Utils.ParseDate(value);
             }
@@ -97,11 +98,11 @@ public class StudentModel : ValidatedObject<StudentModel>
             if (PerformValidation(
             () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.DecimalFormat)
             ,
-            new ValidationError<StudentModel>(nameof(AdmissionScore), "Неверный формат среднего балла")))
+            new ValidationError(nameof(AdmissionScore), "Неверный формат среднего балла")))
             {
                 decimal got = Math.Round(decimal.Parse(value),2);
                 if (PerformValidation(() => ValidatorCollection.CheckRange(got, 3m, 5m),
-                new ValidationError<StudentModel>(nameof(AdmissionScore), "Неверное значение среднего балла"))){
+                new ValidationError(nameof(AdmissionScore), "Неверное значение среднего балла"))){
                     _admissionScore = got;
                 }
                 
@@ -122,7 +123,7 @@ public class StudentModel : ValidatedObject<StudentModel>
             if (PerformValidation(
             () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits) &&
                     ValidatorCollection.CheckStringLength(value, 1, 6),
-            new ValidationError<StudentModel>(nameof(GradeBookNumber), "Неверный формат номера в поименной книге")))
+            new ValidationError(nameof(GradeBookNumber), "Неверный формат номера в поименной книге")))
             {
                 _gradeBookNumber = value;
             }
@@ -134,7 +135,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             if (PerformValidation(
             () => Enum.TryParse(typeof(Genders.GenderCodes), value.ToString(), out object? t),
-            new ValidationError<StudentModel>(nameof(GradeBookNumber), "Неверный пол")))
+            new ValidationError(nameof(GradeBookNumber), "Неверный пол")))
             {
                 _gender = (Genders.GenderCodes)value;
             }
@@ -147,7 +148,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             if (PerformValidation(
             () => Enum.TryParse(typeof(TargetEduAgreement.Types), value.ToString(), out object? t),
-            new ValidationError<StudentModel>(nameof(TargetAgreementType), "Неверный тип договора о целевом обучении")))
+            new ValidationError(nameof(TargetAgreementType), "Неверный тип договора о целевом обучении")))
             {
                 _targetAgreementType = (TargetEduAgreement.Types)value;
             }
@@ -159,7 +160,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             if (PerformValidation(
             () => int.TryParse(value, out int mark) || ValidatorCollection.CheckStringLength(value, 0 , 0),
-            new ValidationError<StudentModel>(nameof(GiaMark), "Неверный формат оценки ГИА")))
+            new ValidationError(nameof(GiaMark), "Неверный формат оценки ГИА")))
             {
                 if (value.Length == 0){
                     _giaMark = null;
@@ -167,7 +168,7 @@ public class StudentModel : ValidatedObject<StudentModel>
                 else{
                     if (PerformValidation (
                         () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                        new ValidationError<StudentModel>(nameof(GiaMark), "Неверное значение оценки ГИА"))
+                        new ValidationError(nameof(GiaMark), "Неверное значение оценки ГИА"))
                     ){
                         _giaMark = int.Parse(value);
                     }
@@ -182,7 +183,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             if (PerformValidation(
             () => int.TryParse(value, out int mark) || ValidatorCollection.CheckStringLength(value, 0 , 0),
-            new ValidationError<StudentModel>(nameof(GiaDemoExamMark), "Неверный формат оценки ГИА (демэкзамен)")))
+            new ValidationError(nameof(GiaDemoExamMark), "Неверный формат оценки ГИА (демэкзамен)")))
             {
                 if (value.Length == 0){
                     _giaDemoExamMark = null;
@@ -190,7 +191,7 @@ public class StudentModel : ValidatedObject<StudentModel>
                 else{
                     if (PerformValidation (
                         () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                        new ValidationError<StudentModel>(nameof(GiaDemoExamMark), "Неверное значение оценки ГИА (демэкзамен)"))
+                        new ValidationError(nameof(GiaDemoExamMark), "Неверное значение оценки ГИА (демэкзамен)"))
                     ){
                         _giaDemoExamMark = int.Parse(value);
                     }
@@ -204,7 +205,7 @@ public class StudentModel : ValidatedObject<StudentModel>
         {
             if (PerformValidation(
             () => Enum.TryParse(typeof(PaidEduAgreement.Types), value.ToString(), out object? t),
-            new ValidationError<StudentModel>(nameof(PaidAgreementType), "Неверный тип договора о целевом обучении")))
+            new ValidationError(nameof(PaidAgreementType), "Неверный тип договора о целевом обучении")))
             {
                 _paidAgreementType = (PaidEduAgreement.Types)value;
             }
@@ -228,7 +229,6 @@ public class StudentModel : ValidatedObject<StudentModel>
         _snils = "";
         _inn = "";
         _gradeBookNumber = "";
-        _validationErrors = new List<ValidationError<StudentModel>>();
     }
     public static StudentModel? GetStudentById(int id)
     {

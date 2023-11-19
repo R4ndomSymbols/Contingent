@@ -29,7 +29,7 @@ public class District : DbValidatedObject
 
     private int _id;
     private int _federalSubjectCode;
-    private string _fullName;
+    private string _untypedName;
     private Types _districtType;
     public int Id
     {
@@ -64,7 +64,7 @@ public class District : DbValidatedObject
     }
     public string UntypedName
     {
-        get => _fullName;
+        get => _untypedName;
         set
         {
             if (PerformValidation(
@@ -79,7 +79,7 @@ public class District : DbValidatedObject
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
                         new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
-                        _fullName = value;
+                        _untypedName = value;
                     }
                 }
             }
@@ -87,21 +87,30 @@ public class District : DbValidatedObject
     }
 
     public string LongTypedName {
-        get => Names[_districtType].FormatLong(_fullName);
+        get => Names[_districtType].FormatLong(_untypedName);
     }
 
 
     protected District(int id, int parentCode, string name, Types type) : base()
     {
         _id = id;
-        _fullName = name;
+        _untypedName = name;
         _districtType = type;
     }
     protected District() : base() {
 
-        _fullName = "";
+        _untypedName = "";
         _districtType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
+    }
+    public static District MakeUnsafe(int id, string untypedName, int type){
+        var dist = new District
+        {
+            _id = id,
+            _untypedName = untypedName,
+            _districtType = (Types)type 
+        };
+        return dist;
     }
     public bool Save()
     {
@@ -119,12 +128,14 @@ public class District : DbValidatedObject
                 Parameters = {
                         new("p1", _federalSubjectCode),
                         new("p2", _districtType),
-                        new("p3", _fullName),
+                        new("p3", _untypedName),
                     }
             })
             {
                 var reader = cmd.ExecuteReader();
                 _id = (int)reader["id"];
+                SetBound();
+                return true;
             }
         }
     }
@@ -233,7 +244,7 @@ public class District : DbValidatedObject
         return GetById(_id);
     }
 
-    public override bool Equals(object? obj){
+    public override bool Equals(IDbObjectValidated? obj){
         if (obj is null){
             return false;
         }
@@ -244,7 +255,7 @@ public class District : DbValidatedObject
             else{
                 var right = (District)obj;
                 return _districtType == right._districtType &&
-                _fullName == right._fullName &&
+                _untypedName == right._untypedName &&
                 _federalSubjectCode == right._federalSubjectCode &&
                 _id == right._id;
             }        

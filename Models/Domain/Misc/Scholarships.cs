@@ -60,13 +60,8 @@ public class Scholarship
                 }
             })
             {
-                try{
-                    var reader = command.ExecuteReader();
-                    return (int)reader["id"];
-                }
-                catch (NpgsqlException){
-                    throw new ValidationExeption("Невозможно добавить дубликат стипендии");
-                }
+                var reader = command.ExecuteReader();
+                return (int)reader["id"];
             }
             }
             else {
@@ -83,13 +78,8 @@ public class Scholarship
                 }
             })
             {
-                try{
-                    command.ExecuteNonQuery();
-                    return toSave.Id;
-                }
-                catch (NpgsqlException){
-                    throw new ValidationExeption("Невозможно сделать существующую стипендию дублирующейся");
-                }
+                command.ExecuteNonQuery();
+                return toSave.Id;
             }
             }
         }

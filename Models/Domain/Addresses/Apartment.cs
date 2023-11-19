@@ -90,15 +90,13 @@ public class Apartment : DbValidatedObject
         _untypedName = "";
         _apartmentType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
+        AddError(new ValidationError(nameof(UntypedName), "Название должно быть указано"));
+        AddError(new ValidationError(nameof(UntypedName), "Тип должен быть указан"));
     }
-    public void Save()
+    public bool Save()
     {
-        if (IsIdExists()){
-            return;
-        }
-
         if (CurrentState != RelationTypes.Pending || !Building.IsIdExists(_parentBuildingId)){
-            return;
+            return false;;
         }
 
         using (var conn = Utils.GetConnectionFactory())
@@ -117,6 +115,7 @@ public class Apartment : DbValidatedObject
                 var reader = cmd.ExecuteReader();
                 _id = (int)reader["id"];
                 SetBound();
+                return true;
             }
         }
     }
@@ -176,7 +175,7 @@ public class Apartment : DbValidatedObject
         }
     }
     public static Apartment? BuildByName(string? fullname){
-        if (fullname == null){
+        if (string.IsNullOrEmpty(fullname)){
             return null;
         }
         NameToken? extracted;
@@ -189,7 +188,7 @@ public class Apartment : DbValidatedObject
                 return toBuild;
             } 
         }
-        return null;
+        return toBuild;
     }
 
     private bool IsIdExists(){

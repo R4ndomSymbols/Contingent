@@ -1,0 +1,148 @@
+@using StudentTracking.Models.Domain;
+@using StudentTracking.Models.Domain.Misc;
+@model StudentTracking.Models.Domain.StudentModel
+@{
+    ViewData["Title"] = "Студент";
+}
+<div class="container">
+    <div class="row">
+        <label for="grade_book" class="col-2">Номер зачетки</label>
+        <input id="grade_book" class="col-2" value="@Model.GradeBookNumber"/>
+        <div id = "grade_book_err"></div>
+    </div>
+    <div class="row">
+        <label for="snils" class="col-2">Снилс</label>
+        <input id="snils" class="col-2" value="@Model.Snils"/>
+        <div id = "snils_err"></div>
+    </div>
+    <div div class="row" >
+        <label for="inn" class="col-2">Инн</label>
+        <input id="inn" class="col-2" value="@Model.Inn"/>
+        <div id = "inn_err"></div>
+    </div>
+    
+    <div>
+        <label for="date_of_birth" class="col-2">Дата Рождения</label>
+        <input id="date_of_birth" class="col-2" value="@Model.DateOfBirth"/>
+        <div id = "data_err"></div>
+    </div>
+    
+    <div class="row">
+        <label for="gender" class="col-2">Пол</label>
+        <select id="gender" class="col-2" hint = "@Model.Gender" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.Genders.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+
+    <div class="row">
+        <label for="target" class="col-2">Договор о целевом обучении</label>
+        <select id="target" class="col-2" hint = "@Model.TargetAgreementType" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.TargetEduAgreement.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+    <div class="row">
+        <label for="paid" class="col-2">Договор об обучении на платной основе</label>
+        <select id="paid" class="col-2" hint = "@Model.PaidAgreementType" >
+                @foreach(var g in StudentTracking.Models.Domain.Misc.PaidEduAgreement.Names){
+                    <option value="@g.Key">@g.Value</option>
+                }
+        </select>
+    </div>
+    <div>
+        <label for="addmission_score">Вступительный балл</label>
+         <input id="admission_score" class="col-2" value="@Model.AdmissionScore"/>
+    </div>
+    <div>
+        <label for="gia_mark" class=>Балл ГИА</label>
+        <input id="gia_mark" class="col-2" value="@Model.GiaMark"/>
+    </div>
+    <div>
+        <label for="gia_demo_exam">Балл ГИА (демэкзамен)</label>
+        <input id="gia_demo_exam" class="col-2" value="@Model.GiaDemoExamMark"/>
+    </div>
+    <label for = "russian_citizenship_panel">Российское гражданство</label>
+
+    @{
+        RussianCitizenship? citizenship = RussianCitizenship.GetById(Model.RussianCitizenshipId);
+    }
+    @if(citizenship != null){
+        <div>
+            <h2>Гражданство (РФ)</h2>
+            <input type="hidden" value="@citizenship.Id"/>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Фамилия</h5>
+                <p class="col-3">@citizenship.Surname</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Имя</h5>
+                <p class="col-3">@citizenship.Name</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Отчество</h5>
+                <p class="col-3">@citizenship.Patronymic</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Номер паспорта</h5>
+                <p class="col-3">@citizenship.PassportNumber</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Серия паспорта</h5>
+                <p class="col-3">@citizenship.PassportSeries</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Прописка</h5>
+                @{
+                   string fullAddress = citizenship.LegalAddress == null ? "Не указана" : citizenship.LegalAddress.FullAddressString;
+                }
+                <p class="col-3">@fullAddress</p>
+            </div>
+        </div>
+    }
+    else{
+         <div id="russian_citizenship_panel">
+        <div>
+            <h2>Гражданство (РФ)</h2>
+            <input type="hidden"/>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Фамилия</h5>
+                <input class="col-3"/>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Имя</h5>
+                <input class="col-3"/>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Отчество</h5>
+                <input class="col-3"/>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Номер паспорта</h5>
+                <input class="col-3"/>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Серия паспорта</h5>
+                <input class="col-3"/>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-3">Прописка</h5>
+                <input class="col-3"/>
+            </div>
+        </div>
+
+    </div>
+    }
+    <button id="save">
+        Сохранить
+    </button>
+
+    <input type="hidden" id="student_id"value="@Model.Id"/>
+</div>
+
+<!--script src="~/js/site.js"></script>
+<script src="~/js/students.js"></script>-->
+
+

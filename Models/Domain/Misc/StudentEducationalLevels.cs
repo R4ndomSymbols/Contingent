@@ -44,13 +44,7 @@ public class StudentEducationalLevelRecord {
                 }
             })
             {
-                try {
-                    command.ExecuteNonQuery();
-                }
-                catch (NpgsqlException) {
-                    throw new ValidationExeption("Нельзя добавить дубликат уровня образования");
-                }
-
+                command.ExecuteNonQuery();
             }
         }
     }

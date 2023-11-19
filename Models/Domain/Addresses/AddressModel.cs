@@ -1,8 +1,11 @@
 namespace StudentTracking.Models.Domain.Address;
 
 using Npgsql;
+using StudentTracking.Models.JSON;
+using StudentTracking.Models.SQL;
 using System.Data;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Principal;
@@ -14,7 +17,7 @@ using Utilities.Validation;
 public class AddressModel : ValidatedObject
 {
 
-    private int? _id;
+    private int _id;
     private FederalSubject? _subjectPart;
     private District? _districtPart;
     private SettlementArea? _settlementAreaPart;
@@ -215,37 +218,14 @@ public class AddressModel : ValidatedObject
             }
             else
             {
-
-                List<string> parts = new List<string>();
-                if (SubjectPart != null)
-                {
-                    parts.Add(SubjectPart);
-                }
-                if (DistrictPart != null)
-                {
-                    parts.Add(DistrictPart);
-                }
-                if (SettlementAreaPart != null)
-                {
-                    parts.Add(SettlementAreaPart);
-                }
-                if (SettlementPart != null)
-                {
-                    parts.Add(SettlementPart);
-                }
-                if (StreetPart != null)
-                {
-                    parts.Add(StreetPart);
-                }
-                if (BuildingPart != null)
-                {
-                    parts.Add(BuildingPart);
-                }
-                if (ApartmentPart != null)
-                {
-                    parts.Add(ApartmentPart);
-                }
-                return string.Join(", ", parts);
+                return CreateAddressString (
+                    _subjectPart, 
+                    _districtPart,
+                    _settlementAreaPart,
+                    _settlementPart,
+                    _streetPart,
+                    _buildingPart,
+                    _apartmentPart);
             }
         }
     }
@@ -254,7 +234,7 @@ public class AddressModel : ValidatedObject
         get => _id;
     }
 
-    protected AddressModel(FederalSubject f, District d, SettlementArea? sa, Settlement s, Street st, Building b, Apartment? a)
+    private AddressModel(FederalSubject f, District d, SettlementArea? sa, Settlement s, Street st, Building b, Apartment? a)
     {
         _subjectPart = f;
         _districtPart = d;
@@ -264,7 +244,7 @@ public class AddressModel : ValidatedObject
         _buildingPart = b;
         _apartmentPart = a;
     }
-    protected AddressModel()
+    public AddressModel()
     {
         _id = Utils.INVALID_ID;
         AddError(new ValidationError(nameof(SubjectPart), "Субъект федерации должен быть указан"));
@@ -274,6 +254,39 @@ public class AddressModel : ValidatedObject
         AddError(new ValidationError(nameof(BuildingPart), "Дом должен быть указан"));
 
     }
+    public static string CreateAddressString(FederalSubject? f, District? d, SettlementArea? sa, Settlement? s, Street? st, Building? b, Apartment? a){
+        List<string> parts = new List<string>();
+        if (f != null)
+        {
+            parts.Add(f.LongTypedName);
+        }
+        if (d != null)
+        {
+            parts.Add(d.LongTypedName);
+        }
+        if (sa != null)
+        {
+            parts.Add(sa.LongTypedName);
+        }
+        if (s != null)
+        {
+            parts.Add(s.LongTypedName);
+        }
+        if (st != null)
+        {
+            parts.Add(st.LongTypedName);
+        }
+        if (b != null)
+        {
+            parts.Add(b.LongTypedName);
+        }
+        if (a != null)
+        {
+            parts.Add(a.LongTypedName);
+        }
+        return string.Join(", ", parts);
+    }
+
 
     public static string? GetAddressNameById(int id)
     {
@@ -372,6 +385,37 @@ public class AddressModel : ValidatedObject
         }
     }
 
+    public static List<string> GetNextSuggestions(string toFound){
+        var builder = new AddressRestoreQueryBuilder();
+        int maxCount = 50;
+        var suggestions = new List<string>();
+        var tmp = builder.SelectFrom(typeof(Street), toFound, maxCount);
+        if (tmp != null){
+            maxCount -= tmp.Count;
+            suggestions.AddRange(tmp);
+        }
+        tmp = builder.SelectFrom(typeof(Settlement), toFound, maxCount);
+        if (tmp != null){
+            maxCount -= tmp.Count;
+            suggestions.AddRange(tmp);
+        }
+        tmp = builder.SelectFrom(typeof(SettlementArea), toFound, maxCount);
+        if (tmp != null){
+            maxCount -= tmp.Count;
+            suggestions.AddRange(tmp);
+        }
+        tmp = builder.SelectFrom(typeof(District), toFound, maxCount);
+        if (tmp != null){
+            maxCount -= tmp.Count;
+            suggestions.AddRange(tmp);
+        }
+        tmp = builder.SelectFrom(typeof(FederalSubject), toFound, maxCount);
+        if (tmp != null){
+            suggestions.AddRange(tmp);
+        }
+        return suggestions;
+    }
+
     public static AddressModel? BuildFromString(string? address)
     {
         if (address == null)
@@ -407,46 +451,74 @@ public class AddressModel : ValidatedObject
             return built;
         }
     }
-    public void Save()
+ 
+
+    public bool Save()
     {
         if (CheckErrorsExist())
         {
-            return;
+            return false;
         }
         else
         {
             if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
                 _streetPart == null || _buildingPart == null){
-                    return;
+                    return false;
                 }
 
-            if (_subjectPart.Save()) {
-                _districtPart.SubjectParentId = int.Parse(_subjectPart.Code);
-                    if (_districtPart.Save()) {
-                        int? saId = null;
-                        if (_settlementAreaPart != null){
-                            _settlementAreaPart.DistrictParentId = _districtPart.Id;
-                            if (_settlementAreaPart.Save()){
-                                saId = _settlementAreaPart.Id;
-                            }
-                        }
-                        if (saId!=null){
-                            _settlementPart.SettlementAreaParentId = saId; 
-                        }
-                        else{
-                            _settlementPart.DistrictParentId = _districtPart.Id;
-                        }
-                        if (_settlementPart.Save()){
-                            _streetPart.SettlementParentId = _streetPart.Id;
-                            if (_streetPart.Save()){
-                                _buildingPart.StreetParentId = _streetPart.Id;
-                                if (_buildingPart.Save()){
-
-                                }
-                            }
-                        }
+            if (!_subjectPart.Save()) 
+            {
+                return false;
+            }
+            _districtPart.SubjectParentId = int.Parse(_subjectPart.Code);
+            if (!_districtPart.Save()) {
+                return false;
+            }
+            int? saId = null;
+            if (_settlementAreaPart != null){
+                _settlementAreaPart.DistrictParentId = _districtPart.Id;
+                if (!_settlementAreaPart.Save()){
+                    return false;
+                }
+                saId = _settlementAreaPart.Id;      
+            }
+            
+            if (saId!=null){
+                _settlementPart.SettlementAreaParentId = saId; 
+            }
+            else{
+                _settlementPart.DistrictParentId = _districtPart.Id;
+            }
+            if (!_settlementPart.Save()){
+                return false;
+            }
+            _streetPart.SettlementParentId = _streetPart.Id;
+            if (!_streetPart.Save())
+            {
+                return false;
+            }
+            _buildingPart.StreetParentId = _streetPart.Id;
+            if (!_buildingPart.Save()){
+                return false;
+            }
+            if (_apartmentPart != null){
+                _apartmentPart.ParentBuildingId = _buildingPart.Id;
+                if (!_apartmentPart.Save()){
+                    return false;
+                }  
+            }
+            using (var conn = Utils.GetConnectionFactory()){
+                conn.Open();
+                using (var cmd = new NpgsqlCommand("INSERT INTO addresses (building, apartment) VALUES (@p1, @p2) RETURNING id", conn) {
+                    Parameters = {
+                        new ("p1", _buildingPart.Id),
+                        new ("p2", _apartmentPart == null ? DBNull.Value : _apartmentPart.Id)
+                    }})
+                    {
+                        var reader = cmd.ExecuteReader();
+                        _id = (int)reader["id"];
+                        return true;
                     }
-               
             }
         }
     }

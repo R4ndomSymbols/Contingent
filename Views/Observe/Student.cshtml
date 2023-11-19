@@ -63,7 +63,7 @@
     <div class="d-flex flex-row">
         <h5 class="col-3">Фактический адресс</h5>
         @{
-           string factAddress =  Model.AddressObject == null ? "Не указан" : Model.AddressObject.Address;
+           string factAddress =  Model.AddressObject == null ? "Не указан" : Model.AddressObject.FullAddressString;
         }
         <p class="col-3">@factAddress</p>
     </div>
@@ -97,9 +97,9 @@
             <div class="d-flex flex-row">
                 <h5 class="col-3">Прописка</h5>
                 @{
-                   string fullAddress = citizenship.
+                   string fullAddress = citizenship.LegalAddress == null ? "Не указана" : citizenship.LegalAddress.FullAddressString;
                 }
-                <p class="col-3">@citizenship.</p>
+                <p class="col-3">@fullAddress</p>
             </div>
         </div>
     }

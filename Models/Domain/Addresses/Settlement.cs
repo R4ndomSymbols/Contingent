@@ -132,9 +132,17 @@ public class Settlement : DbValidatedObject
         _untypedName = name;
         _settlementType = type;
     }
+     public static Settlement MakeUnsafe(int id, string untypedName, int type){
+        var dist = new Settlement
+        {
+            _id = id,
+            _untypedName = untypedName,
+            _settlementType = (Types)type 
+        };
+        return dist;
+    }
 
     // ошибка для привлечения внимания, переделать сохранение (неверные NULL значения)
-    --
     public bool Save()
     {
         if (CurrentState != RelationTypes.Pending || 
@@ -152,7 +160,7 @@ public class Settlement : DbValidatedObject
 	            " VALUES (@p1, @p2, @p3) RETURNING id", conn)
             {
                 Parameters = {
-                        new("p1", _parentSettlementAreaId),
+                        new("p1", (int)_parentSettlementAreaId),
                         new("p2", _settlementType),
                         new("p3", _untypedName),
                     }

@@ -98,6 +98,17 @@ public class SettlementArea : DbValidatedObject
     protected SettlementArea() : base() {
         _untypedName = "";
         _settlementAreaType = Types.NotMentioned;
+        _id = Utils.INVALID_ID;
+        _parentDistrictId = Utils.INVALID_ID;
+    }
+    public static SettlementArea MakeUnsafe(int id, string untypedName, int type){
+        var dist = new SettlementArea
+        {
+            _id = id,
+            _untypedName = untypedName,
+            _settlementAreaType = (Types)type 
+        };
+        return dist;
     }
     
     public bool Save()

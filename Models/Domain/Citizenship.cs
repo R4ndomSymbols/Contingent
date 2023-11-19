@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Npgsql;
 using StudentTracking.Models.Domain.Address;
 using Utilities;
+using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain;
 
@@ -14,7 +15,7 @@ public interface ICitizenship
 
 }
 
-public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizenship
+public class RussianCitizenship : ValidatedObject, ICitizenship
 {
     // добавить ограничения уникальности некоторых параметров
     private AddressModel? _legalAddress;
@@ -36,11 +37,11 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
         set {
             if (PerformValidation(
                 () => ValidatorCollection.CheckStringLength(value, 1, 50),
-                new ValidationError<RussianCitizenship>(nameof(Name), "Имя такой длины не является допустимым")   
+                new ValidationError(nameof(Name), "Имя такой длины не является допустимым")   
             )){
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianLetters),
-                    new ValidationError<RussianCitizenship>(nameof(Name), "Имя содержит недопустимые символы")
+                    new ValidationError(nameof(Name), "Имя содержит недопустимые символы")
                 )){
                     _name = value;
                 }
@@ -53,11 +54,11 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
         set {
             if (PerformValidation(
                 () => ValidatorCollection.CheckStringLength(value, 1, 50),
-                new ValidationError<RussianCitizenship>(nameof(Surname), "Фамилия такой длины не является допустимой")   
+                new ValidationError(nameof(Surname), "Фамилия такой длины не является допустимой")   
             )){
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.RussianNamePart),
-                    new ValidationError<RussianCitizenship>(nameof(Surname), "Имя содержит недопустимые символы")
+                    new ValidationError(nameof(Surname), "Имя содержит недопустимые символы")
                 )){
                     _surname = value;
                 }
@@ -70,11 +71,11 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
         set {
             if (PerformValidation(
                 () => ValidatorCollection.CheckStringLength(value, 1, 50),
-                new ValidationError<RussianCitizenship>(nameof(Patronymic), "Отчество такой длины не является допустимым")   
+                new ValidationError(nameof(Patronymic), "Отчество такой длины не является допустимым")   
             )){
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.RussianNamePart),
-                    new ValidationError<RussianCitizenship>(nameof(Patronymic), "Отчество содержит недопустимые символы либо имеет неверный формат")
+                    new ValidationError(nameof(Patronymic), "Отчество содержит недопустимые символы либо имеет неверный формат")
                 )){
                     _patronymic = value;
                 }
@@ -86,11 +87,11 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
         set {
              if (PerformValidation(
                 () => ValidatorCollection.CheckStringLength(value, 6, 6),
-                new ValidationError<RussianCitizenship>(nameof(PassportNumber), "Длина номера паспорта должна быть 6 символов")   
+                new ValidationError(nameof(PassportNumber), "Длина номера паспорта должна быть 6 символов")   
             )){
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
-                    new ValidationError<RussianCitizenship>(nameof(PassportNumber), "Номер паспорта должен содержать только цифры")
+                    new ValidationError(nameof(PassportNumber), "Номер паспорта должен содержать только цифры")
                 )){
                     _passportNumber = value;
                 }
@@ -102,11 +103,11 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
         set {
              if (PerformValidation(
                 () => ValidatorCollection.CheckStringLength(value, 4, 4),
-                new ValidationError<RussianCitizenship>(nameof(PassportSeries), "Длина серии паспорта должна быть 4 символа")   
+                new ValidationError(nameof(PassportSeries), "Длина серии паспорта должна быть 4 символа")   
             )){
                 if (PerformValidation(
                     () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
-                    new ValidationError<RussianCitizenship>(nameof(PassportSeries), "Серия паспорта должна содержать только цифры")
+                    new ValidationError(nameof(PassportSeries), "Серия паспорта должна содержать только цифры")
                 )){
                     _passportSeries = value;
                 }
@@ -120,7 +121,7 @@ public class RussianCitizenship : ValidatedObject<RussianCitizenship>, ICitizens
                 () => {
                     _legalAddress = AddressModel.GetAddressById(value);
                     return _legalAddress != null;
-                }, new ValidationError<RussianCitizenship> (nameof(LegalAddressId), "Такой адрес не зарегистрирован"));
+                }, new ValidationError(nameof(LegalAddressId), "Такой адрес не зарегистрирован"));
         }
     }
 

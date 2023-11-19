@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Npgsql;
@@ -21,7 +22,7 @@ public class FederalSubject : DbValidatedObject
 
     private int _code;
     private string _subjectUntypedName;
-    private Types _regionType;
+    private Types _federalSubjectType;
     public string Code
     {
         get => _code.ToString();
@@ -44,17 +45,17 @@ public class FederalSubject : DbValidatedObject
 
         }
     }
-    public int FederalSubjectType
+    public int SubjectType
     {
-        get => (int)_regionType;
+        get => (int)_federalSubjectType;
         set
         {
             if (PerformValidation(
                 () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(nameof(FederalSubjectType), "Неверно указан тип субъекта")
+                new ValidationError(nameof(SubjectType), "Неверно указан тип региона")
             ))
             {
-                _regionType = (Types)value;
+                _federalSubjectType = (Types)value;
             }
 
         }
@@ -84,7 +85,12 @@ public class FederalSubject : DbValidatedObject
     }
     public string LongTypedName {
         get {
-            return Names[_regionType].FormatLong(_subjectUntypedName);
+            return Names[_federalSubjectType].FormatLong(_subjectUntypedName);
+        }
+    }
+    public string NameWithCode {
+        get {
+            return Code + " " + LongTypedName;
         }
     }
 
@@ -92,11 +98,16 @@ public class FederalSubject : DbValidatedObject
     {   
         _code = code;
         _subjectUntypedName = name;
-        _regionType = type;
+        _federalSubjectType = type;
     }
-    protected FederalSubject() : base(){
+    public FederalSubject() : base(){
         _subjectUntypedName = "";
+        _federalSubjectType = Types.NotMentioned;
         _code = Utils.INVALID_ID;
+
+        AddError(new ValidationError(nameof(Code), "Код не указан"));
+        AddError(new ValidationError(nameof(UntypedName), "Название не указано"));
+        AddError(new ValidationError(nameof(SubjectType), "Тип не указан"));
     }
 
     public enum Types
@@ -120,6 +131,16 @@ public class FederalSubject : DbValidatedObject
         {Types.Region, new NameFormatting("обл.", "Область", NameFormatting.BEFORE)},
     };
 
+    public static FederalSubject MakeUnsafe(int code, string untypedName, int type){
+        var fed = new FederalSubject
+        {
+            _code = code,
+            _subjectUntypedName = untypedName,
+            _federalSubjectType = (Types)type 
+        };
+        return fed;
+    }
+
     public bool Save()
     {
         if (CurrentState != RelationTypes.Pending){
@@ -133,7 +154,7 @@ public class FederalSubject : DbValidatedObject
             {
                 Parameters = {
                         new("p1", _code),
-                        new("p2", _regionType),
+                        new("p2", _federalSubjectType),
                         new("p3", _subjectUntypedName),
                     }
             })
@@ -195,6 +216,7 @@ public class FederalSubject : DbValidatedObject
             }
         }
     }
+
     public static FederalSubject? BuildByName(string? fullname){
         if (fullname == null){
             return null;
@@ -214,9 +236,9 @@ public class FederalSubject : DbValidatedObject
         }
         string fullnameWithoutCode = fullname.Substring(codeDelimiter+1); 
         foreach (var pair in Names){
-            extracted = pair.Value.ExtractToken(fullname);
+            extracted = pair.Value.ExtractToken(fullnameWithoutCode);
             if (extracted != null){
-                toBuild.FederalSubjectType = (int)pair.Key;
+                toBuild._federalSubjectType = pair.Key;
                 toBuild.UntypedName = extracted.Name;
                 return toBuild;
             } 
@@ -253,7 +275,7 @@ public class FederalSubject : DbValidatedObject
         var unboxed = (FederalSubject)obj;
         return _code == unboxed._code &&
         _subjectUntypedName == unboxed._subjectUntypedName &&
-        _regionType == unboxed._regionType;
+        _federalSubjectType == unboxed._federalSubjectType;
     }
 
 

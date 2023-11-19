@@ -15,9 +15,9 @@ public static class TargetEduAgreement{
 
         {Types.NotMentioned, "Не указан"},
         {Types.WithFederalGovenrment, "С федеральным государственным органом"},
-        {Types.NotMentioned, "С органом государственной власти субъекта РФ"},
-        {Types.NotMentioned, "С органом местного самоуправления"},
-        {Types.NotMentioned, "С организацией"}
+        {Types.WithRegionGovernment, "С органом государственной власти субъекта РФ"},
+        {Types.WithLocalAutority, "С органом местного самоуправления"},
+        {Types.WithOrganization, "С организацией"}
 
     };
 }
