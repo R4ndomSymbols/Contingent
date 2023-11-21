@@ -24,15 +24,16 @@ public class NameFormatting {
         _tokenOcurrences = new List<Regex>();
     }
 
-    public NameToken? ExtractToken(string? token){
-       if (string.IsNullOrEmpty(token)){
+    public NameToken? ExtractToken(string? tokenContainer){
+       if (string.IsNullOrEmpty(tokenContainer)){
             return null;
        }
-       if (string.IsNullOrWhiteSpace(token)){
+       if (string.IsNullOrWhiteSpace(tokenContainer)){
             return null;
        }
        else{
-            int shortFound = token.IndexOf(_shortName, StringComparison.InvariantCulture);
+            string token = tokenContainer.Trim();
+            int shortFound = token.IndexOf(_shortName, StringComparison.OrdinalIgnoreCase);
             if (shortFound != -1){
                 if (shortFound == 0 || shortFound == token.Length - _shortName.Length){
                     return new NameToken(token.Remove(shortFound, _shortName.Length).Trim(), _shortName);
@@ -41,7 +42,7 @@ public class NameFormatting {
                     return null;
                 }
             }
-            int longFound = token.IndexOf(_longName, StringComparison.InvariantCulture);
+            int longFound = token.IndexOf(_longName, StringComparison.OrdinalIgnoreCase);
             if (longFound != -1){
                 if (longFound == 0 || longFound == token.Length - _longName.Length){
                     return new NameToken(token.Remove(longFound, _longName.Length).Trim(), _longName);

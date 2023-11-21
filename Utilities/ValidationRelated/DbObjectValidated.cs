@@ -4,21 +4,26 @@ namespace Utilities.Validation;
 
 public class DbValidatedObject : IDbObjectValidated
 {
-    protected IEnumerable<ValidationError> _errors;
+    private List<ValidationError> _errors;
+    private Dictionary<string, int> _invokationLog;
     private bool _synced;
     private RelationTypes _relationBetweenObjAndDB;
 
+    private bool ValidationProperlyInvoked {
+        get => _invokationLog.All(x => x.Value > 0);
+    }
+
     public RelationTypes CurrentState {
         get {
-            if (!_synced){
-                UpdateObjectIntegrityState();
-            }
+            UpdateObjectIntegrityState();
+            //Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value)));
             return _relationBetweenObjAndDB;
         }
     }
 
     protected DbValidatedObject(){
         _errors = new List<ValidationError>();
+        _invokationLog = new Dictionary<string, int>();
         _synced = false;
         _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
     }
@@ -51,31 +56,44 @@ public class DbValidatedObject : IDbObjectValidated
     }
 
     protected void AddError(ValidationError err){
-        
-        if (_errors.Any(x => x == err)){
-            return;
-        }
-        else{
-            _errors.Append(err);
-        }
+        _errors.Add(err);
     }
     private void ClearState(string propName){
-        _errors = _errors.Where(x => x.PropertyName != propName);
+        _errors = _errors.Where(x => x.PropertyName != propName).ToList();
     }
     public bool PerformValidation(Func<bool> validation, ValidationError err){
         ClearState(err.PropertyName);
         bool validationResult = validation.Invoke();
+        try {
+            _invokationLog[err.PropertyName] = _invokationLog[err.PropertyName] + 1;
+        }
+        catch (Exception){
+            throw new InvalidOperationException("Поле не зарегистрировано");
+        }
+        
         if (!validationResult){
             AddError(err);
         }
         _synced = false;
         return validationResult;
     }
+    protected void RegisterProperty(string? name){
+        if (name == null){
+            return;
+        }
+        if (_invokationLog.ContainsKey(name)){
+            return;
+        }
+        _invokationLog.Add(name, 0);
+    }
 
     private void UpdateObjectIntegrityState(){
+        if (_synced){
+            return;
+        }
         var alter = this.GetDbRepresentation();
         if (alter == null){
-            if (CheckErrorsExist()){
+            if (CheckErrorsExist() || !ValidationProperlyInvoked){
                 _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
             }
             else{
@@ -95,9 +113,15 @@ public class DbValidatedObject : IDbObjectValidated
         }
         _synced = true;
     }
+
+    public IReadOnlyCollection<ValidationError> GetIntegriryErrors()
+    {
+        return _errors.Where(x => x.GetType() == typeof(DbIntegrityValidationError)).ToList().AsReadOnly();
+    }
 }
 
 public enum RelationTypes {
+
         // айди объекта не представлен в базе и есть ошибки
         UnboundInvalid = 1,
         // ошибок нет, но ID не представлен в базе 

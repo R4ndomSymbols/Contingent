@@ -116,6 +116,9 @@ public class Street : DbValidatedObject
         _streetType = type;
     }
     protected Street() : base() {
+
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(StreetType));
         _id = Utils.INVALID_ID;
         _untypedName = "";
         _streetType = Types.NotMentioned;

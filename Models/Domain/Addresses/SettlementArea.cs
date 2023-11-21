@@ -96,6 +96,8 @@ public class SettlementArea : DbValidatedObject
         _settlementAreaType = type;
     }
     protected SettlementArea() : base() {
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(SettlementAreaType));
         _untypedName = "";
         _settlementAreaType = Types.NotMentioned;
         _id = Utils.INVALID_ID;

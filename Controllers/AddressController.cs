@@ -38,6 +38,20 @@ public class AddressController : Controller
             return Json(AddressModel.GetNextSuggestions(suggest));
         }
     }
+    [HttpGet]
+    [Route ("/addresses/explain/{address?}")]
+    public JsonResult GetAddressInfo(string? address){
+        if (address == null){
+            return Json(new object());
+        }
+        else {
+            var built = AddressModel.BuildFromString(address);
+            if (built == null){
+                return Json(new object());
+            }
+            return Json(new { built.AboutAddress });
+        }
+    }
 
     [HttpPost]
     [Route("/addresses/new/{address?}")]

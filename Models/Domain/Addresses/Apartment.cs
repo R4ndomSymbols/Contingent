@@ -87,11 +87,11 @@ public class Apartment : DbValidatedObject
         _untypedName = name;
     }
     protected Apartment() : base() {
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(ApartmentType));
         _untypedName = "";
         _apartmentType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
-        AddError(new ValidationError(nameof(UntypedName), "Название должно быть указано"));
-        AddError(new ValidationError(nameof(UntypedName), "Тип должен быть указан"));
     }
     public bool Save()
     {

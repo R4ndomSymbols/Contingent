@@ -91,6 +91,8 @@ public class Building : DbValidatedObject
     }
     protected Building() : base()
     {
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(BuildingType));
         _untypedName = "";
         _buildingType = Types.NotMentioned;
     }

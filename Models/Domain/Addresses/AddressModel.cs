@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Utilities;
@@ -205,6 +206,24 @@ public class AddressModel : ValidatedObject
             }
         }
     }
+    [JsonIgnore]
+    public string AboutAddress
+    {
+        get
+        {
+            List<string> accumulator = new List<string>();
+            accumulator.Add("Субъект: " + (_subjectPart == null ? "Не указан/Не обнаружен" : _subjectPart.LongTypedName));
+            accumulator.Add("Муниципалитет верхнего уровня: " + (_districtPart == null ? "Не указан/Не обнаружен" : _districtPart.LongTypedName));
+            accumulator.Add("Муниципальное поселение: " + (_settlementAreaPart == null ? "Не указано/Не обнаружено" : _settlementAreaPart.LongTypedName));
+            accumulator.Add("Населенный пункт: " + (_settlementPart == null ? "Не указан/Не обнаружен" : _settlementPart.LongTypedName));
+            accumulator.Add("Объект дорожной инфраструктуры: " + (_streetPart == null ? "Не указан/Не обнаружен" : _streetPart.LongTypedName));
+            accumulator.Add("Дом: " + (_buildingPart == null ? "Не указан/Не обнаружен" : _buildingPart.LongTypedName));
+            accumulator.Add("Квартира: " + (_apartmentPart == null ? "Не указана/Не обнаружена" : _apartmentPart.LongTypedName));
+            return string.Join("<br/>", accumulator);
+        }
+
+
+    }
 
 
 
@@ -218,8 +237,8 @@ public class AddressModel : ValidatedObject
             }
             else
             {
-                return CreateAddressString (
-                    _subjectPart, 
+                return CreateAddressString(
+                    _subjectPart,
                     _districtPart,
                     _settlementAreaPart,
                     _settlementPart,
@@ -254,7 +273,8 @@ public class AddressModel : ValidatedObject
         AddError(new ValidationError(nameof(BuildingPart), "Дом должен быть указан"));
 
     }
-    public static string CreateAddressString(FederalSubject? f, District? d, SettlementArea? sa, Settlement? s, Street? st, Building? b, Apartment? a){
+    public static string CreateAddressString(FederalSubject? f, District? d, SettlementArea? sa, Settlement? s, Street? st, Building? b, Apartment? a)
+    {
         List<string> parts = new List<string>();
         if (f != null)
         {
@@ -385,32 +405,43 @@ public class AddressModel : ValidatedObject
         }
     }
 
-    public static List<string> GetNextSuggestions(string toFound){
+    public static List<string> GetNextSuggestions(string toFound)
+    {
         var builder = new AddressRestoreQueryBuilder();
         int maxCount = 50;
         var suggestions = new List<string>();
-        var tmp = builder.SelectFrom(typeof(Street), toFound, maxCount);
-        if (tmp != null){
+        var tmp = builder.SelectFrom(FederalSubject.BuildByName(toFound), toFound, maxCount);
+        if (tmp != null)
+        {
             maxCount -= tmp.Count;
             suggestions.AddRange(tmp);
         }
-        tmp = builder.SelectFrom(typeof(Settlement), toFound, maxCount);
-        if (tmp != null){
+        tmp = builder.SelectFrom(District.BuildByName(toFound), toFound, maxCount);
+        if (tmp != null)
+        {
             maxCount -= tmp.Count;
             suggestions.AddRange(tmp);
         }
-        tmp = builder.SelectFrom(typeof(SettlementArea), toFound, maxCount);
-        if (tmp != null){
+        tmp = builder.SelectFrom(SettlementArea.BuildByName(toFound), toFound, maxCount);
+        if (tmp != null)
+        {
             maxCount -= tmp.Count;
             suggestions.AddRange(tmp);
         }
-        tmp = builder.SelectFrom(typeof(District), toFound, maxCount);
-        if (tmp != null){
+        tmp = builder.SelectFrom(Settlement.BuildByName(toFound), toFound, maxCount);
+        if (tmp != null)
+        {
             maxCount -= tmp.Count;
             suggestions.AddRange(tmp);
         }
-        tmp = builder.SelectFrom(typeof(FederalSubject), toFound, maxCount);
-        if (tmp != null){
+        tmp = builder.SelectFrom(Street.BuildByName(toFound), toFound, maxCount);
+        if (tmp != null)
+        {
+            suggestions.AddRange(tmp);
+        }
+        tmp = builder.SearchUntyped(toFound, maxCount);
+        if (tmp != null)
+        {
             suggestions.AddRange(tmp);
         }
         return suggestions;
@@ -451,7 +482,7 @@ public class AddressModel : ValidatedObject
             return built;
         }
     }
- 
+
 
     public bool Save()
     {
@@ -462,34 +493,41 @@ public class AddressModel : ValidatedObject
         else
         {
             if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
-                _streetPart == null || _buildingPart == null){
-                    return false;
-                }
+                _streetPart == null || _buildingPart == null)
+            {
+                return false;
+            }
 
-            if (!_subjectPart.Save()) 
+            if (!_subjectPart.Save())
             {
                 return false;
             }
             _districtPart.SubjectParentId = int.Parse(_subjectPart.Code);
-            if (!_districtPart.Save()) {
+            if (!_districtPart.Save())
+            {
                 return false;
             }
             int? saId = null;
-            if (_settlementAreaPart != null){
+            if (_settlementAreaPart != null)
+            {
                 _settlementAreaPart.DistrictParentId = _districtPart.Id;
-                if (!_settlementAreaPart.Save()){
+                if (!_settlementAreaPart.Save())
+                {
                     return false;
                 }
-                saId = _settlementAreaPart.Id;      
+                saId = _settlementAreaPart.Id;
             }
-            
-            if (saId!=null){
-                _settlementPart.SettlementAreaParentId = saId; 
+
+            if (saId != null)
+            {
+                _settlementPart.SettlementAreaParentId = saId;
             }
-            else{
+            else
+            {
                 _settlementPart.DistrictParentId = _districtPart.Id;
             }
-            if (!_settlementPart.Save()){
+            if (!_settlementPart.Save())
+            {
                 return false;
             }
             _streetPart.SettlementParentId = _streetPart.Id;
@@ -498,27 +536,33 @@ public class AddressModel : ValidatedObject
                 return false;
             }
             _buildingPart.StreetParentId = _streetPart.Id;
-            if (!_buildingPart.Save()){
+            if (!_buildingPart.Save())
+            {
                 return false;
             }
-            if (_apartmentPart != null){
+            if (_apartmentPart != null)
+            {
                 _apartmentPart.ParentBuildingId = _buildingPart.Id;
-                if (!_apartmentPart.Save()){
+                if (!_apartmentPart.Save())
+                {
                     return false;
-                }  
+                }
             }
-            using (var conn = Utils.GetConnectionFactory()){
+            using (var conn = Utils.GetConnectionFactory())
+            {
                 conn.Open();
-                using (var cmd = new NpgsqlCommand("INSERT INTO addresses (building, apartment) VALUES (@p1, @p2) RETURNING id", conn) {
+                using (var cmd = new NpgsqlCommand("INSERT INTO addresses (building, apartment) VALUES (@p1, @p2) RETURNING id", conn)
+                {
                     Parameters = {
                         new ("p1", _buildingPart.Id),
                         new ("p2", _apartmentPart == null ? DBNull.Value : _apartmentPart.Id)
-                    }})
-                    {
-                        var reader = cmd.ExecuteReader();
-                        _id = (int)reader["id"];
-                        return true;
                     }
+                })
+                {
+                    var reader = cmd.ExecuteReader();
+                    _id = (int)reader["id"];
+                    return true;
+                }
             }
         }
     }

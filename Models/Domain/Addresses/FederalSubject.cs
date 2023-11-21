@@ -101,13 +101,14 @@ public class FederalSubject : DbValidatedObject
         _federalSubjectType = type;
     }
     public FederalSubject() : base(){
+
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(Code));
+        RegisterProperty(nameof(SubjectType));
+
         _subjectUntypedName = "";
         _federalSubjectType = Types.NotMentioned;
         _code = Utils.INVALID_ID;
-
-        AddError(new ValidationError(nameof(Code), "Код не указан"));
-        AddError(new ValidationError(nameof(UntypedName), "Название не указано"));
-        AddError(new ValidationError(nameof(SubjectType), "Тип не указан"));
     }
 
     public enum Types
@@ -225,14 +226,14 @@ public class FederalSubject : DbValidatedObject
         FederalSubject toBuild = new FederalSubject();
         string[] parts = fullname.Split(" ");
         if (parts.Length < 2){
-            return toBuild;
+            return null;
         }
         else{
             toBuild.Code = parts[0];
         }
         int codeDelimiter = fullname.IndexOf(' ');
         if (fullname.Length-1 == codeDelimiter){
-            return toBuild;
+            return null;
         }
         string fullnameWithoutCode = fullname.Substring(codeDelimiter+1); 
         foreach (var pair in Names){

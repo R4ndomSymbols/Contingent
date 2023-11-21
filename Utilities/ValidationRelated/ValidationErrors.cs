@@ -10,9 +10,12 @@ public class ValidationError {
     [JsonPropertyName("Field")]
     public string PropertyName {get => _propertyName;}
     
-    public ValidationError( string propName, string exceptionMessage){
+    public ValidationError(string propName, string exceptionMessage){
         _message = exceptionMessage;
         _propertyName = propName;
+    }
+    public override string ToString(){
+        return "Ошибка: " + _message + "\t" + "Свойство: " + _propertyName; 
     }
 
     public static bool operator == (ValidationError? left, ValidationError? right){

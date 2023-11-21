@@ -110,6 +110,8 @@ public class Settlement : DbValidatedObject
     // валидация не проверяет типы, внутри которых возможно размещение городов, добавить
 
     private Settlement() : base(){
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(SettlementType));
         _untypedName = "";
         _settlementType = Types.NotMentioned;
         _id = Utils.INVALID_ID;

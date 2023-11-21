@@ -36,15 +36,30 @@ public class StudentController : Controller
     }
     [HttpPost]
     [Route("/students/add")]
-    public async Task<IActionResult> CreateStudent(){
+    public async Task<JsonResult> CreateStudent(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
             var settings = new JsonSerializerOptions();
-            var deserialized = JsonSerializer.Deserialize<StudentModel>(body);
-            if (deserialized!=null){
-                StudentModel.SaveStudent(deserialized);
-            }
+            //try{
+                var deserialized = JsonSerializer.Deserialize<StudentModel>(body);
+                if (deserialized!=null)
+                {
+                    if (deserialized.CheckErrorsExist()){
+                        return Json(deserialized.GetErrors());
+                    }
+                    deserialized.Save();
+                    if (deserialized.CheckIntegrityErrorsExist()){
+                        return Json(deserialized.GetIntegriryErrors());
+                    }
+                    return Json(new object());
+                }
+                else {
+                    return Json(400);
+                }
+            //}
+            //catch (Exception) {
+            //    return Json(400);
+            //}
         }
-        return Ok();
     }
 }

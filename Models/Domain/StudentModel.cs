@@ -10,11 +10,11 @@ using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain;
 
-public class StudentModel : ValidatedObject
+public class StudentModel : DbValidatedObject
 {
 
     private int _id;
-    private AddressModel? _actualAddress;
+    private int? _actualAddress;
     private string _snils;
     private string _inn;
     private DateTime _dateOfBirth;
@@ -26,15 +26,9 @@ public class StudentModel : ValidatedObject
     private PaidEduAgreement.Types _paidAgreementType;
     private int? _giaMark;
     private int? _giaDemoExamMark;
-
-    [JsonRequired]
     public int Id
     {
         get => _id;
-        set
-        {
-            _id = value;
-        }
     }
     public string Snils
     {
@@ -50,16 +44,33 @@ public class StudentModel : ValidatedObject
             }
         }
     }
-    public int ActualAddressId
+    public int? ActualAddressId
     {
-        get => _actualAddress == null ? Utils.INVALID_ID : _actualAddress.Id;
+        get => _actualAddress;
         set
         {
-            var address = AddressModel.GetAddressById(value);
             if (PerformValidation(
-                () => address != null, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
+                () => {
+                    if (value == null){
+                        return false;
+                    }
+                    else{
+                        using (var conn = Utils.GetConnectionFactory()){
+                            conn.Open();
+                            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM addresses WHERE id = @p1) as ex", conn){
+                                Parameters = {
+                                    new ("p1", (int)value)
+                                }
+                            }){
+                                var reader = cmd.ExecuteReader();
+                                return (bool)reader["ex"];
+                            }
+                }
+            
+                    }
+                }, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
             ){
-                _actualAddress = address;
+                _actualAddress = value;
             }
         }
     }
@@ -97,7 +108,7 @@ public class StudentModel : ValidatedObject
         {
             if (PerformValidation(
             () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.DecimalFormat)
-            ,
+            || ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
             new ValidationError(nameof(AdmissionScore), "Неверный формат среднего балла")))
             {
                 decimal got = Math.Round(decimal.Parse(value),2);
@@ -135,7 +146,7 @@ public class StudentModel : ValidatedObject
         {
             if (PerformValidation(
             () => Enum.TryParse(typeof(Genders.GenderCodes), value.ToString(), out object? t),
-            new ValidationError(nameof(GradeBookNumber), "Неверный пол")))
+            new ValidationError(nameof(Gender), "Неверный пол")))
             {
                 _gender = (Genders.GenderCodes)value;
             }
@@ -211,13 +222,21 @@ public class StudentModel : ValidatedObject
             }
         }
     }
-    [JsonIgnore]
-    public AddressModel? AddressObject {
-        get => _actualAddress;
-    }
 
-    public StudentModel()
+    public StudentModel() : base()
     {
+        RegisterProperty(nameof(DateOfBirth));
+        RegisterProperty(nameof(GiaMark));
+        RegisterProperty(nameof(GiaDemoExamMark));
+        RegisterProperty(nameof(Gender));
+        RegisterProperty(nameof(PaidAgreementType));
+        RegisterProperty(nameof(TargetAgreementType));
+        RegisterProperty(nameof(Snils));
+        RegisterProperty(nameof(Inn));
+        RegisterProperty(nameof(GradeBookNumber));
+        RegisterProperty(nameof(AdmissionScore));
+        RegisterProperty(nameof(ActualAddressId));
+
         _id = -1;
         _actualAddress = null;
         _dateOfBirth = DateTime.Today;
@@ -281,7 +300,7 @@ public class StudentModel : ValidatedObject
                     {
                         _snils = (string)pgreader["snils"],
                         _inn = (string)pgreader["inn"],
-                        _actualAddress = AddressModel.GetAddressById((int)pgreader["actual_address"]),
+                        _actualAddress = (int)pgreader["actual_address"],
                         _dateOfBirth = (DateTime)pgreader["date_of_birth"],
                         _gender = (Genders.GenderCodes)pgreader["gender"],
                         _gradeBookNumber = (string)pgreader["grade_book_number"],
@@ -323,13 +342,17 @@ public class StudentModel : ValidatedObject
             }
         }
     }
-    public static int SaveStudent(StudentModel student)
+
+    public void Save()
     {
+        if (CurrentState != RelationTypes.Pending){
+            Console.WriteLine(CurrentState.ToString());
+            Console.WriteLine(string.Join("\n", GetErrors()));
+            return;
+        }
         using (var conn = Utils.GetConnectionFactory())
         {
             conn.Open();
-            if (student.Id == -1)
-            {
                 using var insertCommand = new NpgsqlCommand(
                     "INSERT INTO students( " +
                     "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
@@ -337,57 +360,53 @@ public class StudentModel : ValidatedObject
                     "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id", conn)
                 {
                     Parameters = {
-                            new ("p1", student._snils),
-                            new ("p2", student._inn),
-                            new ("p3", student._actualAddress),
-                            new ("p4", student._dateOfBirth),
-                            new ("p5", student._russianCitizenshipId == null ? DBNull.Value : (int)student.RussianCitizenshipId),
-                            new ("p6", (int)student._gender),
-                            new ("p7", student._gradeBookNumber),
-                            new ("p8", (int)student._targetAgreementType),
-                            new ("p9", student._giaMark == null ? DBNull.Value : (int)student._giaMark),
-                            new ("p10", student._giaDemoExamMark == null ? DBNull.Value : (int)student._giaDemoExamMark),
-                            new ("p11", (int)student._paidAgreementType),
-                            new ("p12", student._admissionScore),
+                            new ("p1", _snils),
+                            new ("p2", _inn),
+                            new ("p3", _actualAddress == null ? DBNull.Value : (int)_actualAddress),
+                            new ("p4", _dateOfBirth),
+                            new ("p5", _russianCitizenshipId == null ? DBNull.Value : (int)RussianCitizenshipId),
+                            new ("p6", (int)_gender),
+                            new ("p7", _gradeBookNumber),
+                            new ("p8", (int)_targetAgreementType),
+                            new ("p9",  _giaMark == null ? DBNull.Value : (int)_giaMark),
+                            new ("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark),
+                            new ("p11", (int)_paidAgreementType),
+                            new ("p12", _admissionScore),
                         }
                 };
                 var reader = insertCommand.ExecuteReader();
                 reader.Read();
-                return (int)reader["id"];
+                _id = (int)reader["id"];
 
             }
-            else
-            {
-                using var updateCommand = new NpgsqlCommand(
+        }
+    private void Update(){
+        using (var conn = Utils.GetConnectionFactory()){
+        using var updateCommand = new NpgsqlCommand(
                     "UPDATE students " +
                     "SET snils=@p1, inn=@p2, actual_address=@p3, date_of_birth=@p4, rus_citizenship_id=@p5, gender=@p6, grade_book_number=@p7, " +
                     "target_education_agreement=@p8, gia_mark=@p9, gia_demo_exam_mark=@p10, paid_education_agreement=@p11, admission_score=@p12 " +
                     "WHERE id = @p13", conn)
                 {
                     Parameters = {
-                             new ("p1", student._snils),
-                            new ("p2", student._inn),
-                            new ("p3", student._actualAddress),
-                            new ("p4", student._dateOfBirth),
-                            new ("p5", student._russianCitizenshipId == null ? DBNull.Value : (int)student.RussianCitizenshipId),
-                            new ("p6", (int)student._gender),
-                            new ("p7", student._gradeBookNumber),
-                            new ("p8", (int)student._targetAgreementType),
-                            new ("p9", student._giaMark == null ? DBNull.Value : (int)student._giaMark),
-                            new ("p10", student._giaDemoExamMark == null ? DBNull.Value : (int)student._giaDemoExamMark),
-                            new ("p11", (int)student._paidAgreementType),
-                            new ("p12", student._admissionScore),
-                            new ("p13", student._id),
+                             new ("p1", _snils),
+                            new ("p2", _inn),
+                            new ("p3", _actualAddress),
+                            new ("p4", _dateOfBirth),
+                            new ("p5", _russianCitizenshipId == null ? DBNull.Value : (int)RussianCitizenshipId),
+                            new ("p6", (int)_gender),
+                            new ("p7", _gradeBookNumber),
+                            new ("p8", (int)_targetAgreementType),
+                            new ("p9", _giaMark == null ? DBNull.Value : (int)_giaMark),
+                            new ("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark),
+                            new ("p11", (int)_paidAgreementType),
+                            new ("p12", _admissionScore),
+                            new ("p13", _id),
                         }
                 };
-                updateCommand.ExecuteNonQuery();
-                return student.Id;
-            }
-
+                updateCommand.ExecuteNonQuery(); 
         }
-    }
-
-
+    } 
 }
 
 

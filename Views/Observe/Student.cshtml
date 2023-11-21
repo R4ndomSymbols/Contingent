@@ -1,5 +1,6 @@
 @using StudentTracking.Models.Domain;
 @using StudentTracking.Models.Domain.Misc;
+@using StudentTracking.Models.Domain.Address;
 @model StudentTracking.Models.Domain.StudentModel
 @{
     ViewData["Title"] = "Просмотр";
@@ -63,7 +64,14 @@
     <div class="d-flex flex-row">
         <h5 class="col-3">Фактический адресс</h5>
         @{
-           string factAddress =  Model.AddressObject == null ? "Не указан" : Model.AddressObject.FullAddressString;
+            
+            string factAddress = "Не указан";
+            if (Model.ActualAddressId!= null){
+                 var address = AddressModel.GetAddressById((int)Model.ActualAddressId);
+                 if (address != null){
+                    factAddress = address.FullAddressString; 
+                 }
+            }
         }
         <p class="col-3">@factAddress</p>
     </div>

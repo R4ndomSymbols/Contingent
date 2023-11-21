@@ -46,7 +46,7 @@ public static class Utils {
             }
             if(int.TryParse(parts[0], out int day)){
                 if(int.TryParse(parts[1], out int month)){
-                    if(int.TryParse(parts[1], out int year)){
+                    if(int.TryParse(parts[2], out int year)){
                         try {
                             new DateTime(year, month, day);
                             return true;

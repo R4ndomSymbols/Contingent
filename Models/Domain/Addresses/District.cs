@@ -98,7 +98,8 @@ public class District : DbValidatedObject
         _districtType = type;
     }
     protected District() : base() {
-
+        RegisterProperty(nameof(UntypedName));
+        RegisterProperty(nameof(DistrictType));
         _untypedName = "";
         _districtType = Types.NotMentioned;
         _id = Utils.INVALID_ID;

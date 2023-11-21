@@ -4,6 +4,8 @@ public interface IDbObjectValidated : IValidatedObject, IEquatable<IDbObjectVali
 
     public bool CheckIntegrityErrorsExist();
 
+    public IReadOnlyCollection<ValidationError> GetIntegriryErrors();
+
     public IDbObjectValidated? GetDbRepresentation();
 
 }
