@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Models;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.JSON;
+using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
 
@@ -16,58 +17,52 @@ public class AddressController : Controller
         _logger = logger;
     }
     [HttpGet]
-    [Route("/addresses/federal")]
-    public JsonResult GetAllCountryRegions(){
-        var dbResponce = FederalSubject.GetAll().Select(x => new FederalSubjectJSON() 
+    [Route("/addresses/suggest/{suggest?}")]
+    public async Task<JsonResult> GetSuggestions(string? suggest)
+    {
+        if (suggest == null)
         {
-            Code = int.Parse(x.Code),
-            FullName = x.LongTypedName    
-        });
-        if (dbResponce!=null){
-            return Json(dbResponce.ToArray());
-        }
-        return Json(null);   
-    }
-    [HttpGet]
-    [Route ("/addresses/suggest/{suggest?}")]
-    public JsonResult GetSuggestions(string? suggest){
-        if (suggest == null){
             return Json(new object());
         }
-        else {
-            return Json(AddressModel.GetNextSuggestions(suggest));
+        else
+        {
+            return Json(await AddressModel.GetNextSuggestions(suggest));
         }
     }
     [HttpGet]
-    [Route ("/addresses/explain/{address?}")]
-    public JsonResult GetAddressInfo(string? address){
-        if (address == null){
-            return Json(new object());
+    [Route("/addresses/explain/{address?}")]
+    public async Task<JsonResult> GetAddressInfo(string? address)
+    {
+        var built = AddressModel.BuildFromString(address?.ToLower());
+        if (built == null)
+        {
+            return Json(new { AboutAddress = "Введен пустой адрес"});
         }
-        else {
-            var built = AddressModel.BuildFromString(address);
-            if (built == null){
-                return Json(new object());
-            }
-            return Json(new { built.AboutAddress });
+        var errors = built.GetErrors();
+        if (errors.Any())
+        {
+            return Json(new { AboutAddress = errors.First().ToUserString() });
         }
+        string status = "";
+        Action updateStatus = async () => status = await built.GetAddressInfo();
+        await built.Save(false, updateStatus, updateStatus);
+        return Json(new { AboutAddress = status });   
     }
 
     [HttpPost]
-    [Route("/addresses/new/{address?}")]
-    public JsonResult CreateAddress(string? address){
-      
-            var built = AddressModel.BuildFromString(address);
-            if (built!=null){
-                if (built.CheckErrorsExist()){
-                    return Json(built.GetErrors());
-                }
-                else{
-                    return Json(built.Id);
-                }
+    [Route("/addresses/save/{address?}")]
+    public async Task<JsonResult> CreateAddress(string? address)
+    {
+
+        var built = AddressModel.BuildFromString(address);
+        if (built != null)
+        {
+            await built.Save(true, null, null);
+            if (await built.GetCurrentState(null) == RelationTypes.Bound)
+            {
+                return Json(new { AddressId = built.Id });
             }
-            else{
-                return Json(new object());
-            }
-        }   
+        }
+        return Json(new { AddressError = "Не удалось сохранить адрес" });
+    }
 }

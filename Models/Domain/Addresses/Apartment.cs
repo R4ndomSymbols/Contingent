@@ -23,25 +23,26 @@ public class Apartment : DbValidatedObject
         Apartment = 1
     }
 
-    private int _id; 
+    private int _id;
     private int _parentBuildingId;
     private Types _apartmentType;
     private string _untypedName;
     public int Id
     {
         get => _id;
-        set
-        {
-            _id = value;
+    }
+    public async Task SetParentBuildingId(int id, ObservableTransaction? scope){
+        bool exists = await Building.IsIdExists(id, scope);
+        if (PerformValidation(
+            () => exists,
+            new DbIntegrityValidationError(nameof(ParentBuildingId), "Квартира должна быть размещена в пределах дома")
+        )){
+            _parentBuildingId = id;
         }
     }
     public int ParentBuildingId
     {
         get => _parentBuildingId;
-        set
-        {
-            _parentBuildingId = value;
-        }
     }
     public int ApartmentType
     {
@@ -71,159 +72,214 @@ public class Apartment : DbValidatedObject
                     () => ValidatorCollection.CheckStringLength(value, 1, 10),
                     new ValidationError(nameof(UntypedName), "Название квартиры слишком длинное или короткое")))
                 {
-                    _untypedName = value;
+                    _untypedName = value.ToLower();
                 }
             }
         }
     }
-    public string LongTypedName {
-        get => Names[_apartmentType].FormatLong(_untypedName); 
+    public string LongTypedName
+    {
+        get => Names[_apartmentType].FormatLong(_untypedName);
     }
 
-    protected Apartment(int id, int parentId, string name) : this()
+    private Apartment(int id) : base(RelationTypes.Bound)
     {
         _id = id;
-        _parentBuildingId = parentId;
-        _untypedName = name;
+        _untypedName = "";
     }
-    protected Apartment() : base() {
+    protected Apartment() : base()
+    {
         RegisterProperty(nameof(UntypedName));
         RegisterProperty(nameof(ApartmentType));
+        RegisterProperty(nameof(ParentBuildingId));
         _untypedName = "";
         _apartmentType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
     }
-    public bool Save()
-    {
-        if (CurrentState != RelationTypes.Pending || !Building.IsIdExists(_parentBuildingId)){
-            return false;;
-        }
 
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("INSERT INTO apartments( " +
-	                " building, apartment_number) " +
-	                " VALUES (@p1, @p2) RETURNING id", conn) 
-            {
-                Parameters = {
-                        new("p1", _parentBuildingId),
-                        new("p2", _untypedName),
-                    }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                _id = (int)reader["id"];
-                SetBound();
-                return true;
-            }
-        }
-    }
-    public static List<Apartment>? GetAllApartmentsIn(int buildingId)
+    public async Task Save(ObservableTransaction? scope)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        if (await GetCurrentState(scope) != RelationTypes.Pending)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM apartments WHERE building = @p1", conn)
-            {
-                Parameters = {
-                    new NpgsqlParameter("p1", buildingId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var result = new List<Apartment>();
-                    while (reader.Read())
-                    {
-                        var apt = new Apartment((int)reader["id"], buildingId, (string)reader["full_name"]);
-                        apt.SetBound();
-                        result.Add(apt);
-                    }
-                    return result;
-                }
-            }
+            return;
+        }
+        NpgsqlCommand? command = null;
+        string cmdText =
+       "INSERT INTO apartments( " +
+                    " building, apartment_number) " +
+                    " VALUES (@p1, @p2) RETURNING id";
+        if (scope != null)
+        {
+            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._id = Utils.INVALID_ID));
+        }
+        else
+        {
+            command = new NpgsqlCommand(cmdText, conn);
+        }
+        command.Parameters.Add(new NpgsqlParameter<int>("p1", _parentBuildingId));
+        command.Parameters.Add(new NpgsqlParameter<string>("p2", _untypedName));
+        await using (conn)
+        await using (command)
+        {   
+            using var reader = await command.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            _id = (int)reader["id"];
+            NotifyStateChanged();
         }
     }
-    public static Apartment? GetById(int aId){
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM apartments WHERE id = @p1", conn){
-                Parameters = {
-                    new ("p1", aId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
+    // public static List<Apartment>? GetAllApartmentsIn(int buildingId)
+    // {
+    //     using (var conn = Utils.GetAndOpenConnectionFactory())
+    //     {
+    //         using (var cmd = new NpgsqlCommand($"SELECT * FROM apartments WHERE building = @p1", conn)
+    //         {
+    //             Parameters = {
+    //                 new NpgsqlParameter("p1", buildingId)
+    //             }
+    //         })
+    //         {
+    //             var reader = cmd.ExecuteReader();
+    //             if (!reader.HasRows)
+    //             {
+    //                 return null;
+    //             }
+    //             else
+    //             {
+    //                 var result = new List<Apartment>();
+    //                 while (reader.Read())
+    //                 {
+    //                     var apt = new Apartment((int)reader["id"]);
+    //                     apt._parentBuildingId = buildingId; 
+    //                     apt._untypedName = (string)reader["full_name"];
+    //                     result.Add(apt);
+    //                 }
+    //                 return result;
+    //             }
+    //         }
+    //     }
+    // }
+    public static async Task<Apartment?> GetById(int aId, ObservableTransaction? scope)
+    {
+            NpgsqlConnection conn =  await Utils.GetAndOpenConnectionFactory();
+            string query = "SELECT * FROM apartments WHERE id = @p1";
+            NpgsqlCommand cmd;
+            if (scope == null){
+                cmd = new NpgsqlCommand(query, conn);
+            }
+            else{
+                cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
+            }
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", aId));
+
+            using(conn)
+            using (cmd)
+            {   
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
-                var apt = new Apartment(
-                        id: (int)reader["id"],
-                        name: (string)reader["apartmentNumber"],
-                        parentId: (int)reader["building"]);
-                apt.SetBound();
+                await reader.ReadAsync();
+                var apt = new Apartment((int)reader["id"]);
+                apt._untypedName = (string)reader["apartment_number"];
+                apt._parentBuildingId =  (int)reader["building"];
+                apt._apartmentType = Types.Apartment; 
                 return apt;
             }
-        }
     }
-    public static Apartment? BuildByName(string? fullname){
-        if (string.IsNullOrEmpty(fullname)){
+    public static Apartment? BuildByName(string? fullname)
+    {
+        if (string.IsNullOrEmpty(fullname))
+        {
             return null;
         }
         NameToken? extracted;
-        Apartment toBuild = new Apartment(); 
-        foreach (var pair in Names){
+        Apartment toBuild = new Apartment();
+        foreach (var pair in Names)
+        {
             extracted = pair.Value.ExtractToken(fullname);
-            if (extracted != null){
+            if (extracted != null)
+            {
                 toBuild.ApartmentType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
                 return toBuild;
-            } 
+            }
         }
         return toBuild;
     }
 
-    private bool IsIdExists(){
-        using (var conn = Utils.GetConnectionFactory())
+    // private async Task<bool> IsIdExists()
+    // {
+    //     await using (var conn = await Utils.GetAndOpenConnectionFactory())
+    //     {
+    //         await using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM apartments WHERE id = @p1)", conn)
+    //         {
+    //             Parameters = {
+    //                 new("p1", _id),
+    //             }
+    //         })
+    //         {
+    //             var reader =  await cmd.ExecuteReaderAsync();
+    //             await reader.ReadAsync();
+    //             return (bool)reader["exists"];
+    //         }
+    //     }
+    // }
+
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
+    {
+        Apartment? got = await GetById(_id, scope);
+        if (got == null)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM apartments WHERE id = @p1)", conn) 
+            await using (var conn = await Utils.GetAndOpenConnectionFactory())
             {
-                Parameters = {
-                    new("p1", _id),
+                string cmdText = "SELECT id FROM apartments WHERE building = @p1 AND apartment_number = @p2";
+                NpgsqlCommand cmd;
+                if (scope != null){
+                    cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
                 }
-            })
-            {
-                return (bool)cmd.ExecuteReader()["exists"];
+                else{
+                    cmd = new NpgsqlCommand(cmdText, conn);
+                }
+                
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _parentBuildingId));
+                cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _untypedName));
+                await using (cmd)
+                {   
+                    scope?.Capture();
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    scope?.Release();
+                    if (!reader.HasRows)
+                    {
+                        return null;
+                    }
+                    await reader.ReadAsync();
+                    _id = (int)reader["id"];
+                    return this;
+                }
             }
         }
-    }
-
-    public override IDbObjectValidated? GetDbRepresentation()
-    {
-        return GetById(_id);
+        else{
+            return got;
+        }
     }
 
     public override bool Equals(IDbObjectValidated? other)
     {
-        if (other == null){
+        if (other == null)
+        {
             return false;
         }
-        if (other.GetType() != typeof(Apartment)){
+        if (other.GetType() != typeof(Apartment))
+        {
             return false;
         }
         var parsed = (Apartment)other;
-        return parsed._id == _id && parsed._parentBuildingId == _parentBuildingId 
-            && parsed._apartmentType == _apartmentType 
-            && parsed._untypedName == _untypedName;  
-        
+        return parsed._id == _id && parsed._parentBuildingId == _parentBuildingId
+            && parsed._apartmentType == _apartmentType
+            && parsed._untypedName == _untypedName;
+
     }
 }

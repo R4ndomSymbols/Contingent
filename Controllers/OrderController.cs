@@ -13,7 +13,7 @@ public class OrderController : Controller{
     {
         _logger = logger;
     }
-
+    /*
     [HttpGet]
     [Route("/orders/order/{query}")]
     public IActionResult ProcessSpeciality(string query){
@@ -75,4 +75,5 @@ public class OrderController : Controller{
             return Json(found.ToArray());
         }
     }
+    */
 }

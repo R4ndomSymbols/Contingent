@@ -58,15 +58,14 @@ public class MedicalReference
         DisorderTypeId = HealthDisorderTypes.NotMentioned;
         InitialDate = null;
     }
-
-    public static int SaveOrUpdateReference(MedicalReference toSave)
+    
+    public static async Task<int> SaveOrUpdateReference(MedicalReference toSave)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn =  await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             if (toSave.Id == Utils.INVALID_ID)
             {
-                using (var command = new NpgsqlCommand("INSERT INTO health_status( " +
+               await using (var command = new NpgsqlCommand("INSERT INTO health_status( " +
                         " person_id, initial_date, end_date, status_type, health_disorder_type) " +
                         " VALUES (@p1, @p2, @p3, @p4, @p5) RETURNING id", conn)
                 {
@@ -78,7 +77,7 @@ public class MedicalReference
                         new ("p5", (int)toSave.DisorderTypeId),
                     }
                 }){
-                    var reader = command.ExecuteReader();
+                    using var reader = command.ExecuteReader();
                     return (int)reader["id"];
                 }
             }
@@ -103,21 +102,20 @@ public class MedicalReference
         }
     }
 
-    public List<MedicalReference>? GetByOwnerId(int ownerId)
+    public async Task<List<MedicalReference>?> GetByOwnerId(int ownerId)
     {
-        using (var conn = Utils.GetConnectionFactory()){
-            conn.Open();
-            using (var command = new NpgsqlCommand("SELECT * FROM health_status WHERE person_id = @p1", conn){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
+            await using (var command = new NpgsqlCommand("SELECT * FROM health_status WHERE person_id = @p1", conn){
                 Parameters = {
                     new ("p1", ownerId)
                 }
             }){
-                var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var toReturn = new List<MedicalReference>();
-                while (reader.Read()){
+                while (await reader.ReadAsync()){
                     toReturn.Add(new MedicalReference(){
                         Id = (int)reader["id"],
                         OwnerId = (int)reader["person_id"],

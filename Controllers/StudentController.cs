@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using StudentTracking.Models.Domain;
+using Utilities;
 
 namespace StudentTracking.Controllers;
 public class StudentController : Controller
@@ -17,13 +18,13 @@ public class StudentController : Controller
     // отрисовка страницы редактирования и добавления
     [HttpGet]
     [Route("students/modify/{query}")]
-    public IActionResult ProcessStudent(string query)
+    public async Task<IActionResult> ProcessStudent(string query)
     {   
         if (query == "new"){
             return View(@"Views/Modify/StudentModify.cshtml", new StudentModel());
         }
         if (int.TryParse(query, out int id)){
-            StudentModel? student = StudentModel.GetStudentById(id);
+            StudentModel? student = await StudentModel.GetStudentById(id);
             if (student == null){
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
@@ -47,11 +48,42 @@ public class StudentController : Controller
                     if (deserialized.CheckErrorsExist()){
                         return Json(deserialized.GetErrors());
                     }
-                    deserialized.Save();
+                    using (var conn = await Utils.GetAndOpenConnectionFactory()){
+                        await deserialized.Save();    
+                    }
                     if (deserialized.CheckIntegrityErrorsExist()){
                         return Json(deserialized.GetIntegriryErrors());
                     }
-                    return Json(new object());
+                    return Json(new {StudentId = deserialized.Id});
+                }
+                else {
+                    return Json(400);
+                }
+            //}
+            //catch (Exception) {
+            //    return Json(400);
+            //}
+        }
+    }
+    [HttpPost]
+    [Route("students/rus/new")]
+    public async Task<JsonResult> AddRussianCitizenship(){
+        using(var reader = new StreamReader(Request.Body)){
+            var body = await reader.ReadToEndAsync();
+            var settings = new JsonSerializerOptions();
+            //try{
+                var deserialized = JsonSerializer.Deserialize<RussianCitizenship>(body);
+                if (deserialized!=null)
+                {
+                    if (deserialized.CheckErrorsExist()){
+                        return Json(deserialized.GetErrors());
+                    }
+                    await deserialized.Save();    
+                    if (deserialized.CheckIntegrityErrorsExist()){
+                        return Json(deserialized.GetIntegriryErrors());
+                    }
+                    await StudentModel.LinkStudentAndCitizenship(typeof(RussianCitizenship), deserialized.StudentId, deserialized.Id);
+                    return Json(new {RussianCitizenshipId = deserialized.Id});
                 }
                 else {
                     return Json(400);

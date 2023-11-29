@@ -50,25 +50,7 @@ public class StudentModel : DbValidatedObject
         set
         {
             if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return false;
-                    }
-                    else{
-                        using (var conn = Utils.GetConnectionFactory()){
-                            conn.Open();
-                            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM addresses WHERE id = @p1) as ex", conn){
-                                Parameters = {
-                                    new ("p1", (int)value)
-                                }
-                            }){
-                                var reader = cmd.ExecuteReader();
-                                return (bool)reader["ex"];
-                            }
-                }
-            
-                    }
-                }, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
+                () => AddressModel.IsIdExists(value, null).Result, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
             ){
                 _actualAddress = value;
             }
@@ -82,11 +64,11 @@ public class StudentModel : DbValidatedObject
         {
             if (PerformValidation(
             () =>
+            ValidatorCollection.CheckStringLength(value, 12, 12) ||
+            ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits)
+            , new ValidationError(nameof(Inn), "Неверный формат ИНН")))
             {
-                return ValidatorCollection.CheckStringLength(value, 12, 12);
-            }, new ValidationError(nameof(Inn), "Неверный формат ИНН")))
-            {
-                _snils = value;
+                _inn = value;
             }
         }
     }
@@ -120,11 +102,22 @@ public class StudentModel : DbValidatedObject
             }
         }
     }
-    public int RussianCitizenshipId  {
-        get => _russianCitizenshipId == null ? Utils.INVALID_ID : (int)_russianCitizenshipId;
+    public int? RussianCitizenshipId  {
+        get => _russianCitizenshipId;
         set
-        {
-            _russianCitizenshipId = value;
+        {   
+            if (PerformValidation(
+                () => {
+                    if (value == null){
+                        return true;
+                    }
+                    else{
+                        return RussianCitizenship.IsIdExists((int)value).Result;
+                    }
+                }, new DbIntegrityValidationError(nameof(RussianCitizenshipId), "Указанное гражданство не зарегистрировано")
+            )){
+                _russianCitizenshipId = value;
+            }      
         }
     }
     public string GradeBookNumber  {
@@ -170,22 +163,25 @@ public class StudentModel : DbValidatedObject
         set
         {
             if (PerformValidation(
-            () => int.TryParse(value, out int mark) || ValidatorCollection.CheckStringLength(value, 0 , 0),
-            new ValidationError(nameof(GiaMark), "Неверный формат оценки ГИА")))
+                () => int.TryParse(value, out int mark),
+                new ValidationError(nameof(GiaMark), "Неверный формат оценки ГИА")))
             {
-                if (value.Length == 0){
+                if (PerformValidation (
+                    () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
+                    new ValidationError(nameof(GiaMark), "Неверное значение оценки ГИА"))
+                ){
+                    _giaMark = int.Parse(value);
+                }
+            } else {
+                if (PerformValidation (
+                    () => value == string.Empty,
+                    new ValidationError(nameof(GiaMark), "Недопустимое значение оценки"))
+                ){
                     _giaMark = null;
                 }
-                else{
-                    if (PerformValidation (
-                        () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                        new ValidationError(nameof(GiaMark), "Неверное значение оценки ГИА"))
-                    ){
-                        _giaMark = int.Parse(value);
-                    }
-                }
-                
             }
+                
+            
         }
     }
     public string GiaDemoExamMark {
@@ -193,19 +189,21 @@ public class StudentModel : DbValidatedObject
         set
         {
             if (PerformValidation(
-            () => int.TryParse(value, out int mark) || ValidatorCollection.CheckStringLength(value, 0 , 0),
-            new ValidationError(nameof(GiaDemoExamMark), "Неверный формат оценки ГИА (демэкзамен)")))
+                () => int.TryParse(value, out int mark),
+                new ValidationError(nameof(GiaDemoExamMark), "Неверный формат оценки ГИА")))
             {
-                if (value.Length == 0){
-                    _giaDemoExamMark = null;
+                if (PerformValidation (
+                    () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
+                    new ValidationError(nameof(GiaDemoExamMark), "Неверное значение оценки ГИА"))
+                ){
+                    _giaDemoExamMark = int.Parse(value);
                 }
-                else{
-                    if (PerformValidation (
-                        () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                        new ValidationError(nameof(GiaDemoExamMark), "Неверное значение оценки ГИА (демэкзамен)"))
-                    ){
-                        _giaDemoExamMark = int.Parse(value);
-                    }
+            } else {
+                if (PerformValidation (
+                    () => value == string.Empty,
+                    new ValidationError(nameof(GiaDemoExamMark), "Недопустимое значение оценки"))
+                ){
+                    _giaDemoExamMark = null;
                 }
             }
         }
@@ -225,20 +223,21 @@ public class StudentModel : DbValidatedObject
 
     public StudentModel() : base()
     {
+        RegisterProperty(nameof(GradeBookNumber));
         RegisterProperty(nameof(DateOfBirth));
-        RegisterProperty(nameof(GiaMark));
-        RegisterProperty(nameof(GiaDemoExamMark));
         RegisterProperty(nameof(Gender));
-        RegisterProperty(nameof(PaidAgreementType));
-        RegisterProperty(nameof(TargetAgreementType));
         RegisterProperty(nameof(Snils));
         RegisterProperty(nameof(Inn));
-        RegisterProperty(nameof(GradeBookNumber));
+        RegisterProperty(nameof(PaidAgreementType));
+        RegisterProperty(nameof(TargetAgreementType));
         RegisterProperty(nameof(AdmissionScore));
+        RegisterProperty(nameof(GiaMark));
+        RegisterProperty(nameof(GiaDemoExamMark));
         RegisterProperty(nameof(ActualAddressId));
+        RegisterProperty(nameof(RussianCitizenshipId));
 
         _id = -1;
-        _actualAddress = null;
+        _actualAddress = Utils.INVALID_ID;
         _dateOfBirth = DateTime.Today;
         _giaMark = null;
         _giaDemoExamMark = null;
@@ -249,137 +248,183 @@ public class StudentModel : DbValidatedObject
         _inn = "";
         _gradeBookNumber = "";
     }
-    public static StudentModel? GetStudentById(int id)
-    {
-        var got = GetStudents(id);
-        if (got == null)
-        {
-            return null;
-        }
-        else
-        {
-            return got.First();
-        }
-    }
-    public static List<StudentModel>? GetAllStudents()
-    {
-        return GetStudents();
-    }
 
-    private static List<StudentModel>? GetStudents(int? id = null)
+    public static async Task<StudentModel?> GetStudentById(int id)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            NpgsqlCommand getCommand;
-            if (id == null)
+            NpgsqlCommand getCommand = new NpgsqlCommand("SELECT * FROM students WHERE id = @p1", conn);
+            getCommand.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+            await using (getCommand)
             {
-                getCommand = new NpgsqlCommand("SELECT * FROM students", conn);
-            }
-            else
-            {
-                getCommand = new NpgsqlCommand("SELECT * FROM students WHERE id = @p1", conn)
-                {
-                    Parameters ={
-                        new NpgsqlParameter("p1", id),
-                    }
-                };
-            }
-            using (getCommand)
-            {
-                var pgreader = getCommand.ExecuteReader();
+                using var pgreader = await getCommand.ExecuteReaderAsync();
                 if (!pgreader.HasRows)
                 {
                     return null;
                 }
 
                 var toReturn = new List<StudentModel>();
-                while (pgreader.Read())
+                await pgreader.ReadAsync();
+                
+                var built = new StudentModel
                 {
-                    var built = new StudentModel
-                    {
-                        _snils = (string)pgreader["snils"],
-                        _inn = (string)pgreader["inn"],
-                        _actualAddress = (int)pgreader["actual_address"],
-                        _dateOfBirth = (DateTime)pgreader["date_of_birth"],
-                        _gender = (Genders.GenderCodes)pgreader["gender"],
-                        _gradeBookNumber = (string)pgreader["grade_book_number"],
-                        _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
-                        _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"]
-                    };
+                    _snils = (string)pgreader["snils"],
+                    _inn = (string)pgreader["inn"],
+                    _actualAddress = (int)pgreader["actual_address"],
+                    _dateOfBirth = (DateTime)pgreader["date_of_birth"],
+                    _gender = (Genders.GenderCodes)pgreader["gender"],
+                    _gradeBookNumber = (string)pgreader["grade_book_number"],
+                    _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
+                    _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"]
+                };
 
-                    object rus_citizenship = pgreader["rus_citizenship_id"];
-                    if (rus_citizenship.GetType() == typeof(System.DBNull))
-                    {
-                        built._russianCitizenshipId = null;
-                    }
-                    else
-                    {
-                        built._russianCitizenshipId = (int)rus_citizenship;
-                    }
-                    object gia_mark_result = pgreader["gia_mark"];
-                    if (gia_mark_result.GetType() == typeof(DBNull))
-                    {
-                        built._giaMark = null;
-                    }
-                    else
-                    {
-                        built._giaMark = (int)gia_mark_result;
-                    }
-                    object gia_mark_dem_result = pgreader["gia_demo_exam_mark"];
-                    if (gia_mark_dem_result.GetType() == typeof(DBNull))
-                    {
-                        built._giaDemoExamMark = null;
-                    }
-                    else
-                    {
-                        built._giaDemoExamMark = (int)gia_mark_dem_result;
-                    }
-
-                    toReturn.Add(built);
+                object rus_citizenship = pgreader["rus_citizenship_id"];
+                if (rus_citizenship.GetType() == typeof(System.DBNull))
+                {
+                    built._russianCitizenshipId = null;
                 }
-                return toReturn;
+                else
+                {
+                    built._russianCitizenshipId = (int)rus_citizenship;
+                }
+                object gia_mark_result = pgreader["gia_mark"];
+                if (gia_mark_result.GetType() == typeof(DBNull))
+                {
+                    built._giaMark = null;
+                }
+                else
+                {
+                    built._giaMark = (int)gia_mark_result;
+                }
+                object gia_mark_dem_result = pgreader["gia_demo_exam_mark"];
+                if (gia_mark_dem_result.GetType() == typeof(DBNull))
+                {
+                    built._giaDemoExamMark = null;
+                }
+                else
+                {
+                    built._giaDemoExamMark = (int)gia_mark_dem_result;
+                }
+                return built;
             }
         }
     }
 
-    public void Save()
-    {
-        if (CurrentState != RelationTypes.Pending){
-            Console.WriteLine(CurrentState.ToString());
-            Console.WriteLine(string.Join("\n", GetErrors()));
+    public static async Task LinkStudentAndCitizenship(Type citizenshipType, int studentId, int citizenshipId){
+        
+        await using var connection = await Utils.GetAndOpenConnectionFactory(); 
+        
+        if (!await IsIdExists(studentId, null) || !await RussianCitizenship.IsIdExists(citizenshipId)){
             return;
         }
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-                using var insertCommand = new NpgsqlCommand(
-                    "INSERT INTO students( " +
-                    "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
-                    "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score) " +
-                    "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id", conn)
-                {
-                    Parameters = {
-                            new ("p1", _snils),
-                            new ("p2", _inn),
-                            new ("p3", _actualAddress == null ? DBNull.Value : (int)_actualAddress),
-                            new ("p4", _dateOfBirth),
-                            new ("p5", _russianCitizenshipId == null ? DBNull.Value : (int)RussianCitizenshipId),
-                            new ("p6", (int)_gender),
-                            new ("p7", _gradeBookNumber),
-                            new ("p8", (int)_targetAgreementType),
-                            new ("p9",  _giaMark == null ? DBNull.Value : (int)_giaMark),
-                            new ("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark),
-                            new ("p11", (int)_paidAgreementType),
-                            new ("p12", _admissionScore),
-                        }
-                };
-                var reader = insertCommand.ExecuteReader();
-                reader.Read();
-                _id = (int)reader["id"];
 
+        if (citizenshipType == typeof(RussianCitizenship)){
+            string cmdText = "UPDATE students SET rus_citizenship_id = @p1 WHERE id = @p2";
+            NpgsqlCommand cmd = new NpgsqlCommand(cmdText, connection);
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", citizenshipId));
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p2", studentId));
+            using (cmd){
+                var nonQuery = await cmd.ExecuteNonQueryAsync();  
             }
         }
+    }
+
+    public async Task Save() 
+    {
+        await using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
+
+        if (await GetCurrentState(null) != RelationTypes.Pending){
+            return;
+        }
+
+        var cmdText = "INSERT INTO students( " +
+            "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
+            "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score) " +
+            "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id";
+        var insertCommand = new NpgsqlCommand(cmdText, connection);
+
+        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p1", _snils));
+        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p2", _inn));
+        insertCommand.Parameters.Add(new NpgsqlParameter("p3", _actualAddress == null ? DBNull.Value : (int)_actualAddress));
+        insertCommand.Parameters.Add(new NpgsqlParameter<DateTime>("p4", _dateOfBirth));
+        insertCommand.Parameters.Add(new NpgsqlParameter("p5", _russianCitizenshipId == null? DBNull.Value : (int)_russianCitizenshipId));
+        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
+        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
+        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType));
+        insertCommand.Parameters.Add(new NpgsqlParameter("p9", _giaMark == null ? DBNull.Value : (int)_giaMark));
+        insertCommand.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
+        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
+        insertCommand.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
+
+        await using (insertCommand){
+            using var reader = await insertCommand.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            NotifyStateChanged();
+            _id = (int)reader["id"];
+        }
+    }
+
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
+    {
+        var rawCheck = await GetStudentById(_id);
+        if (rawCheck == null){
+
+            var conn = await Utils.GetAndOpenConnectionFactory();
+            string cmdText = "SELECT id FROM students WHERE inn = @p1";
+            NpgsqlCommand cmd = new NpgsqlCommand (cmdText, conn);
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _inn));
+
+            using (conn)
+            using (cmd){
+                await using var reader = cmd.ExecuteReader();
+                await reader.ReadAsync();
+                if (!reader.HasRows){
+                    return null;
+                }
+                _id = (int)reader["id"];
+                return this;
+            }
+        }
+        return rawCheck;
+    }
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
+
+        await using var connection = await Utils.GetAndOpenConnectionFactory();{
+            string cmdText = "SELECT EXISTS(SELECT id FROM students WHERE id = @p1)";
+            NpgsqlCommand cmd = new NpgsqlCommand(cmdText, connection);
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+            await using (connection)
+            await using (cmd){
+                using var reader = await cmd.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                return (bool)reader["exists"];
+            }
+        }
+    } 
+
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null){
+            return false;
+        }
+        if (other.GetType() != this.GetType()){
+            return false;
+        }
+        var p = (StudentModel)other;
+        return 
+            _id == p._id &&
+            _actualAddress == p._actualAddress &&
+            _dateOfBirth == p._dateOfBirth &&
+            ((_giaMark == null && p._giaMark == null) || _giaMark == p._giaMark) &&
+            ((_giaDemoExamMark == null && p._giaDemoExamMark == null) || _giaDemoExamMark == p._giaDemoExamMark) &&
+            _gender == p._gender &&
+            _paidAgreementType == p._paidAgreementType &&
+            _targetAgreementType == p._targetAgreementType &&
+            _snils == p._snils &&
+            _inn == p._inn &&
+            _gradeBookNumber == p._gradeBookNumber;
+    }
+    /*
     private void Update(){
         using (var conn = Utils.GetConnectionFactory()){
         using var updateCommand = new NpgsqlCommand(
@@ -406,7 +451,7 @@ public class StudentModel : DbValidatedObject
                 };
                 updateCommand.ExecuteNonQuery(); 
         }
-    } 
+    } */
 }
 
 

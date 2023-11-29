@@ -35,12 +35,11 @@ public class StudentStateRecord
         StateRecorded = States.NotMentioned;
     }
 
-    public static void AddStateToHistory(StudentStateRecord toSave)
+    public static async Task AddStateToHistory(StudentStateRecord toSave)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var command = new NpgsqlCommand("INSERT INTO student_states( " +
+            await using (var command = new NpgsqlCommand("INSERT INTO student_states( " +
                 " student_id, status_code, recorded_on) " +
                 " VALUES (@p1, @p2, @p3)", conn)
             {
@@ -51,27 +50,26 @@ public class StudentStateRecord
                     }
             })
             {
-                command.ExecuteNonQuery();
+                await command.ExecuteNonQueryAsync();
             }
         }
     }
-    public static List<StudentStateRecord>? GetByOwnerId(int ownerId){
-        using (var conn = Utils.GetConnectionFactory())
+    public static async Task<List<StudentStateRecord>?> GetByOwnerId(int ownerId){
+        await using (var conn =  await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var command = new NpgsqlCommand("SELECT * FROM student_states WHERE student_id = @p1", conn)
+            await using (var command = new NpgsqlCommand("SELECT * FROM student_states WHERE student_id = @p1", conn)
             {
                 Parameters = {
                     new("p1", ownerId),
                 }
             })
             {
-                var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var found = new List<StudentStateRecord>();
-                while(reader.Read()){
+                while(await reader.ReadAsync()){
                     found.Add(new StudentStateRecord{
                         OwnerId = ownerId,
                         RecordedOn = (DateTime)reader["recorded_on"],

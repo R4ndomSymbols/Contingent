@@ -13,7 +13,8 @@ public class SpecialityController : Controller{
     {
         _logger = logger;
     }
-
+    /*
+ 
     [HttpGet]
     [Route("specialities/speciality/{query}")]
     public IActionResult ProcessSpeciality(string query){
@@ -86,4 +87,5 @@ public class SpecialityController : Controller{
         }
         return Json(null);
     }
+    */
 }

@@ -32,26 +32,25 @@ public class GroupModel
         GroupName = "";
     }
 
-    public static GroupModel? GetGroupById(int id)
+    public static async Task<GroupModel?> GetGroupById(int id)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM student_groups WHERE id = @p1", conn)
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM student_groups WHERE id = @p1", conn)
             {
                 Parameters = {
                     new NpgsqlParameter("p1", id)
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
-                reader.Read();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
                 else
                 {
+                    await reader.ReadAsync();
                     return new GroupModel()
                     {
                         Id = id,
@@ -67,75 +66,15 @@ public class GroupModel
             }
         }
     }
-    public static List<GroupEducationForm>? GetGroupEduForms()
+
+    public static async Task<int> CreateOrUpdateGroup(GroupModel toProcess)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM group_education_forms", conn))
+            await using (var cmd = new NpgsqlCommand("INSERT INTO student_groups (speciality, course_number, group_type, group_education_form, creation_year, group_name" +
+            " ) VALUES (@p1,@p2,@p3,@p4,@p5,@p6) RETURNING id", conn)
             {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var toReturn = new List<GroupEducationForm>();
-                    while (reader.Read())
-                    {
-                        toReturn.Add(new GroupEducationForm
-                        {
-                            Id = (int)reader["id"],
-                            Name = (string)reader["form_name"],
-                            Postfix = (string)reader["group_name_postfix"],
-                        });
-                    }
-                    return toReturn;
-                }
-            }
-        }
-    }
-    public static List<GroupEducationType>? GetGroupEduTypes()
-    {
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM group_types", conn))
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var toReturn = new List<GroupEducationType>();
-                    while (reader.Read())
-                    {
-                        toReturn.Add(new GroupEducationType
-                        {
-                            Id = (int)reader["id"],
-                            Name = (string)reader["type_name"],
-                            Postfix = (string)reader["group_name_postfix"],
-                        });
-                    }
-                    return toReturn;
-                }
-            }
-        }
-    }
-    public static int CreateOrUpdateGroup(GroupModel toProcess)
-    {
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            if (toProcess.Id == -1)
-            {
-                using (var cmd = new NpgsqlCommand("INSERT INTO student_groups (speciality, course_number, group_type, group_education_form, creation_year, group_name" +
-                " ) VALUES (@p1,@p2,@p3,@p4,@p5,@p6) RETURNING id", conn)
-                {
-                    Parameters = {
+                Parameters = {
                         new ("p1", toProcess.SpecialityId),
                         new ("p2", toProcess.CourseNumber),
                         new ("p3", toProcess.GroupTypeId),
@@ -144,65 +83,62 @@ public class GroupModel
                         new ("p6", toProcess.GroupName),
 
                     }
-                }
-                )
-                {
-                    var reader = cmd.ExecuteReader();
-                    reader.Read();
-                    if (reader.HasRows)
-                    {
-                        return (int)reader["id"];
-                    }
-                    return -1;
-                }
             }
-            else
+            )
             {
-                using (var cmd = new NpgsqlCommand("UPDATE student_groups SET speciality = @p1, course_number = @p2, group_type = @p3, group_education_form = @p4, creation_year = @p5, " +
-                " group_name = @p6 WHERE id = @p7", conn)
-                {
-                    Parameters = {
-                        new ("p1", toProcess.SpecialityId),
-                        new ("p2", toProcess.CourseNumber),
-                        new ("p3", toProcess.GroupTypeId),
-                        new ("p4", toProcess.EducationalFormId),
-                        new ("p5", toProcess.CreationYear),
-                        new ("p6", toProcess.GroupName),
-                        new ("p7", toProcess.Id),
-                    }
-                })
-                {
-                    cmd.ExecuteNonQuery();
-                    return toProcess.Id;
-                }
+                using var reader = await cmd.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                return (int)reader["id"];
             }
         }
+
+        /*
+        else
+        {
+            using (var cmd = new NpgsqlCommand("UPDATE student_groups SET speciality = @p1, course_number = @p2, group_type = @p3, group_education_form = @p4, creation_year = @p5, " +
+            " group_name = @p6 WHERE id = @p7", conn)
+            {
+                Parameters = {
+                    new ("p1", toProcess.SpecialityId),
+                    new ("p2", toProcess.CourseNumber),
+                    new ("p3", toProcess.GroupTypeId),
+                    new ("p4", toProcess.EducationalFormId),
+                    new ("p5", toProcess.CreationYear),
+                    new ("p6", toProcess.GroupName),
+                    new ("p7", toProcess.Id),
+                }
+            })
+            {
+                cmd.ExecuteNonQuery();
+                return toProcess.Id;
+            }
+        }*/
     }
 
-    public static List<GroupEssential>? FindGroup(string? searchText)
+    public static async Task<List<GroupEssential>?> FindGroup(string? searchText)
     {
-        if (searchText == null || searchText.Length < 2){
+        if (searchText == null || searchText.Length < 2)
+        {
             return null;
         }
 
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             string query = "SELECT id, group_name FROM student_groups WHERE group_name LIKE @p1";
-            using (var cmd = new NpgsqlCommand(query, conn)
+            await using (var cmd = new NpgsqlCommand(query, conn)
             {
                 Parameters = {
                     new NpgsqlParameter("p1", "%"+searchText+"%")
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
                 var found = new List<GroupEssential>();
-                while (reader.Read())
+                while (await reader.ReadAsync())
                 {
                     found.Add(new GroupEssential()
                     {
@@ -214,8 +150,6 @@ public class GroupModel
             }
         }
     }
-
-
 }
 
 public class GroupEducationForm

@@ -18,6 +18,10 @@ public class ValidationError {
         return "Ошибка: " + _message + "\t" + "Свойство: " + _propertyName; 
     }
 
+    public string ToUserString(){
+        return "Ошибка: " + _message;
+    }
+
     public static bool operator == (ValidationError? left, ValidationError? right){
         if (left is null){
             return false;

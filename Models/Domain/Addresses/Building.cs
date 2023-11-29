@@ -29,18 +29,20 @@ public class Building : DbValidatedObject
     public int Id
     {
         get => _id;
-        set
-        {
-            _id = value;
+    }
+
+    public async Task SetParentStreet(int id, ObservableTransaction? scope){
+        bool exists = await Street.IsIdExists(id, scope);
+        if (PerformValidation(
+            () => exists,
+            new DbIntegrityValidationError(nameof(StreetParentId), "ID улицы должен быть указан")
+        )){
+            _parentStreetId = id;
         }
     }
     public int StreetParentId
     {
         get => _parentStreetId;
-        set
-        {
-            _parentStreetId = value;
-        }
     }
     public int BuildingType
     {
@@ -70,7 +72,7 @@ public class Building : DbValidatedObject
                     () => ValidatorCollection.CheckStringLength(value, 1, 10),
                     new ValidationError(nameof(UntypedName), "Название дома вне допустимых пределов длины")))
                 {
-                    _untypedName = value;
+                    _untypedName = value.ToLower();
                 }
             }
         }
@@ -83,103 +85,110 @@ public class Building : DbValidatedObject
         }
     }
 
-    protected Building(int id, int parentId, string name) : this()
+    private Building(int id) : base(RelationTypes.Bound)
     {
         _id = id;
-        _parentStreetId = parentId;
-        _untypedName = name;
+        _untypedName = "";
     }
     protected Building() : base()
     {
         RegisterProperty(nameof(UntypedName));
         RegisterProperty(nameof(BuildingType));
+        RegisterProperty(nameof(StreetParentId));
         _untypedName = "";
         _buildingType = Types.NotMentioned;
     }
 
-    public bool Save()
-    {
-        if (CurrentState != RelationTypes.Pending || !Street.IsIdExists(_parentStreetId))
-        {
-            return false;
+    public async Task Save(ObservableTransaction? scope){
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        if (await GetCurrentState(scope) != RelationTypes.Pending){
+            return;
         }
-
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("INSERT INTO buildings( " +
+        NpgsqlCommand? command = null;
+        string cmdText = 
+        "INSERT INTO buildings( " +
                     " street, full_name) " +
-                    " VALUES (@p1, @p2) RETURNING id", conn)
-            {
-                Parameters = {
-                        new("p1", _parentStreetId),
-                        new("p2", _untypedName),
-                    }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                _id = (int)reader["id"];
-                SetBound();
-                return true;
-            }
+                    " VALUES (@p1, @p2) RETURNING id";
+        if (scope!=null){
+            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._id = Utils.INVALID_ID));
+        }
+        else{
+            command = new NpgsqlCommand(cmdText, conn);
+        }
+        command.Parameters.Add(new NpgsqlParameter<int>("p1", _parentStreetId));
+        command.Parameters.Add(new NpgsqlParameter<string> ("p2", _untypedName));
+        await using (conn)
+        await using (command)
+        {
+            using var reader = await command.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            _id = (int)reader["id"];
+            NotifyStateChanged();
         }
     }
-    public static List<Building>? GetAllBuildingsOn(int streetId)
+    
+    // public static List<Building>? GetAllBuildingsOn(int streetId)
+    // {
+    //     using (var conn = Utils.GetAndOpenConnectionFactory())
+    //     {
+    //         using (var cmd = new NpgsqlCommand($"SELECT * FROM buildings WHERE street = @p1", conn)
+    //         {
+    //             Parameters = {
+    //                 new NpgsqlParameter("p1", streetId)
+    //             }
+    //         })
+    //         {
+    //             var reader = cmd.ExecuteReader();
+    //             if (!reader.HasRows)
+    //             {
+    //                 return null;
+    //             }
+    //             else
+    //             {
+    //                 var result = new List<Building>();
+    //                 while (reader.Read())
+    //                 {
+    //                     var b = new Building((int)reader["id"]);
+    //                     b._parentStreetId = streetId;
+    //                     b._untypedName = (string)reader["full_name"];
+    //                     result.Add(b);
+    //                 }
+    //                 return result;
+    //             }
+    //         }
+    //     }
+    // }
+    public static async Task<Building?> GetById(int bId, ObservableTransaction? scope)
     {
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM buildings WHERE street = @p1", conn)
-            {
-                Parameters = {
-                    new NpgsqlParameter("p1", streetId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var result = new List<Building>();
-                    while (reader.Read())
-                    {
-                        var b = new Building((int)reader["id"], streetId, (string)reader["full_name"]);
-                        b.SetBound();
-                        result.Add(b);
-                    }
-                    return result;
-                }
-            }
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        string query = "SELECT * FROM buildings WHERE id = @p1";
+        NpgsqlCommand cmd;
+        if (scope == null){
+            cmd = new NpgsqlCommand(query, conn);
         }
-    }
-    public static Building? GetById(int bId)
-    {
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM buildings WHERE id = @p1", conn)
-            {
-                Parameters = {
-                    new ("p1", bId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                var b = new Building(
-                        id: (int)reader["id"],
-                        name: (string)reader["full_name"],
-                        parentId: (int)reader["street"]);
-                b.SetBound();
-                return b;
-            }
+        else{
+            cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
         }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", bId));
+        using (conn)
+        using (cmd)
+        {
+            using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            if (!reader.HasRows)
+            {
+                return null;
+            }
+            var b = new Building((int)reader["id"])
+            {
+                _untypedName = (string)reader["full_name"],
+                _parentStreetId = (int)reader["street"],
+                _buildingType = Types.Building,
+            };
+            return b;
+        }
+       
     }
     public static Building? BuildByName(string? fullname)
     {
@@ -202,25 +211,70 @@ public class Building : DbValidatedObject
         return null;
     }
 
-    public static bool IsIdExists(int id)
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM buildings WHERE id = @p1)", conn)
-            {
-                Parameters = {
-                    new("p1", id),
-                }
-            })
-            {
-                return (bool)cmd.ExecuteReader()["exists"];
+            string cmdText = "SELECT EXISTS(SELECT id FROM buildings WHERE id = @p1)";
+            NpgsqlCommand? cmd = null;
+            if (scope!=null){
+                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            }
+            else{
+                cmd = new NpgsqlCommand(cmdText, conn);
+            }
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+            await using (cmd)
+            {   
+                using var reader = await cmd.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                return (bool)reader["exists"];
             }
         }
     }
-    public override IDbObjectValidated? GetDbRepresentation()
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {
-        return GetById(_id);
+        Building? got = await GetById(_id, scope);
+        if (got == null)
+        {
+            if (await BindId(scope)){
+                return this;
+            }
+            else{
+                return null;
+            }
+        }
+        else{
+            return got;
+        }
+    }
+
+    private async Task<bool> BindId(ObservableTransaction? scope){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        {
+            string cmdText = "SELECT id FROM buildings WHERE street = @p1 AND full_name = @p2";
+            NpgsqlCommand? cmd;
+            if (scope != null){
+                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            }
+            else{
+                cmd = new NpgsqlCommand(cmdText, conn);
+            }
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _parentStreetId));
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _untypedName));
+            using (cmd)
+            {
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (!reader.HasRows)
+                {
+                    return false;
+                }
+                await reader.ReadAsync();
+                _id = (int)reader["id"];
+                NotifyStateChanged();
+                return true;
+            }
+        }
     }
 
     public override bool Equals(IDbObjectValidated? other)
@@ -234,7 +288,8 @@ public class Building : DbValidatedObject
             return false;
         }
         var parsed = (Building)other;
-        return parsed._id == _id && parsed._parentStreetId == _parentStreetId
+        return parsed._id == _id 
+            && parsed._parentStreetId == _parentStreetId
             && parsed._buildingType == _buildingType
             && parsed._untypedName == _untypedName;
 

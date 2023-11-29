@@ -12,6 +12,7 @@ public class StudentFlowController : Controller{
     {
         _logger = logger;
     }
+    /*
 
     [HttpGet]
     [Route("/flow")]
@@ -89,4 +90,6 @@ public class FilterRequest{
         SearchName = "";
         SearchGroupName = "";
     }
+
+*/
 }

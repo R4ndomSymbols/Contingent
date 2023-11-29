@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Npgsql;
 using Utilities;
@@ -35,26 +36,25 @@ public class SpecialityModel
         SpecialityTypeId = -1;
     }
 
-    public static SpecialityModel? GetById(int id)
+    public static async Task<SpecialityModel?> GetById(int id)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM specialities WHERE id = @p1", conn)
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM specialities WHERE id = @p1", conn)
             {
                 Parameters = {
                     new ("p1", id)
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
-                reader.Read();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
                 else
-                {
+                {   
+                    await reader.ReadAsync();          
                     return new SpecialityModel()
                     {
                         Id = id,
@@ -70,16 +70,13 @@ public class SpecialityModel
             }
         }
     }
-    public static List<SpecialityModel>? GetAllGroupView()
+    public static async Task<List<SpecialityModel>?> GetAllGroupView()
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM specialities", conn)
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM specialities", conn))
             {
-            })
-            {
-                var reader = cmd.ExecuteReader();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
@@ -87,7 +84,7 @@ public class SpecialityModel
                 else
                 {
                     var toReturn = new List<SpecialityModel>();
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         toReturn.Add(new SpecialityModel()
                         {
@@ -106,21 +103,20 @@ public class SpecialityModel
             }
         }
     }
-    public static List<SpecialityTypeModel>? GetAllTypes()
+    public static async Task<List<SpecialityTypeModel>?> GetAllTypes()
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM speciality_types", conn))
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM speciality_types", conn))
             {
-                var reader = cmd.ExecuteReader();
-                reader.Read();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
                 else
                 {
+                    await reader.ReadAsync();
                     List<SpecialityTypeModel> toReturn = new List<SpecialityTypeModel>();
                     do
                     {
@@ -131,20 +127,19 @@ public class SpecialityModel
                         }
                         );
                     }
-                    while (reader.Read());
+                    while (await reader.ReadAsync());
                     return toReturn;
                 }
             }
         }
     }
-    public static List<string>? GetAllFGOSCodes()
+    public static async Task<List<string>?> GetAllFGOSCodes()
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_code FROM specialities", conn))
+            await using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_code FROM specialities", conn))
             {
-                var reader = cmd.ExecuteReader();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
@@ -152,7 +147,7 @@ public class SpecialityModel
                 else
                 {
                     List<string> toReturn = new List<string>();
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         toReturn.Add((string)reader["fgos_code"]);
                     }
@@ -162,14 +157,13 @@ public class SpecialityModel
             }
         }
     }
-    public static List<string>? GetAllFGOSNames()
+    public static async Task<List<string>?> GetAllFGOSNames()
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_name FROM specialities", conn))
+            await using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_name FROM specialities", conn))
             {
-                var reader = cmd.ExecuteReader();
+                using var reader = cmd.ExecuteReader();
                 if (!reader.HasRows)
                 {
                     return null;
@@ -187,14 +181,13 @@ public class SpecialityModel
             }
         }
     }
-    public static int CreateOrUpdateSpeciality(SpecialityModel toProcess)
+    public static async Task<int> CreateOrUpdateSpeciality(SpecialityModel toProcess)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             if (toProcess.Id == -1)
             {
-                using (var cmd = new NpgsqlCommand("INSERT INTO specialities (fgos_code, fgos_name, qualification, main_name_prefix, qualification_postfix, " +
+                await using (var cmd = new NpgsqlCommand("INSERT INTO specialities (fgos_code, fgos_name, qualification, main_name_prefix, qualification_postfix, " +
                 " course_count, speciality_type) VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7) RETURNING id", conn)
                 {
                     Parameters = {
@@ -209,7 +202,7 @@ public class SpecialityModel
                 }
                 )
                 {
-                    var reader = cmd.ExecuteReader();
+                    using  var reader = cmd.ExecuteReader();
                     reader.Read();
                     if (reader.HasRows)
                     {

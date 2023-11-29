@@ -4,6 +4,7 @@ using Npgsql;
 using StudentTracking.Models.JSON;
 using StudentTracking.Models.SQL;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
@@ -15,7 +16,7 @@ using System.Text.RegularExpressions;
 using Utilities;
 using Utilities.Validation;
 
-public class AddressModel : ValidatedObject
+public class AddressModel : DbValidatedObject
 {
 
     private int _id;
@@ -26,6 +27,12 @@ public class AddressModel : ValidatedObject
     private Street? _streetPart;
     private Building? _buildingPart;
     private Apartment? _apartmentPart;
+ 
+
+    public int Id
+    {
+        get => _id;
+    }
 
     private string? SubjectPart
     {
@@ -74,30 +81,20 @@ public class AddressModel : ValidatedObject
         set
         {
             if (PerformValidation(
-                () =>
-                {
-                    if (_districtPart == null)
-                    {
-                        return false;
-                    }
-                    else if ((_districtPart.DistrictType == (int)District.Types.CityTerritory ||
-                             _districtPart.DistrictType == (int)District.Types.MunicipalTerritory) && value == null)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        var parsed = SettlementArea.BuildByName(value);
-                        return !(parsed == null || parsed.CheckErrorsExist());
-                    }
-                }, new ValidationError(nameof(SettlementAreaPart), "Поселение не указано, указано неверно либо не соотнесено с районом")
+                () => _districtPart != null,
+                new ValidationError(nameof(SettlementAreaPart), "Не указан верхний муниципалитет")
             ))
             {
-                if (_districtPart == null)
+                if (PerformValidation(
+                () =>
                 {
-                    return;
+                    var parsed = SettlementArea.BuildByName(value);
+                    return !(parsed == null || parsed.CheckErrorsExist());
+                }, new ValidationError(nameof(SettlementAreaPart), "Поселение указано неверно (возможно, нужно ввести населенный пункт)")))
+                {
+                    _settlementAreaPart = SettlementArea.BuildByName(value);
                 }
-                _settlementAreaPart = SettlementArea.BuildByName(value);
+
             }
         }
     }
@@ -109,15 +106,8 @@ public class AddressModel : ValidatedObject
             if (PerformValidation(
                 () =>
                 {
-                    try
-                    {
-                        var parsed = Settlement.BuildByName(value);
-                        return !(parsed == null || parsed.CheckErrorsExist());
-                    }
-                    catch (ArgumentException)
-                    {
-                        return false;
-                    }
+                    var parsed = Settlement.BuildByName(value);
+                    return !(parsed == null || parsed.CheckErrorsExist());
                 }, new ValidationError(nameof(SettlementPart), "Населенный пункт не указан, указан неверно либо не определен предшествующий адрес")
             ))
             {
@@ -145,10 +135,7 @@ public class AddressModel : ValidatedObject
                 }, new ValidationError(nameof(StreetPart), "Улица не указана, указана неверно либо не определен предшествующий адрес")
             ))
             {
-                if (_settlementPart != null)
-                {
-                    _streetPart = Street.BuildByName(value);
-                }
+                _streetPart = Street.BuildByName(value);
             }
         }
     }
@@ -172,14 +159,11 @@ public class AddressModel : ValidatedObject
                 }, new ValidationError(nameof(BuildingPart), "Дом не указан, указан неверно либо не определен предшествующий адрес")
             ))
             {
-                if (_streetPart != null)
-                {
-                    _buildingPart = Building.BuildByName(value);
-                }
+                _buildingPart = Building.BuildByName(value);
             }
         }
     }
-    private string ApartmentPart
+    private string? ApartmentPart
     {
         get => _apartmentPart == null ? "" : _apartmentPart.LongTypedName;
         set
@@ -191,40 +175,64 @@ public class AddressModel : ValidatedObject
                     {
                         return false;
                     }
+                    if (value == null)
+                    {
+                        return true;
+                    }
                     else
                     {
                         var parsed = Apartment.BuildByName(value);
-                        return !(parsed == null || parsed.CheckErrorsExist());
+                        return parsed != null && !parsed.CheckErrorsExist();
                     }
                 }, new ValidationError(nameof(ApartmentPart), "Квартира указана неверно либо не определен предшествующий адрес")
             ))
             {
-                if (_buildingPart != null)
-                {
-                    _apartmentPart = Apartment.BuildByName(value);
-                }
+                _apartmentPart = Apartment.BuildByName(value);
             }
         }
     }
-    [JsonIgnore]
-    public string AboutAddress
+
+    public async Task<string> GetAddressInfo()
     {
-        get
+        async Task<string> FormatTag(DbValidatedObject? obj)
         {
-            List<string> accumulator = new List<string>();
-            accumulator.Add("Субъект: " + (_subjectPart == null ? "Не указан/Не обнаружен" : _subjectPart.LongTypedName));
-            accumulator.Add("Муниципалитет верхнего уровня: " + (_districtPart == null ? "Не указан/Не обнаружен" : _districtPart.LongTypedName));
-            accumulator.Add("Муниципальное поселение: " + (_settlementAreaPart == null ? "Не указано/Не обнаружено" : _settlementAreaPart.LongTypedName));
-            accumulator.Add("Населенный пункт: " + (_settlementPart == null ? "Не указан/Не обнаружен" : _settlementPart.LongTypedName));
-            accumulator.Add("Объект дорожной инфраструктуры: " + (_streetPart == null ? "Не указан/Не обнаружен" : _streetPart.LongTypedName));
-            accumulator.Add("Дом: " + (_buildingPart == null ? "Не указан/Не обнаружен" : _buildingPart.LongTypedName));
-            accumulator.Add("Квартира: " + (_apartmentPart == null ? "Не указана/Не обнаружена" : _apartmentPart.LongTypedName));
-            return string.Join("<br/>", accumulator);
+            string state = "";
+            if (obj == null)
+            {
+                state = "Не распознан";
+            }
+            else
+            {
+                switch (await obj.GetCurrentState(null))
+                {
+                    case RelationTypes.Bound:
+                    case RelationTypes.Pending:
+                        state = "Распознан";
+                        break;
+                    case RelationTypes.Invalid:
+                    case RelationTypes.UnboundInvalid:
+                        state = "Не найден/Не указан";
+                        break;
+                    case RelationTypes.Modified:
+                        state = "???";
+                        break;
+                }
+            }
+            state = "[" + state + "]";
+            return state + string.Join("", Enumerable.Repeat(" ", 30 - state.Length));
         }
 
 
+        List<string> accumulator = new List<string>();
+        accumulator.Add(await FormatTag(_subjectPart) + "Субъект: " + (_subjectPart == null ? "Не указан/Не обнаружен" : _subjectPart.LongTypedName));
+        accumulator.Add(await FormatTag(_districtPart) + "Муниципалитет верхнего уровня: " + (_districtPart == null ? "Не указан/Не обнаружен" : _districtPart.LongTypedName));
+        accumulator.Add(await FormatTag(_settlementAreaPart) + "Муниципальное поселение: " + (_settlementAreaPart == null ? "Не указано/Не обнаружено" : _settlementAreaPart.LongTypedName));
+        accumulator.Add(await FormatTag(_settlementPart) + "Населенный пункт: " + (_settlementPart == null ? "Не указан/Не обнаружен" : _settlementPart.LongTypedName));
+        accumulator.Add(await FormatTag(_streetPart) + "Объект дорожной инфраструктуры: " + (_streetPart == null ? "Не указан/Не обнаружен" : _streetPart.LongTypedName));
+        accumulator.Add(await FormatTag(_buildingPart) + "Дом: " + (_buildingPart == null ? "Не указан/Не обнаружен" : _buildingPart.LongTypedName));
+        accumulator.Add(await FormatTag(_apartmentPart) + "Квартира: " + (_apartmentPart == null ? "Не указана/Не обнаружена" : _apartmentPart.LongTypedName));
+        return string.Join("<br/>", accumulator);
     }
-
 
 
     public string FullAddressString
@@ -248,30 +256,22 @@ public class AddressModel : ValidatedObject
             }
         }
     }
-    public int Id
-    {
-        get => _id;
-    }
-
-    private AddressModel(FederalSubject f, District d, SettlementArea? sa, Settlement s, Street st, Building b, Apartment? a)
-    {
-        _subjectPart = f;
-        _districtPart = d;
-        _settlementAreaPart = sa;
-        _settlementPart = s;
-        _streetPart = st;
-        _buildingPart = b;
-        _apartmentPart = a;
-    }
     public AddressModel()
     {
-        _id = Utils.INVALID_ID;
-        AddError(new ValidationError(nameof(SubjectPart), "Субъект федерации должен быть указан"));
-        AddError(new ValidationError(nameof(DistrictPart), "Муниципальное образование верхнего уровня должно быть указано"));
-        AddError(new ValidationError(nameof(SettlementPart), "Населенный пункт должен быть указан"));
-        AddError(new ValidationError(nameof(StreetPart), "Объект дорожной инфраструктуры должен быть указан"));
-        AddError(new ValidationError(nameof(BuildingPart), "Дом должен быть указан"));
+        RegisterProperty(nameof(SubjectPart));
+        RegisterProperty(nameof(DistrictPart));
+        RegisterProperty(nameof(SettlementAreaPart));
+        RegisterProperty(nameof(SettlementPart));
+        RegisterProperty(nameof(StreetPart));
+        RegisterProperty(nameof(BuildingPart));
+        RegisterProperty(nameof(ApartmentPart));
 
+        _id = Utils.INVALID_ID;
+    }
+
+    private AddressModel(int id) : base(RelationTypes.Bound)
+    {
+        _id = id;
     }
     public static string CreateAddressString(FederalSubject? f, District? d, SettlementArea? sa, Settlement? s, Street? st, Building? b, Apartment? a)
     {
@@ -307,144 +307,107 @@ public class AddressModel : ValidatedObject
         return string.Join(", ", parts);
     }
 
-
-    public static string? GetAddressNameById(int id)
-    {
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            // получение всех сущностей
-
-
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM get_full_address_by_id({id})", conn))
-            {
-                var reader = cmd.ExecuteReader();
-                reader.Read();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-    }
-
-    public static AddressModel? GetAddressById(int id)
+    public static async Task<AddressModel?> GetAddressById(int id)
     {
 
-        using (var conn = Utils.GetConnectionFactory())
+        using (var conn = Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             // получение всех сущностей
 
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM addresses WHERE id = @p1", conn)
+            using (var cmd = new NpgsqlCommand($"SELECT * FROM addresses WHERE id = @p1", await conn)
             {
                 Parameters = {
                     new ("p1", id)
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
-                reader.Read();
-
-                FederalSubject? subject = null;
-                District? district = null;
-                SettlementArea? settlementArea = null;
-                Settlement? settlement = null;
-                Street? street = null;
-                Building? building = null;
-                Apartment? apartment = null;
-
-                if (reader["apartment"].GetType() != typeof(DBNull))
-                {
-                    apartment = Apartment.GetById((int)reader["apartment"]);
-                    if (apartment != null)
-                    {
-                        building = Building.GetById(apartment.ParentBuildingId);
-                    }
-                }
-                else
-                {
-                    building = Building.GetById((int)reader["building"]);
-                }
-                if (building != null)
-                {
-                    street = Street.GetById(building.StreetParentId);
-                }
-                if (street != null)
-                {
-                    settlement = Settlement.GetById(street.SettlementParentId);
-                }
-                if (settlement != null)
-                {
-                    if (settlement.SettlementAreaParentId != null)
-                    {
-                        settlementArea = SettlementArea.GetById((int)settlement.SettlementAreaParentId);
-                    }
-                    if (settlement.DistrictParentId != null)
-                    {
-                        district = District.GetById((int)settlement.DistrictParentId);
-                    }
-                }
-                if (district != null)
-                {
-                    subject = FederalSubject.GetByCode(district.SubjectParentId);
-                }
-                if (subject == null || district == null || settlement == null || street == null || building == null)
+                using var reader = cmd.ExecuteReader();
+                if (!reader.HasRows)
                 {
                     return null;
                 }
+
+                reader.Read();
+                AddressModel built = new AddressModel(id);
+
+                if (reader["apartment"].GetType() != typeof(DBNull))
+                {
+                    built._apartmentPart = await Apartment.GetById((int)reader["apartment"], null);
+                    if (built._apartmentPart != null)
+                    {
+                        built._buildingPart = await Building.GetById(built._apartmentPart.ParentBuildingId, null);
+                    }
+                }
                 else
                 {
-                    return new AddressModel(subject, district, settlementArea, settlement, street, building, apartment);
+                    built._buildingPart = await Building.GetById((int)reader["building"], null);
                 }
+                if (built._buildingPart != null)
+                {
+                    built._streetPart = await Street.GetById(built._buildingPart.StreetParentId, null);
+                }
+                if (built._streetPart != null)
+                {
+                    built._settlementPart = await Settlement.GetById(built._streetPart.SettlementParentId, null);
+                }
+                if (built._settlementPart != null)
+                {
+                    if (built._settlementPart.SettlementAreaParentId != null)
+                    {
+                        built._settlementAreaPart = await SettlementArea.GetById((int)built._settlementPart.SettlementAreaParentId, null);
+                    }
+                    if (built._settlementPart.DistrictParentId != null)
+                    {
+                        built._districtPart = await District.GetById((int)built._settlementPart.DistrictParentId, null);
+                    }
+                }
+                if (built._districtPart != null)
+                {
+                    built._subjectPart = await FederalSubject.GetByCode(built._districtPart.SubjectParentId, null);
+                }
+                return built;
             }
         }
     }
 
-    public static List<string> GetNextSuggestions(string toFound)
+    public static async Task<List<string>?> GetNextSuggestions(string request)
     {
         var builder = new AddressRestoreQueryBuilder();
+        var split = request.Split(',');
+        if (split.Length > 5)
+        {
+            return null;
+        }
+        var toFound = split.Last();
         int maxCount = 50;
         var suggestions = new List<string>();
-        var tmp = builder.SelectFrom(FederalSubject.BuildByName(toFound), toFound, maxCount);
-        if (tmp != null)
+
+        DbValidatedObject? parsed = FederalSubject.BuildByName(toFound);
+        if (parsed != null)
         {
-            maxCount -= tmp.Count;
-            suggestions.AddRange(tmp);
+            return await builder.SelectFrom(parsed, maxCount);
         }
-        tmp = builder.SelectFrom(District.BuildByName(toFound), toFound, maxCount);
-        if (tmp != null)
+        parsed = District.BuildByName(toFound);
+        if (parsed != null)
         {
-            maxCount -= tmp.Count;
-            suggestions.AddRange(tmp);
+            return await builder.SelectFrom(parsed, maxCount);
         }
-        tmp = builder.SelectFrom(SettlementArea.BuildByName(toFound), toFound, maxCount);
-        if (tmp != null)
+        parsed = SettlementArea.BuildByName(toFound);
+        if (parsed != null)
         {
-            maxCount -= tmp.Count;
-            suggestions.AddRange(tmp);
+            return await builder.SelectFrom(parsed, maxCount);
         }
-        tmp = builder.SelectFrom(Settlement.BuildByName(toFound), toFound, maxCount);
-        if (tmp != null)
+        parsed = Settlement.BuildByName(toFound);
+        if (parsed != null)
         {
-            maxCount -= tmp.Count;
-            suggestions.AddRange(tmp);
+            return await builder.SelectFrom(parsed, maxCount);
         }
-        tmp = builder.SelectFrom(Street.BuildByName(toFound), toFound, maxCount);
-        if (tmp != null)
+        parsed = Street.BuildByName(toFound);
+        if (parsed != null)
         {
-            suggestions.AddRange(tmp);
+            return await builder.SelectFrom(parsed, maxCount);
         }
-        tmp = builder.SearchUntyped(toFound, maxCount);
-        if (tmp != null)
-        {
-            suggestions.AddRange(tmp);
-        }
-        return suggestions;
+        return await builder.SearchUntyped(toFound, maxCount);
     }
 
     public static AddressModel? BuildFromString(string? address)
@@ -457,37 +420,103 @@ public class AddressModel : ValidatedObject
         {
             AddressModel built = new AddressModel();
             string[] parts = address.Split(',').Select(x => x.Trim()).ToArray();
-            if (parts.Length < 5 || parts.Length > 7)
-            {
-                built.AddError(new ValidationError(nameof(AddressModel), "Неверное количество частей адреса"));
-            }
-            else
-            {
-                int offset = 0;
-                built.SubjectPart = parts[0];
-                built.DistrictPart = parts[1];
-                built.SettlementAreaPart = parts[2];
-                if (built._settlementAreaPart != null)
-                {
-                    offset += 1;
-                }
-                built.SettlementPart = parts[2 + offset];
-                built.StreetPart = parts[3 + offset];
-                built.BuildingPart = parts[4 + offset];
-                if (parts.Length >= 6)
-                {
-                    built.ApartmentPart = parts[5 + offset];
-                }
-            }
+            ProcessSubject(0);
             return built;
+
+            void ProcessSubject(int position)
+            {
+                built.SubjectPart =  position >= parts.Length ? "" : parts[position];
+                if (built._subjectPart?.CheckErrorsExist() ?? true)
+                {
+                    return;
+                }
+                ProcessDistrict(++position);
+            }
+
+            void ProcessDistrict(int position)
+            {
+
+                built.DistrictPart =  position >= parts.Length ? "" : parts[position];
+                if (built._districtPart?.CheckErrorsExist() ?? true)
+                {
+                    return;
+                }
+                ProcessSettlementArea(++position);
+            }
+
+            void ProcessSettlementArea(int position)
+            {
+
+                built.SettlementAreaPart =  position >= parts.Length ? "" : parts[position];
+                if (built._settlementAreaPart?.CheckErrorsExist() ?? true)
+                {
+                    ProcessSettlement(position); 
+                }
+                else{
+                    ProcessSettlement(++position); 
+                }
+            }
+
+            void ProcessSettlement(int position)
+            {
+
+                built.SettlementPart =  position >= parts.Length ? "" : parts[position];
+                if (built._settlementPart?.CheckErrorsExist() ?? true)
+                {
+                    built.PerformValidation(() => true, new ValidationError(nameof(SettlementPart), "Очистка статуса"));
+                    if (built.FilterErrorsByName(nameof(SettlementAreaPart)).Any()){
+                        built.AddError(new ValidationError(nameof(SettlementAreaPart), "Ни муниципалитет верхнего уровня, ни населенный пункт верно не указаны"));
+                        return;
+                    }
+                }
+                built.PerformValidation(() => true, new ValidationError(nameof(SettlementAreaPart), "Очистка статуса"));
+                ProcessStreet(++position);
+                return;
+            }
+
+            void ProcessStreet(int position)
+            {
+
+                built.StreetPart =  position >= parts.Length ? "" : parts[position];
+                if (built._streetPart?.CheckErrorsExist() ?? true)
+                {   
+                    return;
+                }
+                ProcessBuilding(++position);
+            }
+            void ProcessBuilding(int position)
+            {
+
+                built.BuildingPart =  position >= parts.Length ? "" : parts[position];
+                if (built._buildingPart?.CheckErrorsExist() ?? true)
+                {
+                    return;
+                }
+                ProcessApartment(++position);
+            }
+            void ProcessApartment(int position)
+            {
+                if (position >= parts.Length){
+                    return;
+                }
+                built.ApartmentPart = parts[position];
+                if (built._apartmentPart?.CheckErrorsExist() ?? true)
+                {
+                    built.AddError(new ValidationError(nameof(ApartmentPart), "Квартира указана некорректно"));
+                    return;
+                }
+            }
         }
     }
 
 
-    public bool Save()
+
+    public async Task<bool> Save(bool commit, Action? beforeRollbackAction, Action? onFailureAction)
     {
+
         if (CheckErrorsExist())
         {
+            onFailureAction?.Invoke();
             return false;
         }
         else
@@ -495,75 +524,146 @@ public class AddressModel : ValidatedObject
             if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
                 _streetPart == null || _buildingPart == null)
             {
+                onFailureAction?.Invoke();
                 return false;
             }
+            var transactConn = await Utils.GetAndOpenConnectionFactory();
+            var scope = await transactConn.BeginTransactionAsync();
+            ObservableTransaction wrapper = new ObservableTransaction(scope, transactConn);
 
-            if (!_subjectPart.Save())
+            await _subjectPart.Save(wrapper);
+            if (await _subjectPart.GetCurrentState(wrapper) == RelationTypes.Bound)
             {
-                return false;
+                await _districtPart.SetSubjectParent(int.Parse(_subjectPart.Code), wrapper);
             }
-            _districtPart.SubjectParentId = int.Parse(_subjectPart.Code);
-            if (!_districtPart.Save())
+            await _districtPart.Save(wrapper);
+            if (await _districtPart.GetCurrentState(wrapper) == RelationTypes.Bound)
             {
-                return false;
-            }
-            int? saId = null;
-            if (_settlementAreaPart != null)
-            {
-                _settlementAreaPart.DistrictParentId = _districtPart.Id;
-                if (!_settlementAreaPart.Save())
+                if (_settlementAreaPart != null)
                 {
-                    return false;
-                }
-                saId = _settlementAreaPart.Id;
-            }
-
-            if (saId != null)
-            {
-                _settlementPart.SettlementAreaParentId = saId;
-            }
-            else
-            {
-                _settlementPart.DistrictParentId = _districtPart.Id;
-            }
-            if (!_settlementPart.Save())
-            {
-                return false;
-            }
-            _streetPart.SettlementParentId = _streetPart.Id;
-            if (!_streetPart.Save())
-            {
-                return false;
-            }
-            _buildingPart.StreetParentId = _streetPart.Id;
-            if (!_buildingPart.Save())
-            {
-                return false;
-            }
-            if (_apartmentPart != null)
-            {
-                _apartmentPart.ParentBuildingId = _buildingPart.Id;
-                if (!_apartmentPart.Save())
-                {
-                    return false;
-                }
-            }
-            using (var conn = Utils.GetConnectionFactory())
-            {
-                conn.Open();
-                using (var cmd = new NpgsqlCommand("INSERT INTO addresses (building, apartment) VALUES (@p1, @p2) RETURNING id", conn)
-                {
-                    Parameters = {
-                        new ("p1", _buildingPart.Id),
-                        new ("p2", _apartmentPart == null ? DBNull.Value : _apartmentPart.Id)
+                    await _settlementAreaPart.SetDistrictParent(_districtPart.Id, wrapper);
+                    await _settlementAreaPart.Save(wrapper);
+                    if (await _settlementAreaPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+                    { 
+                        await _settlementPart.SetSettlementAreaParent(_settlementAreaPart.Id, wrapper);
+                        
                     }
-                })
+                }
+                else
                 {
-                    var reader = cmd.ExecuteReader();
-                    _id = (int)reader["id"];
-                    return true;
+                    await _settlementPart.SetDistrictParent(_districtPart.Id, wrapper);
                 }
             }
+            await _settlementPart.Save(wrapper);
+
+            if (await _settlementPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            {
+                await _streetPart.SetSettlementParent(_settlementPart.Id, wrapper);
+            }
+            await _streetPart.Save(wrapper);
+
+            if (await _streetPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            {
+                await _buildingPart.SetParentStreet(_streetPart.Id, wrapper);
+            }
+            bool completed = false;
+            await _buildingPart.Save(wrapper);
+            if (await _buildingPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            {
+                if (_apartmentPart != null)
+                {
+                    await _apartmentPart.SetParentBuildingId(_buildingPart.Id, wrapper);
+                    await _apartmentPart.Save(wrapper);
+                    completed = await _apartmentPart.GetCurrentState(wrapper) == RelationTypes.Bound;
+                }
+                else
+                {
+                    completed = true;
+                }
+            }
+            
+
+            Console.WriteLine("1 " + _subjectPart?.LongTypedName + " " + _subjectPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("2 " + _districtPart?.LongTypedName + "|" + _districtPart?.Id + " " + _districtPart?.SubjectParentId + " " + _districtPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("3 " + _settlementAreaPart?.LongTypedName + "|" + _settlementAreaPart?.Id + " " + _settlementAreaPart?.DistrictParentId + " " + _settlementAreaPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("4 " + _settlementPart?.LongTypedName + "|" + _settlementPart?.Id + " " + _settlementPart?.DistrictParentId + " " + _settlementPart?.SettlementAreaParentId + " " + _settlementPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("5 " + _streetPart?.LongTypedName + " " + _streetPart?.SettlementParentId + " " + _streetPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("6 " + _buildingPart?.LongTypedName + " " + _buildingPart?.StreetParentId + " " + _buildingPart?.GetCurrentState(wrapper)?.Result.ToString());
+            Console.WriteLine("7 " + _apartmentPart?.LongTypedName + " " + _apartmentPart?.ParentBuildingId + " " + _apartmentPart?.GetCurrentState(wrapper)?.Result.ToString());
+            
+            using (transactConn)
+            using (scope)
+            {
+                if (completed)
+                {
+                    if (commit)
+                    {
+                        string insertText = "INSERT INTO addresses (building, apartment) " +
+                            " VALUES (@p1, @p2) RETURNING id";
+                        var saveCmd = new NpgsqlCommand(insertText, scope.Connection, scope);
+
+                        saveCmd.Parameters.Add(new NpgsqlParameter<int>("p1", _buildingPart.Id));
+                        saveCmd.Parameters.Add(new NpgsqlParameter("p2", _apartmentPart == null ? DBNull.Value : (int)_apartmentPart.Id));
+
+                        await using (var reader = await saveCmd.ExecuteReaderAsync()){
+                            await reader.ReadAsync();
+                            _id = (int)reader["id"]; ;
+                        };
+                        await wrapper.CommitAsync();
+                        NotifyStateChanged();
+                        return true;
+
+                    }
+                    await wrapper.RollbackAsync();
+                }
+                if (beforeRollbackAction != null)
+                {
+                    onFailureAction?.Invoke();
+                }
+                return false;
+            }
+
+        }
+    }
+
+    public async static Task<bool> IsIdExists(int? id, ObservableTransaction? scope)
+    {
+        if (id == null)
+        {
+            return false;
+        }
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        {
+            await using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM addresses WHERE id = @p1)", conn))
+            {
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)id));
+                using var reader = await cmd.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                return (bool)reader["exists"];
+            }
+        }
+    }
+
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null){
+            return false;
+        }
+        if (this.GetType() != other.GetType()){
+            return false;
+        }
+        else {
+            return _id == ((AddressModel)other)._id;
+        }
+    }
+
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
+    {
+        if (await IsIdExists(_id, null)){
+            return this;
+        }
+        else{
+            return null;
         }
     }
 }

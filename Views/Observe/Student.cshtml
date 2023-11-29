@@ -67,7 +67,7 @@
             
             string factAddress = "Не указан";
             if (Model.ActualAddressId!= null){
-                 var address = AddressModel.GetAddressById((int)Model.ActualAddressId);
+                 var address = await AddressModel.GetAddressById((int)Model.ActualAddressId);
                  if (address != null){
                     factAddress = address.FullAddressString; 
                  }
@@ -76,7 +76,10 @@
         <p class="col-3">@factAddress</p>
     </div>
     @{
-        RussianCitizenship? citizenship = RussianCitizenship.GetById(Model.RussianCitizenshipId);
+        RussianCitizenship? citizenship = null;
+        if (Model.RussianCitizenshipId != null){
+            citizenship = await RussianCitizenship.GetById((int)Model.RussianCitizenshipId);
+        }
     }
     @if(citizenship != null){
         <div>
@@ -105,7 +108,7 @@
             <div class="d-flex flex-row">
                 <h5 class="col-3">Прописка</h5>
                 @{
-                   string fullAddress = citizenship.LegalAddress == null ? "Не указана" : citizenship.LegalAddress.FullAddressString;
+                   string fullAddress = (await AddressModel.GetAddressById(citizenship.LegalAddressId))?.FullAddressString ?? "";
                 }
                 <p class="col-3">@fullAddress</p>
             </div>

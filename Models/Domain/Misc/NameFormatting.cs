@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Utilities;
 
 namespace StudentTracking.Models.Domain.Misc;
 
@@ -58,19 +59,19 @@ public class NameFormatting {
 
     public string FormatLong(string toponym){
         if (_positioning == BEFORE){
-            return _longName + " " + toponym;
+            return _longName + " " + Utils.FormatToponymName(toponym);
         }
         if (_positioning == AFTER){
-            return toponym + " " + _longName;
+            return Utils.FormatToponymName(toponym) + " " + _longName;
         }
         return string.Empty;
     }
      public string FormatShort(string toponym){
         if (_positioning == BEFORE){
-            return _shortName + " " + toponym;
+            return _shortName + " " + Utils.FormatToponymName(toponym);
         }
         if (_positioning == AFTER){
-            return toponym + " " + _shortName;
+            return Utils.FormatToponymName(toponym) + " " + _shortName;
         }
         return string.Empty;
     }

@@ -36,11 +36,10 @@ public class StudentRecord
 
 
 
-    public static List<StudentEssentials>? FilterByNextOrderType(OrderTypesId id, int currentOrderId, string? searchText = null, string? groupNameLike = null)
+    public static async Task<List<StudentEssentials>?> FilterByNextOrderType(OrderTypesId id, int currentOrderId, string? searchText = null, string? groupNameLike = null)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             int[]? ordersAllowed = OrderModel.GetRulesBefore(id);
             if (ordersAllowed != null)
             {
@@ -48,7 +47,7 @@ public class StudentRecord
                 string query = "SELECT * FROM get_student_allowed_for_order(@p1, @p2, @p3, @p4)";
                 if (id == OrderTypesId.FromPaidToFreeGroup)
                 {
-                    query += " WHERE group_type = 2";
+                    query += " WHERE group_type = 2"; 
                 }
                 using (var cmd = new NpgsqlCommand(query, conn))
                 {
@@ -56,7 +55,7 @@ public class StudentRecord
                     cmd.Parameters.Add("@p2", NpgsqlTypes.NpgsqlDbType.Text).Value = (searchText == null || searchText == "") ? DBNull.Value : "%" + searchText + "%";
                     cmd.Parameters.Add("@p3", NpgsqlTypes.NpgsqlDbType.Text).Value = (groupNameLike == null || groupNameLike == "") ? DBNull.Value : "%" + groupNameLike + "%";
                     cmd.Parameters.Add("@p4", NpgsqlTypes.NpgsqlDbType.Integer).Value = currentOrderId;
-                    var reader = cmd.ExecuteReader();
+                    using var reader = cmd.ExecuteReader();
                     var studentsGot = new List<StudentEssentials>();
                     if (!reader.HasRows)
                     {
@@ -85,20 +84,19 @@ public class StudentRecord
             }
         }
     }
-    public static List<StudentEssentials>? GetAssociatedStudents(int orderId)
+    public static async Task<List<StudentEssentials>?> GetAssociatedStudents(int orderId)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
 
-            using (var cmd = new NpgsqlCommand("SELECT * FROM get_students_in_order (@p1)", conn)
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM get_students_in_order (@p1)", conn)
             {
                 Parameters = {
                    new  ("p1", orderId)
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
+                using  var reader = cmd.ExecuteReader();
                 var studentsGot = new List<StudentEssentials>();
                 if (!reader.HasRows)
                 {
@@ -121,9 +119,8 @@ public class StudentRecord
         }
     }
     // возвращает число записанных студентов
-    public static void SaveRecords(List<StudentRecord> toSave){
-        using (var conn = Utils.GetConnectionFactory()){
-            conn.Open();
+    public static async Task SaveRecords(List<StudentRecord> toSave){
+        using (var conn = await Utils.GetAndOpenConnectionFactory()){
             for (int i = 0; i < toSave.Count; i++){
                 // перед установкой в базу необходимо проверить валидность типа приказа
                 // доделать

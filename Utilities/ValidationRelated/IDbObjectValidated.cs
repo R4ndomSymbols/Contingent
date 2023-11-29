@@ -1,3 +1,5 @@
+using Npgsql;
+
 namespace Utilities.Validation;
 
 public interface IDbObjectValidated : IValidatedObject, IEquatable<IDbObjectValidated>{
@@ -6,7 +8,8 @@ public interface IDbObjectValidated : IValidatedObject, IEquatable<IDbObjectVali
 
     public IReadOnlyCollection<ValidationError> GetIntegriryErrors();
 
-    public IDbObjectValidated? GetDbRepresentation();
+    public IReadOnlyCollection<ValidationError> FilterErrorsByName(string name);
 
+    public Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? within);
 }
 

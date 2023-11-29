@@ -38,8 +38,8 @@ public class FederalSubject : DbValidatedObject
                     () => ValidatorCollection.CheckRange(r, 0, 300),
                     new ValidationError(nameof(Code), "Код региона не может быть таким")
                 ))
-                {  
-                     _code = r;
+                {
+                    _code = r;
                 }
             }
 
@@ -62,7 +62,7 @@ public class FederalSubject : DbValidatedObject
     }
     public string UntypedName
     {
-        get => _subjectUntypedName;
+        get => Utils.FormatToponymName(_subjectUntypedName);
         set
         {
             if (PerformValidation(
@@ -77,30 +77,34 @@ public class FederalSubject : DbValidatedObject
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
                         new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
-                        _subjectUntypedName = value;
+                        _subjectUntypedName = value.ToLower();
                     }
                 }
             }
         }
     }
-    public string LongTypedName {
-        get {
-            return Names[_federalSubjectType].FormatLong(_subjectUntypedName);
+    public string LongTypedName
+    {
+        get
+        {
+            return Names[_federalSubjectType].FormatLong(UntypedName);
         }
     }
-    public string NameWithCode {
-        get {
+    public string NameWithCode
+    {
+        get
+        {
             return Code + " " + LongTypedName;
         }
     }
 
-    protected FederalSubject(int code, string name, Types type) : this()
-    {   
+    protected FederalSubject(int code) : base(RelationTypes.Bound)
+    {
         _code = code;
-        _subjectUntypedName = name;
-        _federalSubjectType = type;
+        _subjectUntypedName = "";
     }
-    public FederalSubject() : base(){
+    public FederalSubject() : base()
+    {
 
         RegisterProperty(nameof(UntypedName));
         RegisterProperty(nameof(Code));
@@ -132,149 +136,185 @@ public class FederalSubject : DbValidatedObject
         {Types.Region, new NameFormatting("обл.", "Область", NameFormatting.BEFORE)},
     };
 
-    public static FederalSubject MakeUnsafe(int code, string untypedName, int type){
+    public static FederalSubject MakeUnsafe(int code, string untypedName, int type)
+    {
         var fed = new FederalSubject
         {
             _code = code,
             _subjectUntypedName = untypedName,
-            _federalSubjectType = (Types)type 
+            _federalSubjectType = (Types)type
         };
         return fed;
     }
 
-    public bool Save()
-    {
-        if (CurrentState != RelationTypes.Pending){
-            return false;
-        }
-        using (var conn = Utils.GetConnectionFactory())
+    public async Task Save(ObservableTransaction? scope)
+    {   
+        var connWithin = await Utils.GetAndOpenConnectionFactory();
+        if (await GetCurrentState(scope) != RelationTypes.Pending)
         {
-            conn.Open();
+            return;
+        }
+        NpgsqlCommand? command = null;
+        string cmdText = "INSERT INTO federal_subjects (code,subject_type, full_name) VALUES (@p1,@p2,@p3)";
+        if (scope != null)
+        {
+            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._code = Utils.INVALID_ID));
+        }
+        else
+        {
+            command = new NpgsqlCommand(cmdText, connWithin);
+        }
 
-            using (var cmd = new NpgsqlCommand($"INSERT INTO federal_subjects (code,subject_type, full_name) VALUES (@p1,@p2,@p3)", conn)
-            {
-                Parameters = {
-                        new("p1", _code),
-                        new("p2", _federalSubjectType),
-                        new("p3", _subjectUntypedName),
-                    }
-            })
-            {
-                var reader = cmd.ExecuteNonQuery();
-                SetBound();
-                return true;
-            }
-        }
-    }
-    public static List<FederalSubject> GetAll()
-    {
-        using (var conn = Utils.GetConnectionFactory())
+        // разобраться с прописными и строчными буквами
+
+        command.Parameters.Add(new NpgsqlParameter<int>("p1", _code));
+        command.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_federalSubjectType));
+        command.Parameters.Add(new NpgsqlParameter<string>("p3", _subjectUntypedName.ToLower()));
+
+        await using (connWithin)
+        await using (command)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM federal_subject", conn))
-            {
-                var found = new List<FederalSubject>();
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return found;
-                }
-                while (reader.Read())
-                {
-                    var f = new FederalSubject(
-                        code: (int)reader["code"],
-                        name: (string)reader["full_name"],
-                        type: (Types)reader["subject_type"]
-                    );
-                    f.SetBound();
-                    found.Add(f);
-                }
-                return found;
-            }
-        }
-    }
-    public static FederalSubject? GetByCode(int code){
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT code, subject_type, full_name FROM federal_subjects WHERE id = @p1", conn){
-                Parameters = {
-                    new ("p1", code)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                var f = new FederalSubject(
-                        code: (int)reader["code"],
-                        name: (string)reader["full_name"],
-                        type: (Types)reader["subject_type"]);
-                f.SetBound();
-                return f;
-            }
+            var reader = await command.ExecuteNonQueryAsync();
+            NotifyStateChanged();
         }
     }
 
-    public static FederalSubject? BuildByName(string? fullname){
-        if (fullname == null){
+
+
+    // public static List<FederalSubject> GetAll()
+    // {
+    //     using (var conn = Utils.GetAndOpenConnectionFactory())
+    //     {
+
+    //         using (var cmd = new NpgsqlCommand($"SELECT * FROM federal_subject", conn))
+    //         {
+    //             var found = new List<FederalSubject>();
+    //             var reader = cmd.ExecuteReader();
+    //             if (!reader.HasRows)
+    //             {
+    //                 return found;
+    //             }
+    //             while (reader.Read())
+    //             {
+    //                 var f = new FederalSubject((int)reader["code"])
+    //                 {
+    //                     _subjectUntypedName = (string)reader["full_name"],
+    //                     _federalSubjectType = (Types)reader["subject_type"]
+    //                 };
+    //                 found.Add(f);
+    //             }
+    //             return found;
+    //         }
+    //     }
+    // }
+    public static async Task<FederalSubject?> GetByCode(int code, ObservableTransaction? scope = null)
+    {
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        string query = "SELECT subject_type, full_name FROM federal_subjects WHERE code = @p1";
+        NpgsqlCommand cmd;
+        if (scope == null)
+        {
+            cmd = new NpgsqlCommand(query, conn);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", code));
+
+        await using (conn)
+        await using (cmd)
+        {   
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows)
+            {
+                return null;
+            }
+            await reader.ReadAsync();
+            var f = new FederalSubject(code);
+            f._subjectUntypedName = (string)reader["full_name"];
+            f._federalSubjectType = (Types)reader["subject_type"];
+            return f;
+        }
+    }
+
+    public static FederalSubject? BuildByName(string? fullname)
+    {
+        if (fullname == null)
+        {
             return null;
         }
         NameToken? extracted;
         FederalSubject toBuild = new FederalSubject();
-        string[] parts = fullname.Split(" ");
-        if (parts.Length < 2){
+        string[] parts = fullname.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length < 2)
+        {
             return null;
         }
-        else{
+        else
+        {
             toBuild.Code = parts[0];
         }
         int codeDelimiter = fullname.IndexOf(' ');
-        if (fullname.Length-1 == codeDelimiter){
+        if (fullname.Length - 1 == codeDelimiter)
+        {
             return null;
         }
-        string fullnameWithoutCode = fullname.Substring(codeDelimiter+1); 
-        foreach (var pair in Names){
+        string fullnameWithoutCode = fullname.Substring(codeDelimiter + 1);
+        foreach (var pair in Names)
+        {
             extracted = pair.Value.ExtractToken(fullnameWithoutCode);
-            if (extracted != null){
-                toBuild._federalSubjectType = pair.Key;
+            if (extracted != null)
+            {
+                toBuild.SubjectType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
                 return toBuild;
-            } 
+            }
         }
         return null;
     }
-    public static bool IsCodeExists(int id){
-        using (var conn = Utils.GetConnectionFactory())
-        {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlements WHERE id = @p1)", conn) 
-            {
-                Parameters = {
-                    new("p1", id),
-                }
-            })
-            {
-               return (bool)cmd.ExecuteReader()["exists"];
-            }
-        }
-    } 
-    public override IDbObjectValidated? GetDbRepresentation()
+    public static async Task<bool> IsCodeExists(int id, ObservableTransaction? scope)
     {
-        return GetByCode(_code);
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        NpgsqlCommand? cmd = null;
+        var cmdText = "SELECT EXISTS(SELECT code FROM federal_subjects WHERE code = @p1)";
+        if (scope!=null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);    
+        }
+        else {
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        using (conn)
+        using (cmd)
+        {
+            
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            var t = await reader.ReadAsync();
+            return (bool)reader["exists"];
+        }
+    }
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? within = null)
+    {
+        return await GetByCode(_code, within);
     }
     public override bool Equals(IDbObjectValidated? obj)
     {
-        if (obj == null){
+        if (obj == null)
+        {
             return false;
         }
-        if (obj.GetType() != typeof(FederalSubject)){
+        if (obj.GetType() != typeof(FederalSubject))
+        {
             return false;
         }
         var unboxed = (FederalSubject)obj;
-        return _code == unboxed._code &&
+        return 
+        _code == unboxed._code &&
         _subjectUntypedName == unboxed._subjectUntypedName &&
         _federalSubjectType == unboxed._federalSubjectType;
     }

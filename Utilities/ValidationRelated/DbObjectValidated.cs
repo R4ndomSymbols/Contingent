@@ -1,24 +1,30 @@
 
+using System.Collections.ObjectModel;
+using Npgsql;
+
 namespace Utilities.Validation;
 
 
 public class DbValidatedObject : IDbObjectValidated
 {
-    private List<ValidationError> _errors;
-    private Dictionary<string, int> _invokationLog;
+    private List<ValidationError>? _errors;
+    private Dictionary<string, int>? _invokationLog;
     private bool _synced;
     private RelationTypes _relationBetweenObjAndDB;
 
     private bool ValidationProperlyInvoked {
-        get => _invokationLog.All(x => x.Value > 0);
+        
+        get {
+            if (_invokationLog == null){
+                throw new InvalidOperationException("Смена состояний неинициализированной валидации невозможна, свойство");
+            }
+            return _invokationLog.All(x => x.Value > 0);
+        } 
     }
 
-    public RelationTypes CurrentState {
-        get {
-            UpdateObjectIntegrityState();
-            //Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value)));
-            return _relationBetweenObjAndDB;
-        }
+    public async Task<RelationTypes> GetCurrentState(ObservableTransaction? scope){
+        await UpdateObjectIntegrityState(scope);
+        return _relationBetweenObjAndDB;
     }
 
     protected DbValidatedObject(){
@@ -27,48 +33,80 @@ public class DbValidatedObject : IDbObjectValidated
         _synced = false;
         _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
     }
-    protected void SetBound(){
-        _relationBetweenObjAndDB = RelationTypes.Bound;
+
+    protected DbValidatedObject(RelationTypes initRelation){
+        _errors = new List<ValidationError>();
+        _relationBetweenObjAndDB = initRelation;
+        switch (initRelation)
+        {
+            case RelationTypes.UnboundInvalid:
+            case RelationTypes.Invalid:
+                _errors = new List<ValidationError>();
+                _invokationLog = new Dictionary<string, int>();
+                _synced = false;
+                break;
+            case RelationTypes.Bound:
+                _errors = null;
+                _invokationLog = null;
+                _synced = true;
+                break;
+        }
     }
+
     public bool CheckErrorsExist()
     {
-        return _errors.Any();
+        if (_errors != null){
+            return _errors.Any();          
+        }
+        else{
+            return false;
+        }
     }
 
     public bool CheckIntegrityErrorsExist()
     {
-        return _errors.Any(x => x.GetType() == typeof(DbIntegrityValidationError));
-    }
-
-    public virtual bool Equals(IDbObjectValidated? other)
-    {
+        if (_errors != null){
+            return _errors.Any(x => x.GetType() == typeof(DbIntegrityValidationError));
+        }
         return false;
-    }
-
-    public virtual IDbObjectValidated? GetDbRepresentation()
-    {
-        return null;
     }
 
     public IReadOnlyCollection<ValidationError> GetErrors()
     {
+        if (_errors == null){
+            return new List<ValidationError>().AsReadOnly();
+        }
         return _errors.ToList().AsReadOnly();
     }
 
     protected void AddError(ValidationError err){
+        if (_errors == null){
+            return;
+        }
         _errors.Add(err);
     }
     private void ClearState(string propName){
+        if (_errors == null){
+            return;
+        }
         _errors = _errors.Where(x => x.PropertyName != propName).ToList();
     }
     public bool PerformValidation(Func<bool> validation, ValidationError err){
+        if (_errors == null){
+            _errors = new List<ValidationError>();
+            _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
+        }
+
         ClearState(err.PropertyName);
         bool validationResult = validation.Invoke();
         try {
+            if (_invokationLog == null){
+                throw new ArgumentNullException("непредвиденная ошибка инициализации словаря валидации");
+            }
             _invokationLog[err.PropertyName] = _invokationLog[err.PropertyName] + 1;
         }
-        catch (Exception){
-            throw new InvalidOperationException("Поле не зарегистрировано");
+        catch (KeyNotFoundException){
+            throw new ArgumentException("Поле не зарегистрировано");
         }
         
         if (!validationResult){
@@ -77,7 +115,12 @@ public class DbValidatedObject : IDbObjectValidated
         _synced = false;
         return validationResult;
     }
+    
     protected void RegisterProperty(string? name){
+        if (_invokationLog == null){
+            _invokationLog = new Dictionary<string, int>();
+        }
+
         if (name == null){
             return;
         }
@@ -87,11 +130,16 @@ public class DbValidatedObject : IDbObjectValidated
         _invokationLog.Add(name, 0);
     }
 
-    private void UpdateObjectIntegrityState(){
+    private async Task UpdateObjectIntegrityState(ObservableTransaction? scope){
+        if (_invokationLog == null){
+            throw new InvalidOperationException("Смена состояний неинициализированной валидации невозможна");
+        }
         if (_synced){
             return;
         }
-        var alter = this.GetDbRepresentation();
+        //Console.WriteLine(this.GetType().ToString() + " " + ValidationProperlyInvoked.ToString() + " " + CheckErrorsExist().ToString());
+        //Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value.ToString())));
+        var alter = await GetDbRepresentation(scope);
         if (alter == null){
             if (CheckErrorsExist() || !ValidationProperlyInvoked){
                 _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
@@ -116,7 +164,41 @@ public class DbValidatedObject : IDbObjectValidated
 
     public IReadOnlyCollection<ValidationError> GetIntegriryErrors()
     {
+        if (_errors == null){
+            return new List<ValidationError>().AsReadOnly();
+        }
         return _errors.Where(x => x.GetType() == typeof(DbIntegrityValidationError)).ToList().AsReadOnly();
+    }
+
+    public virtual bool Equals(IDbObjectValidated? other)
+    {
+        throw new NotImplementedException("Метод сравнения не переопределен");
+    }
+
+    public virtual async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
+    {   
+        await Task.Delay(10);
+        throw new NotImplementedException("Метод получения сущности БД не переопределен");
+    }
+
+    protected void NotifyStateChanged(){
+        _synced = false;
+    }
+
+    public void WriteErrors(){
+        if (_errors != null){
+            Console.WriteLine(string.Join("\n", _errors));
+        }
+    }
+
+    public IReadOnlyCollection<ValidationError> FilterErrorsByName(string name)
+    {
+        if (_errors == null){
+            return new List<ValidationError>();
+        }
+        else{
+            return _errors.Where(x => x.PropertyName == name).ToList();
+        }
     }
 }
 

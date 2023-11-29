@@ -31,11 +31,10 @@ public class StudentEducationalLevelRecord {
         Recorded = EducationalLevels.NotMentioned;
     }
 
-    public static void SaveRecord(StudentEducationalLevelRecord toSave){
-        using (var conn = Utils.GetConnectionFactory())
+    public static async Task SaveRecord(StudentEducationalLevelRecord toSave){
+        await using (var conn =await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var command = new NpgsqlCommand("INSERT INTO education_tag_history( " +
+            await using (var command = new NpgsqlCommand("INSERT INTO education_tag_history( " +
                     " student_id, level_code) VALUES (@p1, @p2)", conn)
             {
                 Parameters = {
@@ -44,27 +43,26 @@ public class StudentEducationalLevelRecord {
                 }
             })
             {
-                command.ExecuteNonQuery();
+                await command.ExecuteNonQueryAsync();
             }
         }
     }
-    public static List<StudentEducationalLevelRecord>? GetByOwnerId(int ownerId){
-        using (var conn = Utils.GetConnectionFactory())
+    public static async Task<List<StudentEducationalLevelRecord>?> GetByOwnerId(int ownerId){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var command = new NpgsqlCommand("SELECT * FROM education_tag_history WHERE student_id = @p1", conn)
+            await using (var command = new NpgsqlCommand("SELECT * FROM education_tag_history WHERE student_id = @p1", conn)
             {
                 Parameters = {
                     new("p1", ownerId),
                 }
             })
             {
-                var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var found = new List<StudentEducationalLevelRecord>();
-                while(reader.Read()){
+                while(await reader.ReadAsync()){
                     found.Add(new StudentEducationalLevelRecord{
                         OwnerId = ownerId,
                         Recorded = (EducationalLevels)(int)reader["level_code"],

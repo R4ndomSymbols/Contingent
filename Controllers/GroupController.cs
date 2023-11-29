@@ -31,24 +31,7 @@ public class GroupController : Controller{
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
         }
     }
-    [HttpGet]
-    [Route("/groups/types")]
-    public JsonResult GetGroupTypes(){
-        var got = GroupModel.GetGroupEduTypes();
-        if (got == null){
-            return Json(null);
-        }
-        return Json(got.ToArray());
-    }
-    [HttpGet]
-    [Route("/groups/forms")]
-    public JsonResult GetGroupForms(){
-        var got = GroupModel.GetGroupEduForms();
-        if (got == null){
-            return Json(null);
-        }
-        return Json(got.ToArray());
-    }
+
     [HttpPost]
     [Route("/groups/add")]
     public async Task<JsonResult> SaveOrUpdateGroup(){
@@ -58,13 +41,13 @@ public class GroupController : Controller{
             if (deserialized == null){
                 return Json(null);
             }
-            return Json(GroupModel.CreateOrUpdateGroup(deserialized));
+            return Json(await GroupModel.CreateOrUpdateGroup(deserialized));
         }
     }
     [HttpGet]
     [Route("/groups/find/{query?}")]
-    public JsonResult FindGroups(string? query){
-        var found = GroupModel.FindGroup(query);
+    public async Task<JsonResult> FindGroups(string? query){
+        var found = await GroupModel.FindGroup(query);
         return Json(found);
     }
 }

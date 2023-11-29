@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Npgsql;
 using StudentTracking.Models.Domain.Address;
 using Utilities;
@@ -37,7 +38,7 @@ public class AddressRestoreQueryBuilder {
     private string FormatLike(string text) {
         return "\'%" + text + "%\'"; 
     }
-    public List<string>? SearchUntyped(string plainText, int count){
+    public async Task<List<string>?> SearchUntyped(string plainText, int count){
         string liked = FormatLike(plainText);
         string findClause = 
         $" federal_subjects.full_name LIKE {liked} " +
@@ -51,17 +52,16 @@ public class AddressRestoreQueryBuilder {
 
         Console.WriteLine(query);
 
-        using (var conn = Utils.GetConnectionFactory()){
-            conn.Open();
-            using (var cmd = new NpgsqlCommand(query, conn)){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
+            await using (var cmd = new NpgsqlCommand(query, conn)){
                 
-                var reader = cmd.ExecuteReader();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var toReturn = new List<string>();
 
-                while (reader.Read()){
+                while (await reader.ReadAsync()){
                     string found =  AddressModel.CreateAddressString(
                         FederalSubject.MakeUnsafe((int)reader["subj_id"], (string)reader["subj_name"], (int)reader["subj_type"]),
                         District.MakeUnsafe((int)reader["dist_id"], (string)reader["dist_name"], (int)reader["dist_type"]),
@@ -80,10 +80,7 @@ public class AddressRestoreQueryBuilder {
         }
     }
 
-    public List<string>? SelectFrom(object? addressPart, string? findText, int count){
-        if (findText == null){
-            return null;
-        }
+    public async Task<List<string>?> SelectFrom(object? addressPart, int count){
         if (addressPart == null){
             return null;
         }
@@ -98,28 +95,28 @@ public class AddressRestoreQueryBuilder {
             var converted = (FederalSubject)addressPart; 
             findClause = $" federal_subjects.full_name LIKE {FormatLike(converted.UntypedName)} " 
             + (converted.SubjectType == (int)FederalSubject.Types.NotMentioned ? "" 
-            : " AND federal_subjects.subject_type = " + converted.SubjectType.ToString());
+            : (" AND federal_subjects.subject_type = " + converted.SubjectType.ToString()));
             addressLevel = 1;
         }
         else if(addressPart is District){
             var converted = (District)addressPart; 
             findClause = $" districts.full_name LIKE {FormatLike(converted.UntypedName)} " 
             + (converted.DistrictType == (int)District.Types.NotMentioned ? "" 
-            : " AND districts.district_type = " + converted.DistrictType.ToString());
+            : (" AND districts.district_type = " + converted.DistrictType.ToString()));
             addressLevel = 2;
         }
         else if(addressPart is SettlementArea){
             var converted = (SettlementArea)addressPart; 
             findClause = $" settlement_areas.full_name LIKE {FormatLike(converted.UntypedName)} " 
             + (converted.SettlementAreaType == (int)SettlementArea.Types.NotMentioned ? "" 
-            : " AND settlement_areas.settlement_area_type = " + converted.SettlementAreaType.ToString());
+            : (" AND settlement_areas.settlement_area_type = " + converted.SettlementAreaType.ToString()));
             addressLevel = 3;
         }
         else if(addressPart is Settlement ){
             var converted = (Settlement)addressPart; 
             findClause = $" settlements.full_name LIKE {FormatLike(converted.UntypedName)} " 
             + (converted.SettlementType == (int)Settlement.Types.NotMentioned ? "" 
-            : " AND settlements.settlement_type = " + converted.SettlementType.ToString());
+            : (" AND settlements.settlement_type = " + converted.SettlementType.ToString()));
             addressLevel = 4;
         }
         else if (addressPart is Street)
@@ -127,27 +124,26 @@ public class AddressRestoreQueryBuilder {
             var converted = (Street)addressPart; 
             findClause = $" streets.full_name LIKE {FormatLike(converted.UntypedName)} "
             + (converted.StreetType == (int)Street.Types.NotMentioned ? ""
-            : " AND streets.street_type = " + converted.StreetType.ToString());
+            : (" AND streets.street_type = " + converted.StreetType.ToString()));
             addressLevel = 5;
         }
-        if (findClause == "" || addressLevel == 0){
+        else {
             return null;
         }
         string query = _mainQuery.Replace("{find_clause}", findClause);
         query = query.Replace("{count}", count.ToString());
         Console.WriteLine(query);
 
-        using (var conn = Utils.GetConnectionFactory()){
-            conn.Open();
-            using (var cmd = new NpgsqlCommand(query, conn)){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
+            await using (var cmd = new NpgsqlCommand(query, conn)){
                 
-                var reader = cmd.ExecuteReader();
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var toReturn = new List<string>();
 
-                while (reader.Read()){
+                while (await reader.ReadAsync()){
                     string found =  AddressModel.CreateAddressString(
                         FederalSubject.MakeUnsafe((int)reader["subj_id"], (string)reader["subj_name"], (int)reader["subj_type"]),
                         addressLevel > 0 ? District.MakeUnsafe((int)reader["dist_id"], (string)reader["dist_name"], (int)reader["dist_type"]) : null,
@@ -165,12 +161,5 @@ public class AddressRestoreQueryBuilder {
             }
         }
     }
-
-
-
-
-
-
-
 }
 

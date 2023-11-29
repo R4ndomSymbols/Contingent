@@ -63,11 +63,33 @@ public static class Utils {
         }
     }
 
-    public static NpgsqlConnection GetConnectionFactory(){
+    public static string FormatToponymName(string name){
+
+        if (string.IsNullOrEmpty(name)){
+            return "";
+        }
+        string[] split = name.Split(new char[] {' ', '-'});
+        if (split.Any(x => x == string.Empty)){
+            throw new ArgumentException("Входной топоним не был в правильном формате");
+        }
+        int point = 0;
+        string result = string.Empty;
+        for (int i = 0; i < split.Length; i++){
+            var newName = string.Concat(split[i][0..1].ToUpper(), split[i].Substring(1).ToLower());
+            point+=split[i].Length;
+            result+=newName + (point < name.Length ? name[point] : "");
+            point++;
+        }
+        return result; 
+    }
+
+    public static async Task<NpgsqlConnection> GetAndOpenConnectionFactory(){
         if (DatabaseConnectionString == null){
             DatabaseConnectionString = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["ConnectionString"];
         }
-        return new NpgsqlConnection(DatabaseConnectionString);
+        var c = new NpgsqlConnection(DatabaseConnectionString);
+        await c.OpenAsync(); 
+        return c;
     }
 }
 

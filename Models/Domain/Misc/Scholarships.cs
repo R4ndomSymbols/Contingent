@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Server.IIS.Core;
 using Npgsql;
 using Utilities;
 namespace StudentTracking.Models.Domain.Misc;
@@ -42,13 +43,12 @@ public class Scholarship
         Id = Utils.INVALID_ID;
     }
 
-    public int RegisterOrUpdateScholarsip(Scholarship toSave)
+    public async Task<int> RegisterOrUpdateScholarsip(Scholarship toSave)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             if (Id == Utils.INVALID_ID){
-                using (var command = new NpgsqlCommand("INSERT INTO scholarship( " +
+               await using (var command = new NpgsqlCommand("INSERT INTO scholarship( " +
                     " student_id, scholarship_type, initial_date, end_date) " +
                     " VALUES (@p1, @p2, @p3, @p4) RETURNING id", conn)
             {
@@ -60,7 +60,8 @@ public class Scholarship
                 }
             })
             {
-                var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync();
+                await reader.ReadAsync();
                 return (int)reader["id"];
             }
             }
@@ -85,21 +86,20 @@ public class Scholarship
         }
     }
 
-    public List<Scholarship>? GetScholarshipsByOwnerId(int ownerId)
+    public async Task<List<Scholarship>?> GetScholarshipsByOwnerId(int ownerId)
     {
-        using (var conn = Utils.GetConnectionFactory()){
-            conn.Open();
-            using (var command = new NpgsqlCommand("SELECT * FROM scholarship WHERE student_id = @p1", conn){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
+            await using (var command = new NpgsqlCommand("SELECT * FROM scholarship WHERE student_id = @p1", conn){
                 Parameters = {
                     new ("p1",ownerId),
                 }
             }){
-                var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync();
                 if (!reader.HasRows){
                     return null;
                 }
                 var found = new List<Scholarship>();
-                while (reader.Read()){
+                while (await reader.ReadAsync()){
                     found.Add(new Scholarship(){
                         Id = (int)reader["id"],
                         OwnerId = ownerId,

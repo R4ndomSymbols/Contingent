@@ -16,7 +16,7 @@ public class OrderModel
     [JsonPropertyName("orderDescription")]
     public string OrderDescription { get; set; }
     [JsonPropertyName("serialNumber")]
-    public int SerialNumber { get; set; }
+    public int SerialNumber { get; set; } 
     [JsonPropertyName("orderType")]
     public int OrderTypeId { get; set; }
 
@@ -214,24 +214,23 @@ public class OrderModel
     }
     
 
-    public static OrderModel? GetById(int id)
+    public static async Task<OrderModel?> GetById(int id)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn =await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT * FROM orders WHERE id = @p1", conn)
+            await using (var cmd = new NpgsqlCommand("SELECT * FROM orders WHERE id = @p1", conn)
             {
                 Parameters = {
                     new NpgsqlParameter("p1", id)
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
+                using var reader =await cmd.ExecuteReaderAsync();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
-                reader.Read();
+                await reader.ReadAsync();
                 return new OrderModel()
                 {
                     Id = id,
@@ -244,14 +243,13 @@ public class OrderModel
             }
         }
     }
-    public static List<OrderType>? GetAllTypes()
+    public static async Task<List<OrderType>?> GetAllTypes()
     {
-        using (var conn = Utils.GetConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             using (var cmd = new NpgsqlCommand("SELECT * FROM order_types", conn))
             {
-                var reader = cmd.ExecuteReader();
+                using var reader = cmd.ExecuteReader();
                 if (!reader.HasRows)
                 {
                     return null;
@@ -273,11 +271,10 @@ public class OrderModel
 
 
 
-    public static int CreateOrUpdateOrder(OrderModel toProcess)
+    public static async Task<int> CreateOrUpdateOrder(OrderModel toProcess)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        using (var  conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             if (toProcess.Id == -1)
             {
                 using (var cmd = new NpgsqlCommand("INSERT INTO orders (date, order_identity, order_description, order_type, serial_number) "
@@ -292,7 +289,7 @@ public class OrderModel
                     }
                 })
                 {
-                    var reader = cmd.ExecuteReader();
+                    using var reader = cmd.ExecuteReader();
                     if (!reader.HasRows)
                     {
                         return -1;
@@ -324,10 +321,9 @@ public class OrderModel
         }
     }
 
-    public static List<OrderModel>? FindOrdersByOrgId(string orgId){
-        using (var conn = Utils.GetConnectionFactory())
+    public static async Task<List<OrderModel>?> FindOrdersByOrgId(string orgId){
+        using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
             using (var cmd = new NpgsqlCommand("SELECT * FROM orders WHERE order_identity LIKE @p1", conn)
             {
                 Parameters = {
@@ -335,13 +331,13 @@ public class OrderModel
                 }
             })
             {
-                var reader = cmd.ExecuteReader();
+                using var reader = cmd.ExecuteReader();
                 if (!reader.HasRows)
                 {
                     return null;
                 }
                 var toReturn = new List<OrderModel>();
-                while (reader.Read())
+                while (await reader.ReadAsync())
                 {
                     toReturn.Add(new OrderModel()
                     {

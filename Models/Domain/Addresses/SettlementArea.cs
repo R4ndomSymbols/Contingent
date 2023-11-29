@@ -31,18 +31,20 @@ public class SettlementArea : DbValidatedObject
     public int Id
     {
         get => _id;
-        set
-        {
-            _id = value;
-        }
     }
+    public async Task SetDistrictParent(int id, ObservableTransaction? scope){
+        bool exists = await District.IsIdExists(id, scope);
+        if (PerformValidation(() => exists, 
+            new DbIntegrityValidationError(nameof(DistrictParentId), "ID муниципалитета ВУ должен быть указан")))
+        {
+            _parentDistrictId = id;
+        }
+
+    }
+
     public int DistrictParentId
     {
         get => _parentDistrictId;
-        set
-        {
-            _parentDistrictId = value;
-        }
     }
     public int SettlementAreaType
     {
@@ -61,7 +63,7 @@ public class SettlementArea : DbValidatedObject
     }
     public string UntypedName
     {
-        get => _untypedName;
+        get => Utils.FormatToponymName(_untypedName);
         set
         {
             if (PerformValidation(
@@ -76,26 +78,28 @@ public class SettlementArea : DbValidatedObject
                         () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
                         new ValidationError(nameof(UntypedName), "Название поселения содержит недопустимые символы")))
                     {
-                        _untypedName = value;
+                        _untypedName = value.ToLower();
                     }
                 }
             }
         }
     }
-     public string LongTypedName {
-        get {
-            return Names[_settlementAreaType].FormatLong(_untypedName);
+    public string LongTypedName
+    {
+        get
+        {
+            return Names[_settlementAreaType].FormatLong(UntypedName);
         }
     }
 
-    protected SettlementArea(int id, int parentId, string name, Types type) : this()
+    protected SettlementArea(int id) : base(RelationTypes.Bound)
     {
         _id = id;
-        _parentDistrictId = parentId;
-        _untypedName = name;
-        _settlementAreaType = type;
+        _untypedName = "";
     }
-    protected SettlementArea() : base() {
+    protected SettlementArea() : base()
+    {
+        RegisterProperty(nameof(DistrictParentId));
         RegisterProperty(nameof(UntypedName));
         RegisterProperty(nameof(SettlementAreaType));
         _untypedName = "";
@@ -103,136 +107,207 @@ public class SettlementArea : DbValidatedObject
         _id = Utils.INVALID_ID;
         _parentDistrictId = Utils.INVALID_ID;
     }
-    public static SettlementArea MakeUnsafe(int id, string untypedName, int type){
+    public static SettlementArea MakeUnsafe(int id, string untypedName, int type)
+    {
         var dist = new SettlementArea
         {
             _id = id,
             _untypedName = untypedName,
-            _settlementAreaType = (Types)type 
+            _settlementAreaType = (Types)type
         };
         return dist;
     }
-    
-    public bool Save()
-    {
-        if (CurrentState != RelationTypes.Pending || !District.IsIdExists(_parentDistrictId)){
-            return false;
-        }
 
-        using (var conn = Utils.GetConnectionFactory())
+    public async Task Save(ObservableTransaction? scope)
+    {   
+        var connWithin = await Utils.GetAndOpenConnectionFactory();  
+        if (await GetCurrentState(scope) != RelationTypes.Pending)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("INSERT INTO settlement_areas( " +
+            return;
+        }
+        NpgsqlCommand? command = null;
+        string cmdText =
+        "INSERT INTO settlement_areas( " +
                 " district, settlement_area_type, full_name) " +
-	            " VALUES (@p1, @p2, @p3) RETURNING id", conn)
-            {
-                Parameters = {
-                        new("p1", _parentDistrictId),
-                        new("p2", _settlementAreaType),
-                        new("p3", _untypedName),
-                    }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                _id = (int)reader["id"];
-                SetBound();
-                return true;
-            }
+                " VALUES (@p1, @p2, @p3) RETURNING id";
+        if (scope != null)
+        {
+            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._id = Utils.INVALID_ID));
+        }
+        else
+        {
+            command = new NpgsqlCommand(cmdText, connWithin);
+        }
+        command.Parameters.Add(new NpgsqlParameter("p1", (int)_parentDistrictId) { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Integer });
+        command.Parameters.Add(new NpgsqlParameter("p2", (int)_settlementAreaType) { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Integer });
+        command.Parameters.Add(new NpgsqlParameter("p3", _untypedName) { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Varchar });
+
+        await using (connWithin)
+        await using (command)
+        {   
+            using var reader = await command.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            _id = (int)reader["id"];
+            NotifyStateChanged();
         }
     }
-    public static List<SettlementArea>? GetAllDistrictsWithin(int districtId)
+
+    // public static List<SettlementArea>? GetAllDistrictsWithin(int districtId)
+    // {
+    //     using (var conn = Utils.GetAndOpenConnectionFactory())
+    //     {
+
+    //         using (var cmd = new NpgsqlCommand($"SELECT * FROM settlement_areas WHERE district = @p1", conn)
+    //         {
+    //             Parameters = {
+    //                 new NpgsqlParameter("p1", districtId)
+    //             }
+    //         })
+    //         {
+    //             var reader = cmd.ExecuteReader();
+    //             if (!reader.HasRows)
+    //             {
+    //                 return null;
+    //             }
+    //             else
+    //             {
+    //                 var result = new List<SettlementArea>();
+    //                 while (reader.Read())
+    //                 {
+    //                     var sa = new SettlementArea((int)reader["id"])
+    //                     {
+    //                         _parentDistrictId = districtId,
+    //                         _untypedName = (string)reader["full_name"],
+    //                         _settlementAreaType = (Types)reader["settlement_area_type"]
+    //                     };
+    //                     result.Add(sa);
+    //                 }
+    //                 return result;
+    //             }
+    //         }
+    //     }
+    // }
+    public static async Task<SettlementArea?> GetById(int saId, ObservableTransaction? scope)
     {
-        using (var conn = Utils.GetConnectionFactory())
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        string query = "SELECT * FROM settlements WHERE id = @p1";
+        NpgsqlCommand cmd;
+        if (scope == null)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM settlement_areas WHERE district = @p1", conn)
+            cmd = new NpgsqlCommand(query, conn);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", saId));
+        await using (conn)
+        await using (cmd)
+        {   
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows)
             {
-                Parameters = {
-                    new NpgsqlParameter("p1", districtId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var result = new List<SettlementArea>();
-                    while (reader.Read())
-                    {
-                        var sa = new SettlementArea((int)reader["id"], districtId, (string)reader["full_name"], (Types)reader["settlement_area_type"]);
-                        sa.SetBound();
-                        result.Add(sa);
-                    }
-                    return result;
-                }
+                return null;
             }
+            await reader.ReadAsync();
+            var sa = new SettlementArea((int)reader["id"])
+            {
+                _parentDistrictId = (int)reader["district"],
+                _untypedName = (string)reader["full_name"],
+                _settlementAreaType = (Types)(int)reader["settlement_area_type"]
+
+            };
+            return sa;
         }
     }
-    public static SettlementArea? GetById(int saId){
-        using (var conn = Utils.GetConnectionFactory())
+    public static SettlementArea? BuildByName(string? fullname)
+    {
+        if (fullname == null)
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM settlement_areas WHERE id = @p1", conn){
-                Parameters = {
-                    new ("p1", saId)
-                }
-            })
-            {
-                var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                var sa = new SettlementArea((int)reader["id"], (int)reader["district"], (string)reader["full_name"], (Types)(int)reader["settlement_area_type"]); 
-                sa.SetBound();
-                return sa;
-            }
-        }
-    }
-    public static SettlementArea? BuildByName(string? fullname){
-        if (fullname == null){
             return null;
         }
         NameToken? extracted;
-        SettlementArea toBuild = new SettlementArea(); 
-        foreach (var pair in Names){
+        SettlementArea toBuild = new SettlementArea();
+        foreach (var pair in Names)
+        {
             extracted = pair.Value.ExtractToken(fullname);
-            if (extracted != null){
+            if (extracted != null)
+            {
                 toBuild.SettlementAreaType = (int)pair.Key;
                 toBuild.UntypedName = extracted.Name;
                 return toBuild;
-            } 
+            }
         }
         return null;
     }
-     public static bool IsIdExists(int id){
-        using (var conn = Utils.GetConnectionFactory())
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
+    {
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            conn.Open();
-            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM settlement_areas WHERE id = @p1)", conn) 
+            string cmdText = "SELECT EXISTS(SELECT id FROM settlement_areas WHERE id = @p1)";
+            NpgsqlCommand? cmd = null; 
+            if (scope != null){
+                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            }
+            else{
+                cmd = new NpgsqlCommand(cmdText, conn);
+            }
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+
+            using (cmd)
             {
-                Parameters = {
-                    new("p1", id),
-                }
-            })
-            {
-               return (bool)cmd.ExecuteReader()["exists"];
+                using var reader = await cmd.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                return (bool)reader["exists"];
             }
         }
-    } 
-    public override IDbObjectValidated? GetDbRepresentation()
+    }
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {
-        return GetById(_id);
+        SettlementArea? got = await GetById(_id, scope);
+        if (got == null)
+        {
+            await using (var conn = await Utils.GetAndOpenConnectionFactory())
+            {
+                string cmdText = "SELECT id FROM settlement_areas WHERE district = @p1 AND settlement_area_type = @p2 AND full_name = @p3";
+                NpgsqlCommand? cmd  = null;
+                if (scope != null){
+                    cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+                }
+                else{
+                    cmd = new NpgsqlCommand(cmdText, conn);
+                }
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _parentDistrictId));
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_settlementAreaType));
+                cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _untypedName));
+                await using (cmd)
+                {
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    if (!reader.HasRows)
+                    {
+                        return null;
+                    }
+                    await reader.ReadAsync();
+                    _id = (int)reader["id"];
+                    NotifyStateChanged();
+                    return this;
+                }
+            }
+        }
+        else
+        {
+            return got;
+        }
     }
     public override bool Equals(IDbObjectValidated? obj)
     {
-        if (obj == null){
+        if (obj == null)
+        {
             return false;
         }
-        if (obj.GetType() != typeof(SettlementArea)){
+        if (obj.GetType() != typeof(SettlementArea))
+        {
             return false;
         }
         var unboxed = (SettlementArea)obj;
