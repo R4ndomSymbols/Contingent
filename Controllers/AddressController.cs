@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using StudentTracking.Models;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.JSON;
+using Utilities;
 using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
@@ -43,10 +45,12 @@ public class AddressController : Controller
         {
             return Json(new { AboutAddress = errors.First().ToUserString() });
         }
-        string status = "";
-        Action updateStatus = async () => status = await built.GetAddressInfo();
-        await built.Save(false, updateStatus, updateStatus);
-        return Json(new { AboutAddress = status });   
+        await using var connection = await Utils.GetAndOpenConnectionFactory();
+        var transaction = await connection.BeginTransactionAsync();
+        await using ObservableTransaction saving = new ObservableTransaction(transaction, connection);
+        await built.Save(saving);
+        await saving.RollbackAsync();
+        return Json(new { AboutAddress = await built.GetAddressInfo()});   
     }
 
     [HttpPost]
@@ -57,7 +61,10 @@ public class AddressController : Controller
         var built = AddressModel.BuildFromString(address);
         if (built != null)
         {
-            await built.Save(true, null, null);
+             await using var connection = await Utils.GetAndOpenConnectionFactory();
+            var transaction = await connection.BeginTransactionAsync();
+            await using ObservableTransaction saving = new ObservableTransaction(transaction, connection);
+            await built.Save(saving);
             if (await built.GetCurrentState(null) == RelationTypes.Bound)
             {
                 return Json(new { AddressId = built.Id });

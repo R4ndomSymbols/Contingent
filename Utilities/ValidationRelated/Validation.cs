@@ -9,9 +9,10 @@ public static class ValidatorCollection {
     public static readonly Regex OnlyDigits = new Regex(@"^[0-9]+\z");
     public static readonly Regex Snils = new Regex(@"^[0-9]{3}-[0-9]{3}-[0-9]{3}[^\S\t\n\r][0-9]{2}\z");
     public static readonly Regex DecimalFormat = new Regex(@"^[0-9]+\.[0-9]+\z");
-    public static readonly Regex OnlyRussianText = new Regex(@"^[\u0410-\u044f\s0-9]+$");
+    public static readonly Regex OnlyRussianText = new Regex(@"^[A-я\s0-9]+$");
     public static readonly Regex OnlyRussianLetters = new Regex(@"^[\u0410-\u044f]+\z");
     public static readonly Regex RussianNamePart = new Regex(@"^[А-я]+([-][А-я]+)?\z");
+    public static readonly Regex FgosCode = new Regex(@"^[0-9]{2}\.[0-9]{2}\.[0-9]{2}\z");
 
     // больше либо равно минимальному, меньше либо равно максимальному
     public static bool CheckRange(double? value, double min, double max){

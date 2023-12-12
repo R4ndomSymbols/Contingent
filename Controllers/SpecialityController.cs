@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Models;
+using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
 
@@ -13,18 +15,17 @@ public class SpecialityController : Controller{
     {
         _logger = logger;
     }
-    /*
  
     [HttpGet]
-    [Route("specialities/speciality/{query}")]
+    [Route("specialities/modify/{query}")]
     public IActionResult ProcessSpeciality(string query){
         if (query == "new"){
-            return View(@"Views/Models/Speciality.cshtml", new SpecialityModel()); 
+            return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityModel()); 
         }
         else if(int.TryParse(query, out int id)){
-            var got = SpecialityModel.GetById(id);
+            var got = SpecialityModel.GetById(id, null);
             if (got!=null){
-                return View(@"Views/Models/Speciality.cshtml", got);
+                return View(@"Views/Modify/SpecialityModify.cshtml", got);
             }
             else{
                 return View(@"Views/Shared/Error.cshtml", "Специальности с таким id не существует");
@@ -32,38 +33,8 @@ public class SpecialityController : Controller{
             
         }
         else{
-            return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
+            return View(@"Views/Shared/Error.cshtml", "Недопустимый id специальности");
         }
-    }
-    [HttpGet]
-    [Route("specialities/fgoscodes")]
-    public JsonResult GetFGOSCodes(){
-        
-        var got = SpecialityModel.GetAllFGOSCodes();
-        if (got!=null){
-            return Json(got.ToArray());
-        }
-        return Json(null);
-    }
-    [HttpGet]
-    [Route("specialities/fgosnames")]
-    public JsonResult GetFGOSNames(){
-        
-        var got = SpecialityModel.GetAllFGOSNames();
-        if (got!=null){
-            return Json(got.ToArray());
-        }
-        return Json(null);
-    }
-    [HttpGet]
-    [Route("specialities/types")]
-    public JsonResult GetSpecialityTypes(){
-        
-        var got = SpecialityModel.GetAllTypes();
-        if (got!=null){
-            return Json(got.ToArray());
-        }
-        return Json(null);
     }
     [HttpPost]
     [Route("specialities/add")]
@@ -71,21 +42,23 @@ public class SpecialityController : Controller{
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
             var deserialized = JsonSerializer.Deserialize<SpecialityModel>(body);
-            int result = -1;
             if (deserialized!=null){
-                result = SpecialityModel.CreateOrUpdateSpeciality(deserialized);
+                await deserialized.Save(null);
+                Console.WriteLine(await deserialized.GetCurrentState(null));
+                if (await deserialized.GetCurrentState(null) == RelationTypes.Bound){
+                    return Json(new { deserialized.Id});
+                }
+                else {
+                    return Json(deserialized.GetErrors());
+                }
             }
-            return Json(result);
+            return Json(new object());
         }    
     }
     [HttpGet]
-    [Route("specialities/forgroups")]
-    public JsonResult GetSpecialitiesForGroups(){
-        var got = SpecialityModel.GetAllGroupView();
-        if (got!=null){
-            return Json(got.ToArray());
-        }
-        return Json(null);
+    [Route("specialities/suggest/{query?}")]
+    public async Task<JsonResult> GetSuggestions(string? query){
+        return Json(await SpecialityModel.GetSuggestions(query, null));
     }
-    */
+
 }

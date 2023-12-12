@@ -20,3 +20,19 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.accent_color {
+  color: #E88716;
+}
+.secondary_color{
+  color: #8c92a1;
+}
+.primary_color {
+  color: #929CB7;
+}
+.background_color {
+  color: #ffffff;
+}
+.text_color {
+  color: #181617;
+}

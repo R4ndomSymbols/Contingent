@@ -7,170 +7,308 @@
     ViewData["Title"] = "Студент";
 }
 <div class="container">
-    <div class="row">
-        <label for="GradeBookNumber" class="col-2">Номер зачетки</label>
-        <input id="GradeBookNumber" class="col-2" value="@Model.GradeBookNumber"/>
-        <div id = "GradeBookNumber_err"></div>
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Номер зачетки</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Снилс</h5>
     </div>
-    <div class="row">
-        <label for="Snils" class="col-2">Снилс</label>
-        <input id="Snils" class="col-2" value="@Model.Snils"/>
-        <div id = "Snils_err"></div>
+    <div class="d-flex flex-row">
+        <input id="GradeBookNumber" class="col-5" value="@Model.GradeBookNumber" />
+        <div class="col-1"></div>
+        <input id="Snils" class="col-5" value="@Model.Snils" />
     </div>
-    <div div class="row" >
-        <label for="Inn" class="col-2">Инн</label>
-        <input id="Inn" class="col-2" value="@Model.Inn"/>
-        <div id = "Inn_err"></div>
-    </div>
-    
-    <div>
-        <label for="DateOfBirth" class="col-2">Дата Рождения</label>
-        <input id="DateOfBirth" class="col-2" value="@Model.DateOfBirth"/>
-        <div id = "DateOfBirth_err"></div>
-    </div>
-    
-    <div class="row">
-        <label for="Gender" class="col-2">Пол</label>
-        <select id="Gender" class="col-2" hint = "@Model.Gender" >
-                @foreach(var g in StudentTracking.Models.Domain.Misc.Genders.Names){
-                    var code = (int)g.Key;
-                    <option value="@code">@g.Value</option>
-                }
-        </select>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small class="accent_color" id="GradeBookNumber_err">
+
+            </small>
+        </div>
+        <div class="col-6">
+            <small class="accent_color" id="Snils_err">
+
+            </small>
+        </div>
     </div>
 
-    <div class="row">
-        <label for="TargetAgreementType" class="col-2">Договор о целевом обучении</label>
-        <select id="TargetAgreementType" class="col-2" hint = "@Model.TargetAgreementType" >
-                @foreach(var g in StudentTracking.Models.Domain.Misc.TargetEduAgreement.Names){
-                    var code = (int)g.Key;
-                    <option value="@code">@g.Value</option>
-                }
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Инн</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Дата Рождения</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <input id="Inn" class="col-5" value="@Model.Inn" />
+        <div class="col-1"></div>
+        <input id="DateOfBirth" class="col-5" value="@Model.DateOfBirth" />
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small class="accent_color" id="Inn_err">
+
+            </small>
+        </div>
+        <div class="col-6">
+            <small class="accent_color" id="DateOfBirth_err">
+
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Пол</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Вступительный (конкурсный) балл</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <select id="Gender" class="col-3" hint="@Model.Gender">
+            @foreach (var g in StudentTracking.Models.Domain.Misc.Genders.Names)
+            {
+                var code = (int)g.Key;
+                <option value="@code">@g.Value</option>
+            }
+        </select>
+        <div class="col-3"></div>
+        <input id="AdmissionScore" class="col-5" value="@Model.AdmissionScore" />
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small></small>
+        </div>
+        <div class="col-6">
+            <small class="accent_color" id="AdmissionScore_err">
+
+            </small>
+        </div>
+    </div>
+
+
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Балл ГИА</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Балл ГИА (демэкзамен)</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <input id="GiaMark" class="col-5" value="@Model.GiaMark" />
+        <div class="col-1"></div>
+        <input id="GiaDemoExamMark" class="col-5" value="@Model.GiaDemoExamMark" />
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small class="accent_color" id="GiaMark_err">
+
+            </small>
+        </div>
+        <div class="col-6">
+            <small class="accent_color" id="GiaDemoExamMark_err">
+
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row">
+        <h5 class="col-12">Договор о целевом обучении</h5>
+    </div>
+    <div class="d-flex flex-row mb-3">
+        <select id="TargetAgreementType" class="col-5" hint="@Model.TargetAgreementType">
+            @foreach (var g in StudentTracking.Models.Domain.Misc.TargetEduAgreement.Names)
+            {
+                var code = (int)g.Key;
+                <option value="@code">@g.Value</option>
+            }
         </select>
     </div>
-    <div class="row">
-        <label for="PaidAgreementType" class="col-2">Договор об обучении на платной основе</label>
-        <select id="PaidAgreementType" class="col-2" hint = "@Model.PaidAgreementType" >
-                @foreach(var g in StudentTracking.Models.Domain.Misc.PaidEduAgreement.Names){
-                    var code = (int)g.Key;
-                    <option value="@code">@g.Value</option>
-                }
+    <div class="d-flex flex-row">
+        <h5 class="col-12">Договор об обучении на платной основе</h5>
+    </div>
+    <div class="d-flex flex-row mb-3">
+        <select id="PaidAgreementType" class="col-6" hint="@Model.PaidAgreementType">
+            @foreach (var g in StudentTracking.Models.Domain.Misc.PaidEduAgreement.Names)
+            {
+                var code = (int)g.Key;
+                <option value="@code">@g.Value</option>
+            }
         </select>
     </div>
-    <div>
-        <label for="AdmissionScore">Вступительный балл</label>
-         <input id="AdmissionScore" class="col-2" value="@Model.AdmissionScore"/>
-         <div id = "AdmissionScore_err"></div>
+    <div class="d-flex flex-row">
+        <h5 class="col-12">Адрес</h5>
     </div>
-    <div>
-        <label for="GiaMark" class=>Балл ГИА</label>
-        <input id="GiaMark" class="col-2" value="@Model.GiaMark"/>
-        <div id = "GiaMark_err"></div>
-    </div>
-    <div>
-        <label for="GiaDemoExamMark">Балл ГИА (демэкзамен)</label>
-        <input id="GiaDemoExamMark" class="col-2" value="@Model.GiaDemoExamMark"/>
-        <div id = "GiaDemoExamMark_err"></div>
-    </div>
-    <div>
+    <div class="d-flex flex-row">
         @{
             string RealAddress = "";
-            if (Model.ActualAddressId!=null){
+            if (Model.ActualAddressId != null)
+            {
                 RealAddress = (await AddressModel.GetAddressById((int)Model.ActualAddressId))?.FullAddressString ?? "";
             }
         }
-        <label for="ActualAddress">Адрес</label>
-        <input id="ActualAddress" class="col-8" value="@RealAddress"/>
-        <button id = "about" class = "col-1">Разобрать</button>
-        <div id = "ActualAddress_err"></div>
-        <div id = "AboutAddress"></div>
+        <input id="ActualAddress" class="col-10" value="@RealAddress" />
+        <button id="about" class="col-1">Разобрать</button>
     </div>
+    <div class="d-flex flex-row">
+        <div class="col-8">
+            <small class="accent_color" id="AboutAddress">
+
+            </small>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-8">
+            <small class="accent_color" id="ActualAddress_err">
+
+            </small>
+        </div>
+    </div>
+
+
+
     @{
-        RussianCitizenship? citizenship = Model.RussianCitizenshipId == null ? null : await RussianCitizenship.GetById((int)Model.RussianCitizenshipId);
+        RussianCitizenship? citizenship = Model.RussianCitizenshipId == null ? null : await
+        RussianCitizenship.GetById((int)Model.RussianCitizenshipId, null);
         AddressModel? address = await AddressModel.GetAddressById(citizenship?.LegalAddressId ?? Utils.INVALID_ID);
-        string LegalAddress = address?.FullAddressString ?? ""; 
+        string LegalAddress = address?.FullAddressString ?? "";
     }
-    else{
-        <div>
-            <h2>Гражданство (РФ)</h2>
-            <input type="hidden"/>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Фамилия</h5>
-                @if (citizenship == null){
-                    <input id="Surname"class="col-3"/>
-                } else {
-                    <input id="Surname"class="col-3" value="@citizenship.Surname"/>
-                }
+    <div class="mt-4">
+        <h2>Гражданство (РФ)</h2>
+
+        <div class="d-flex flex-row">
+            <h5 class="col-3 mx-0">Фамилия</h5>
+            <div class="col-1"></div>
+            <h5 class="col-3 mx-0">Имя</h5>
+            <div class="col-1"></div>
+            <h5 class="col-3 mx-0">Отчество</h5>
+        </div>
+        <div class="d-flex flex-row">
+            @if (citizenship == null)
+            {
+                <input id="Surname" class="col-3" />
+            }
+            else
+            {
+                <input id="Surname" class="col-3" value="@citizenship.Surname" />
+            }
+            <div class="col-1"></div>
+            @if (citizenship == null)
+            {
+                <input id="Name" class="col-3" />
+            }
+            else
+            {
+                <input id="Name" class="col-3" value="@citizenship.Name" />
+            }
+            <div class="col-1"></div>
+            @if (citizenship == null)
+            {
+                <input id="Patronymic" class="col-3" />
+            }
+            else
+            {
+                <input id="Patronymic" class="col-3" value="@citizenship.Patronymic" />
+            }
+        </div>
+        <div class="d-flex flex-row">
+            <div class="col-3">
+                <small class="accent_color" id="Surname_err">
+
+                </small>
             </div>
-            <div id="Surname_err"></div>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Имя</h5>
-                @if (citizenship == null){
-                    <input id="Name"class="col-3"/>
-                } else {
-                    <input id="Name"class="col-3" value="@citizenship.Name"/>
-                }
+            <div class="col-1"></div>
+            <div class="col-3">
+                <small class="accent_color" id="Name_err">
+
+                </small>
             </div>
-            <div id="Name_err"></div>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Отчество</h5>
-                @if (citizenship == null){
-                    <input id="Patronymic"class="col-3"/>
-                } else {
-                    <input id="Patronymic"class="col-3" value="@citizenship.Patronymic"/>
-                }
+            <div class="col-1"></div>
+             <div class="col-3">
+                <small class="accent_color" id="Patronymic_err">
+
+                </small>
             </div>
-            <div id="Patronymic_err"></div>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Номер паспорта</h5>
-                @if (citizenship == null){
-                    <input id="PassportNumber"class="col-3"/>
-                } else {
-                    <input id="PassportNumber"class="col-3" value="@citizenship.Patronymic"/>
-                }
-            </div>
-            <div id="PassportNumber_err"></div>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Серия паспорта</h5>
-                @if (citizenship == null){
-                    <input id="PassportSeries"class="col-3"/>
-                } else {
-                    <input id="PassportSeries"class="col-3" value="@citizenship.Patronymic"/>
-                }
-            </div>
-            <div id="PassportSeries_err"></div>
-            <div class="d-flex flex-row">
-                <h5 class="col-3">Прописка</h5>
-                @if (citizenship == null){
-                    <input id="LegalAddress"class="col-9"/>
-                } else {
-                    <input id="LegalAddress"class="col-9" value="@LegalAddress"/>
-                }
-                <button class="col-1" id ="about_legal_address">
-                    Проверить
-                </button>
-            </div>
-            <div id=  "LegalAddress_err"></div>
-            <div id = "legal_address_info"></div>
-            <div id = "legal_address_err"></div>
         </div>
 
+        <div class="d-flex flex-row">
+            <h5 class="col-5 mx-0">Номер паспорта</h5>
+            <div class="col-1"></div>
+            <h5 class="col-5 mx-0">Серия паспорта</h5>
+        </div>
+        <div class="d-flex flex-row">
+            @if (citizenship == null)
+            {
+                <input id="PassportNumber" class="col-5" />
+            }
+            else
+            {
+                <input id="PassportNumber" class="col-5" value="@citizenship.PassportNumber" />
+            }
+            <div class="col-1"></div>
+            @if (citizenship == null)
+            {
+                <input id="PassportSeries" class="col-5" />
+            }
+            else
+            {
+                <input id="PassportSeries" class="col-5" value="@citizenship.PassportSeries" />
+            }
+        </div>
+        <div class="d-flex flex-row">
+            <div class="col-5">
+                <small class="accent_color" id="PassportNumber_err">
+
+                </small>
+            </div>
+            <div class="col-1"></div>
+            <div class="col-5">
+                <small class="accent_color" id="PassportSeries_err">
+
+                </small>
+            </div>
+        </div>
+
+        <div class="d-flex flex-row">
+            <h5 class="col-12 mx-0">Прописка</h5>
+        </div>
+        <div class="d-flex flex-row">
+            @if (citizenship == null)
+            {
+                <input id="LegalAddress" class="col-10" />
+            }
+            else
+            {
+                <input id="LegalAddress" class="col-10" value="@LegalAddress" />
+            }
+            <button class="col-1" id="about_legal_address">
+                Разобрать
+            </button>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="col-11">
+                <small class="accent_color" id="LegalAddress_err">
+
+                </small>
+            </div>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="col-11">
+                <small class="accent_color" id="legal_address_info">
+
+                </small>
+            </div>
+        </div>
     </div>
-    <button id="save">
+    <div class="d-flex flex-row">
+        <button id="save" class="mt-4 btn btn-primary">
         Сохранить
-    </button>
+        </button>
+    </div>
+</div>
 
-    @{
-        string corrRusId = citizenship?.Id.ToString() ?? "";
-        string corrRusAddress = citizenship?.LegalAddressId.ToString() ?? "";
-    }
 
-    <input type="hidden" id="StudentId" value="@Model.Id"/>
-    <input type="hidden" id="AddressId" value="@Model.ActualAddressId"/>
-    <input type="hidden" id="RussianLegalAddressId" value="@corrRusAddress"/>
-    <input type="hidden" id="RussianCitizenshipId" value="@corrRusId"/>    
+@{
+    string corrRusId = citizenship?.Id.ToString() ?? "";
+    string corrRusAddress = citizenship?.LegalAddressId.ToString() ?? "";
+}
+
+<input type="hidden" id="StudentId" value="@Model.Id" />
+<input type="hidden" id="AddressId" value="@Model.ActualAddressId" />
+<input type="hidden" id="RussianLegalAddressId" value="@corrRusAddress" />
+<input type="hidden" id="RussianCitizenshipId" value="@corrRusId" />
 </div>
 
 <script src="~/js/students.js"></script>
-
-

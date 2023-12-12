@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR;
 using Npgsql;
 using StudentTracking.Models.Domain.Address;
@@ -27,7 +28,6 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     private string? _patronymic;
     private string _passportNumber;
     private string _passportSeries;
-    private int _studentId;
 
     public int Id
     {
@@ -47,21 +47,6 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
             }
         }
     }
-    public int StudentId
-    {
-        get => _studentId;
-        set
-        {
-            if (PerformValidation(
-                () => StudentModel.IsIdExists(value, null).Result,
-                new ValidationError(nameof(StudentId), "Айди студента не существует")
-            ))
-            {
-                _studentId = value;
-            }
-        }
-    }
-
     public string Surname
     {
         get => _surname;
@@ -139,15 +124,17 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     public int LegalAddressId
     {
         get => _legalAddress;
-        set
-        {
-            if (PerformValidation(
-                () => AddressModel.IsIdExists(value, null).Result,
-                new DbIntegrityValidationError(nameof(LegalAddressId), "Такой адрес не зарегистрирован"))){
-                    _legalAddress = value;
-                }
-        }
     }
+
+    public async Task SetLegalAddressId(int id, ObservableTransaction? scope){
+        bool exists = await AddressModel.IsIdExists(id, scope);
+        if (PerformValidation(
+            () => exists,
+            new DbIntegrityValidationError(nameof(LegalAddressId), "Такой адрес не зарегистрирован"))){
+                _legalAddress = id;
+            }
+    }
+
 
     public RussianCitizenship() : base()
     {
@@ -156,7 +143,6 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         RegisterProperty(nameof(Patronymic));
         RegisterProperty(nameof(PassportNumber));
         RegisterProperty(nameof(PassportSeries));
-        RegisterProperty(nameof(StudentId));
         RegisterProperty(nameof(LegalAddressId));
 
         _name = "";
@@ -164,6 +150,7 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         _patronymic = "";
         _passportNumber = "";
         _passportSeries = "";
+        _id = Utils.INVALID_ID;
 
     }
     public RussianCitizenship(int id) : base(RelationTypes.Bound)
@@ -176,39 +163,40 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         _passportSeries = "";
     }
 
-    public static async Task<RussianCitizenship?> GetById(int id)
+    public static async Task<RussianCitizenship?> GetById(int id, ObservableTransaction? scope)
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
-        {
-            await using (var command = new NpgsqlCommand("SELECT * FROM rus_citizenship WHERE id = @p1", conn)
+        await using var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT * FROM rus_citizenship WHERE id = @p1";
+        NpgsqlCommand cmd;
+        if (scope!= null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        await using (cmd){
+            using var cursor = await cmd.ExecuteReaderAsync();
+            if (!cursor.HasRows)
             {
-                Parameters = {
-                    new NpgsqlParameter("p1", id),
-                }
-            })
-            {
-                using var cursor = await command.ExecuteReaderAsync();
-                if (!cursor.HasRows)
-                {
-                    return null;
-                }
-                await cursor.ReadAsync();
-                return new RussianCitizenship(id)
-                {
-                    _passportNumber = (string)cursor["passport_number"],
-                    _passportSeries = (string)cursor["passport_series"],
-                    _surname = (string)cursor["surname"],
-                    _name = (string)cursor["name"],
-                    _patronymic = cursor["patronymic"].GetType() == typeof(DBNull) ? null : (string)cursor["patronymic"],
-                    _legalAddress = (int)cursor["legal_address"],
-                };
+                return null;
             }
+            await cursor.ReadAsync();
+            return new RussianCitizenship(id)
+            {
+                _passportNumber = (string)cursor["passport_number"],
+                _passportSeries = (string)cursor["passport_series"],
+                _surname = (string)cursor["surname"],
+                _name = (string)cursor["name"],
+                _patronymic = cursor["patronymic"].GetType() == typeof(DBNull) ? null : (string)cursor["patronymic"],
+                _legalAddress = (int)cursor["legal_address"],
+            };
         }
     }
-    public async Task Save()
+    public async Task Save(ObservableTransaction? scope)
     {
 
-        if (await GetCurrentState(null) != RelationTypes.Pending)
+        if (await GetCurrentState(scope) != RelationTypes.Pending)
         {
             return;
         }
@@ -216,8 +204,14 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         string cmdText = "INSERT INTO rus_citizenship( " +
                         " passport_number, passport_series, surname, name, patronymic, legal_address) " +
                         " VALUES (@p1, @p2, @p3, @p4, @p5, @p6) RETURNING id";
-        NpgsqlCommand? command = new NpgsqlCommand(cmdText, conn);
-
+        NpgsqlCommand? command;
+        
+        if (scope!=null){
+            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }        
+        else {
+            command = new NpgsqlCommand(cmdText, conn);
+        }
         command.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
         command.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
         command.Parameters.Add(new NpgsqlParameter<string>("p3", _surname));
@@ -231,50 +225,61 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
             {
                 using var reader = await command.ExecuteReaderAsync();
                 await reader.ReadAsync();
-                NotifyStateChanged();
                 _id = (int)reader["id"];
+                NotifyStateChanged();
             }
         }
     }
 
-    public static async Task<bool> IsIdExists(int id)
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
     {
-        using (var conn = await Utils.GetAndOpenConnectionFactory())
-        {
-            using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM rus_citizenship WHERE id = @p1)", conn))
-            {
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-                using var reader = await cmd.ExecuteReaderAsync();
-                await reader.ReadAsync();
-                return (bool)reader["exists"];
-            }
+        await using var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT EXISTS(SELECT id FROM rus_citizenship WHERE id = @p1)";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        using (cmd)
+        {            
+            using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            return (bool)reader["exists"];
         }
     }
+    
 
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {
-        var rawCheck = await GetById(_id);
+        var rawCheck = await GetById(_id, scope);
         if (rawCheck == null)
         {
-            await using (var conn = await Utils.GetAndOpenConnectionFactory())
-            {
-                string cmdText = "SELECT id FROM rus_citizenship WHERE passport_number = @p1 AND passport_series = @p2";
-                NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
-                cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
-                cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
+            await using var conn = await Utils.GetAndOpenConnectionFactory();
+            string cmdText = "SELECT id FROM rus_citizenship WHERE passport_number = @p1 AND passport_series = @p2";
+            NpgsqlCommand cmd;
+            if (scope != null){
+                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            }
+            else{
+                cmd = new NpgsqlCommand(cmdText, conn);
+            }
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
 
-                await using (cmd)
+            await using (cmd)
+            {
+                await using var reader = await cmd.ExecuteReaderAsync();
+                if (!reader.HasRows)
                 {
-                    await using var reader = await cmd.ExecuteReaderAsync();
-                    if (!reader.HasRows)
-                    {
-                        return null;
-                    }
-                    await reader.ReadAsync();
-                    _id = (int)reader["id"];
-                    NotifyStateChanged();
-                    return this;
+                    return null;
                 }
+                await reader.ReadAsync();
+                _id = (int)reader["id"];
+                NotifyStateChanged();
+                return this;
             }
         }
         return rawCheck;
@@ -286,7 +291,7 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         {
             return false;
         }
-        if (other.GetType() == typeof(RussianCitizenship))
+        if (other.GetType() != typeof(RussianCitizenship))
         {
             return false;
         }

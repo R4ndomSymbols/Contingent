@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualBasic;
 using Npgsql;
+using StudentTracking.Models;
 
 namespace Utilities;
 
@@ -14,6 +15,7 @@ public static class Utils {
 
 
     public const int INVALID_ID = -1;
+    public const int ORG_CREATION_YEAR = 1972;
 
     public static string FormatDateTime(DateTime? date){
         var correctDate = date == null ? DateTime.Now : (DateTime)date;
@@ -91,6 +93,54 @@ public static class Utils {
         await c.OpenAsync(); 
         return c;
     }
+    // метод не экранирует " внутри строки
+    public static List<(int start, int length)> SplitJsonIntoObjectStrings(string json, int level){
+        Stack<int> positionHolder = new Stack<int>();
+        int currentLevel = 0;
+        bool escaped = false;
+        List<(int start, int length, int level)> foundObjects = new List<(int start, int length, int level)>();
+        for (int i = 0; i < json.Length; i++)
+        {
+            if (json[i] == '{' && !escaped){
+                positionHolder.Push(i);
+                currentLevel++;
+            }
+            else if (json[i] == '}' && !escaped){
+                //Console.WriteLine(currentLevel + " close");
+                var start = positionHolder.Pop();
+                foundObjects.Add((start, i - start + 1, currentLevel));
+                currentLevel--;
+            }
+            else if (json[i] == '\"') {
+                escaped = !escaped;
+            } 
+        }
+        //Console.WriteLine(string.Join("\n", foundObjects.Select(x => x.start + " " + x.length + " " + x.level)));
+        if (positionHolder.Any()){
+            throw new ArgumentException("Неверный формат json");
+        }
+        return foundObjects.Where(x => x.level >= level).Select(x => (x.start, x.length)).ToList();
+    }
+
+    public static int ComputeGroupCourse(int attendationYear, int eduProgramCourseCount){
+        int difference = DateTime.Now.Year - attendationYear;
+        if (difference < 0){
+            throw new ArgumentException("Группа не может быть создана в следующем году");
+        }
+        if (eduProgramCourseCount < SpecialityModel.MINIMAL_COURSE_COUNT || 
+            eduProgramCourseCount > SpecialityModel.MAXIMUM_COURSE_COUNT){
+            throw new ArgumentException("Неверное значение количества курсов у специальности");         
+        }
+        int resultCourseCount = difference+1;
+        if (resultCourseCount > eduProgramCourseCount){
+            return eduProgramCourseCount;
+        }
+        else {
+            return resultCourseCount;
+        }
+
+    }
+
 }
 
 

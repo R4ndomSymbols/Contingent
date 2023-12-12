@@ -2,6 +2,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Models;
+using StudentTracking.Models.JSON;
+using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
 
@@ -15,17 +17,17 @@ public class GroupController : Controller{
     }
 
     [HttpGet]
-    [Route("groups/group/{query}")]
-    public IActionResult ProcessGroup(string query){
+    [Route("groups/modify/{query}")]
+    public async Task<IActionResult> ProcessGroup(string query){
         if (query == "new"){
-            return View(@"Views/Models/Group.cshtml", new GroupModel()); 
+            return View(@"Views/Modify/GroupModify.cshtml", new GroupModel()); 
         }
         else if(int.TryParse(query, out int id)){
-            var got = GroupModel.GetGroupById(id);
+            var got = await GroupModel.GetGroupById(id, null);
             if(got == null){
-                return View(@"Views/Shared/Error.cshtml", "Группы с таким Id не существует" );
+                return View(@"Views/Shared/Error.cshtml", "Группы с таким id не существует" );
             }
-            return View(@"Views/Models/Group.cshtml", got); 
+            return View(@"Views/Modify/GroupModify.cshtml", got); 
         }
         else{
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
@@ -37,17 +39,34 @@ public class GroupController : Controller{
     public async Task<JsonResult> SaveOrUpdateGroup(){
         using (var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
-            var deserialized = JsonSerializer.Deserialize<GroupModel>(body);
+            var deserialized = JsonSerializer.Deserialize<GroupModelJSON>(body);
             if (deserialized == null){
-                return Json(null);
+                return Json(new object());
             }
-            return Json(await GroupModel.CreateOrUpdateGroup(deserialized));
+            else{
+                var processed = await GroupModel.FromJSON(deserialized, null);
+                await processed.SaveAsync(null);
+                if (await processed.GetCurrentState(null) != RelationTypes.Bound){
+                    return Json(processed.GetErrors());
+                }
+                else{
+                    return Json(new {GroupId = processed.Id}); 
+                }
+            }
         }
     }
-    [HttpGet]
-    [Route("/groups/find/{query?}")]
-    public async Task<JsonResult> FindGroups(string? query){
-        var found = await GroupModel.FindGroup(query);
-        return Json(found);
+    [HttpPost]
+    [Route("/groups/getname")]
+    public async Task<JsonResult> GenerateName(){
+        using (var reader = new StreamReader(Request.Body)){
+            string jsonString = await reader.ReadToEndAsync();
+            GroupModelJSON? group = JsonSerializer.Deserialize<GroupModelJSON>(jsonString);
+            string name = "";
+            if (group!=null){
+                var parsed = await GroupModel.FromJSON(group, null);
+                name = parsed.GroupName;
+            }
+            return Json(new {GroupName = name});
+        }
     }
 }

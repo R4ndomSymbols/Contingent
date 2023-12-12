@@ -215,7 +215,7 @@ public class Street : DbValidatedObject
     public static async Task<Street?> GetById(int strId, ObservableTransaction? scope)
     {
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        string query = "SELECT * FROM buildings WHERE id = @p1";
+        string query = "SELECT * FROM streets WHERE id = @p1";
         NpgsqlCommand cmd;
         if (scope == null)
         {

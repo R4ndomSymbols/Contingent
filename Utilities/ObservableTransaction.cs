@@ -4,7 +4,7 @@ using Npgsql.Internal;
 namespace Utilities;
 
 
-public class ObservableTransaction {
+public class ObservableTransaction : IAsyncDisposable {
 
     private NpgsqlTransaction _underliedTransaction;
     private NpgsqlConnection _underliedConnection;
@@ -52,5 +52,8 @@ public class ObservableTransaction {
         RollbackEvent?.Invoke(this, new EventArgs());
     }
 
-
+    public ValueTask DisposeAsync()
+    {
+        return _underliedTransaction.DisposeAsync();
+    }
 }

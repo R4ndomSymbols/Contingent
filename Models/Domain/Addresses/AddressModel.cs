@@ -27,7 +27,7 @@ public class AddressModel : DbValidatedObject
     private Street? _streetPart;
     private Building? _buildingPart;
     private Apartment? _apartmentPart;
- 
+
 
     public int Id
     {
@@ -93,6 +93,15 @@ public class AddressModel : DbValidatedObject
                 }, new ValidationError(nameof(SettlementAreaPart), "Поселение указано неверно (возможно, нужно ввести населенный пункт)")))
                 {
                     _settlementAreaPart = SettlementArea.BuildByName(value);
+                    return;
+                }
+                if (PerformValidation(
+                () =>
+                {
+                    return value == null;
+                }, new ValidationError(nameof(SettlementAreaPart), "Поселение указано неверно (возможно, нужно ввести населенный пункт)")))
+                {
+                    _settlementAreaPart = null;
                 }
 
             }
@@ -103,9 +112,14 @@ public class AddressModel : DbValidatedObject
         get => _settlementPart == null ? "" : _settlementPart.LongTypedName;
         set
         {
+
             if (PerformValidation(
                 () =>
                 {
+                    if (_districtPart == null)
+                    {
+                        return false;
+                    }
                     var parsed = Settlement.BuildByName(value);
                     return !(parsed == null || parsed.CheckErrorsExist());
                 }, new ValidationError(nameof(SettlementPart), "Населенный пункт не указан, указан неверно либо не определен предшествующий адрес")
@@ -309,65 +323,50 @@ public class AddressModel : DbValidatedObject
 
     public static async Task<AddressModel?> GetAddressById(int id)
     {
-
-        using (var conn = Utils.GetAndOpenConnectionFactory())
+        await using var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT * FROM addresses WHERE id = @p1";
+        await using var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!reader.HasRows)
         {
-            // получение всех сущностей
-
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM addresses WHERE id = @p1", await conn)
+            return null;
+        }        
+        await reader.ReadAsync();
+        AddressModel built = new AddressModel(id);
+        if (reader["apartment"].GetType() != typeof(DBNull))
+        {
+            built._apartmentPart = await Apartment.GetById((int)reader["apartment"], null);
+            if (built._apartmentPart != null)
             {
-                Parameters = {
-                    new ("p1", id)
-                }
-            })
-            {
-                using var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-
-                reader.Read();
-                AddressModel built = new AddressModel(id);
-
-                if (reader["apartment"].GetType() != typeof(DBNull))
-                {
-                    built._apartmentPart = await Apartment.GetById((int)reader["apartment"], null);
-                    if (built._apartmentPart != null)
-                    {
-                        built._buildingPart = await Building.GetById(built._apartmentPart.ParentBuildingId, null);
-                    }
-                }
-                else
-                {
-                    built._buildingPart = await Building.GetById((int)reader["building"], null);
-                }
-                if (built._buildingPart != null)
-                {
-                    built._streetPart = await Street.GetById(built._buildingPart.StreetParentId, null);
-                }
-                if (built._streetPart != null)
-                {
-                    built._settlementPart = await Settlement.GetById(built._streetPart.SettlementParentId, null);
-                }
-                if (built._settlementPart != null)
-                {
-                    if (built._settlementPart.SettlementAreaParentId != null)
-                    {
-                        built._settlementAreaPart = await SettlementArea.GetById((int)built._settlementPart.SettlementAreaParentId, null);
-                    }
-                    if (built._settlementPart.DistrictParentId != null)
-                    {
-                        built._districtPart = await District.GetById((int)built._settlementPart.DistrictParentId, null);
-                    }
-                }
-                if (built._districtPart != null)
-                {
-                    built._subjectPart = await FederalSubject.GetByCode(built._districtPart.SubjectParentId, null);
-                }
-                return built;
+                built._buildingPart = await Building.GetById(built._apartmentPart.ParentBuildingId, null);
             }
         }
+        built._buildingPart = await Building.GetById((int)reader["building"], null);
+        if (built._buildingPart != null)
+        {
+            built._streetPart = await Street.GetById(built._buildingPart.StreetParentId, null);
+        }
+        if (built._streetPart != null)
+        {
+            built._settlementPart = await Settlement.GetById(built._streetPart.SettlementParentId, null);
+        }
+        if (built._settlementPart != null)
+        {
+            if (built._settlementPart.SettlementAreaParentId != null)
+            {
+                built._settlementAreaPart = await SettlementArea.GetById((int)built._settlementPart.SettlementAreaParentId, null);
+            }
+            else if (built._settlementPart.DistrictParentId != null)
+            {
+                built._districtPart = await District.GetById((int)built._settlementPart.DistrictParentId, null);
+            }
+        }
+        if (built._districtPart != null)
+        {
+            built._subjectPart = await FederalSubject.GetByCode(built._districtPart.SubjectParentId, null);
+        }
+        return built;
     }
 
     public static async Task<List<string>?> GetNextSuggestions(string request)
@@ -425,7 +424,7 @@ public class AddressModel : DbValidatedObject
 
             void ProcessSubject(int position)
             {
-                built.SubjectPart =  position >= parts.Length ? "" : parts[position];
+                built.SubjectPart = position >= parts.Length ? "" : parts[position];
                 if (built._subjectPart?.CheckErrorsExist() ?? true)
                 {
                     return;
@@ -436,7 +435,7 @@ public class AddressModel : DbValidatedObject
             void ProcessDistrict(int position)
             {
 
-                built.DistrictPart =  position >= parts.Length ? "" : parts[position];
+                built.DistrictPart = position >= parts.Length ? "" : parts[position];
                 if (built._districtPart?.CheckErrorsExist() ?? true)
                 {
                     return;
@@ -447,24 +446,26 @@ public class AddressModel : DbValidatedObject
             void ProcessSettlementArea(int position)
             {
 
-                built.SettlementAreaPart =  position >= parts.Length ? "" : parts[position];
+                built.SettlementAreaPart = position >= parts.Length ? null : parts[position];
                 if (built._settlementAreaPart?.CheckErrorsExist() ?? true)
                 {
-                    ProcessSettlement(position); 
+                    ProcessSettlement(position);
                 }
-                else{
-                    ProcessSettlement(++position); 
+                else
+                {
+                    ProcessSettlement(++position);
                 }
             }
 
             void ProcessSettlement(int position)
             {
 
-                built.SettlementPart =  position >= parts.Length ? "" : parts[position];
+                built.SettlementPart = position >= parts.Length ? "" : parts[position];
                 if (built._settlementPart?.CheckErrorsExist() ?? true)
                 {
                     built.PerformValidation(() => true, new ValidationError(nameof(SettlementPart), "Очистка статуса"));
-                    if (built.FilterErrorsByName(nameof(SettlementAreaPart)).Any()){
+                    if (built.FilterErrorsByName(nameof(SettlementAreaPart)).Any())
+                    {
                         built.AddError(new ValidationError(nameof(SettlementAreaPart), "Ни муниципалитет верхнего уровня, ни населенный пункт верно не указаны"));
                         return;
                     }
@@ -477,9 +478,9 @@ public class AddressModel : DbValidatedObject
             void ProcessStreet(int position)
             {
 
-                built.StreetPart =  position >= parts.Length ? "" : parts[position];
+                built.StreetPart = position >= parts.Length ? "" : parts[position];
                 if (built._streetPart?.CheckErrorsExist() ?? true)
-                {   
+                {
                     return;
                 }
                 ProcessBuilding(++position);
@@ -487,7 +488,7 @@ public class AddressModel : DbValidatedObject
             void ProcessBuilding(int position)
             {
 
-                built.BuildingPart =  position >= parts.Length ? "" : parts[position];
+                built.BuildingPart = position >= parts.Length ? "" : parts[position];
                 if (built._buildingPart?.CheckErrorsExist() ?? true)
                 {
                     return;
@@ -496,7 +497,9 @@ public class AddressModel : DbValidatedObject
             }
             void ProcessApartment(int position)
             {
-                if (position >= parts.Length){
+                if (position >= parts.Length)
+                {
+                    built.ApartmentPart = null;
                     return;
                 }
                 built.ApartmentPart = parts[position];
@@ -511,12 +514,11 @@ public class AddressModel : DbValidatedObject
 
 
 
-    public async Task<bool> Save(bool commit, Action? beforeRollbackAction, Action? onFailureAction)
+    public async Task<bool> Save(ObservableTransaction scope)
     {
 
         if (CheckErrorsExist())
         {
-            onFailureAction?.Invoke();
             return false;
         }
         else
@@ -524,105 +526,86 @@ public class AddressModel : DbValidatedObject
             if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
                 _streetPart == null || _buildingPart == null)
             {
-                onFailureAction?.Invoke();
                 return false;
             }
-            var transactConn = await Utils.GetAndOpenConnectionFactory();
-            var scope = await transactConn.BeginTransactionAsync();
-            ObservableTransaction wrapper = new ObservableTransaction(scope, transactConn);
 
-            await _subjectPart.Save(wrapper);
-            if (await _subjectPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            await _subjectPart.Save(scope);
+            if (await _subjectPart.GetCurrentState(scope) == RelationTypes.Bound)
             {
-                await _districtPart.SetSubjectParent(int.Parse(_subjectPart.Code), wrapper);
+                await _districtPart.SetSubjectParent(int.Parse(_subjectPart.Code), scope);
             }
-            await _districtPart.Save(wrapper);
-            if (await _districtPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            await _districtPart.Save(scope);
+            if (await _districtPart.GetCurrentState(scope) == RelationTypes.Bound)
             {
                 if (_settlementAreaPart != null)
                 {
-                    await _settlementAreaPart.SetDistrictParent(_districtPart.Id, wrapper);
-                    await _settlementAreaPart.Save(wrapper);
-                    if (await _settlementAreaPart.GetCurrentState(wrapper) == RelationTypes.Bound)
-                    { 
-                        await _settlementPart.SetSettlementAreaParent(_settlementAreaPart.Id, wrapper);
-                        
+                    await _settlementAreaPart.SetDistrictParent(_districtPart.Id, scope);
+                    await _settlementAreaPart.Save(scope);
+                    if (await _settlementAreaPart.GetCurrentState(scope) == RelationTypes.Bound)
+                    {
+                        await _settlementPart.SetSettlementAreaParent(_settlementAreaPart.Id, scope);
+
                     }
                 }
                 else
                 {
-                    await _settlementPart.SetDistrictParent(_districtPart.Id, wrapper);
+                    await _settlementPart.SetDistrictParent(_districtPart.Id, scope);
                 }
             }
-            await _settlementPart.Save(wrapper);
+            await _settlementPart.Save(scope);
 
-            if (await _settlementPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            if (await _settlementPart.GetCurrentState(scope) == RelationTypes.Bound)
             {
-                await _streetPart.SetSettlementParent(_settlementPart.Id, wrapper);
+                await _streetPart.SetSettlementParent(_settlementPart.Id, scope);
             }
-            await _streetPart.Save(wrapper);
+            await _streetPart.Save(scope);
 
-            if (await _streetPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            if (await _streetPart.GetCurrentState(scope) == RelationTypes.Bound)
             {
-                await _buildingPart.SetParentStreet(_streetPart.Id, wrapper);
+                await _buildingPart.SetParentStreet(_streetPart.Id, scope);
             }
             bool completed = false;
-            await _buildingPart.Save(wrapper);
-            if (await _buildingPart.GetCurrentState(wrapper) == RelationTypes.Bound)
+            await _buildingPart.Save(scope);
+            if (await _buildingPart.GetCurrentState(scope) == RelationTypes.Bound)
             {
                 if (_apartmentPart != null)
                 {
-                    await _apartmentPart.SetParentBuildingId(_buildingPart.Id, wrapper);
-                    await _apartmentPart.Save(wrapper);
-                    completed = await _apartmentPart.GetCurrentState(wrapper) == RelationTypes.Bound;
+                    await _apartmentPart.SetParentBuildingId(_buildingPart.Id, scope);
+                    await _apartmentPart.Save(scope);
+                    completed = await _apartmentPart.GetCurrentState(scope) == RelationTypes.Bound;
                 }
                 else
                 {
                     completed = true;
                 }
             }
-            
 
-            Console.WriteLine("1 " + _subjectPart?.LongTypedName + " " + _subjectPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("2 " + _districtPart?.LongTypedName + "|" + _districtPart?.Id + " " + _districtPart?.SubjectParentId + " " + _districtPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("3 " + _settlementAreaPart?.LongTypedName + "|" + _settlementAreaPart?.Id + " " + _settlementAreaPart?.DistrictParentId + " " + _settlementAreaPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("4 " + _settlementPart?.LongTypedName + "|" + _settlementPart?.Id + " " + _settlementPart?.DistrictParentId + " " + _settlementPart?.SettlementAreaParentId + " " + _settlementPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("5 " + _streetPart?.LongTypedName + " " + _streetPart?.SettlementParentId + " " + _streetPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("6 " + _buildingPart?.LongTypedName + " " + _buildingPart?.StreetParentId + " " + _buildingPart?.GetCurrentState(wrapper)?.Result.ToString());
-            Console.WriteLine("7 " + _apartmentPart?.LongTypedName + " " + _apartmentPart?.ParentBuildingId + " " + _apartmentPart?.GetCurrentState(wrapper)?.Result.ToString());
-            
-            using (transactConn)
-            using (scope)
+
+            Console.WriteLine("1 " + _subjectPart?.LongTypedName + " " + _subjectPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("2 " + _districtPart?.LongTypedName + "|" + _districtPart?.Id + " " + _districtPart?.SubjectParentId + " " + _districtPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("3 " + _settlementAreaPart?.LongTypedName + "|" + _settlementAreaPart?.Id + " " + _settlementAreaPart?.DistrictParentId + " " + _settlementAreaPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("4 " + _settlementPart?.LongTypedName + "|" + _settlementPart?.Id + " " + _settlementPart?.DistrictParentId + " " + _settlementPart?.SettlementAreaParentId + " " + _settlementPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("5 " + _streetPart?.LongTypedName + " " + _streetPart?.SettlementParentId + " " + _streetPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("6 " + _buildingPart?.LongTypedName + " " + _buildingPart?.StreetParentId + " " + _buildingPart?.GetCurrentState(scope)?.Result.ToString());
+            Console.WriteLine("7 " + _apartmentPart?.LongTypedName + " " + _apartmentPart?.ParentBuildingId + " " + _apartmentPart?.GetCurrentState(scope)?.Result.ToString());
+
+            if (completed)
             {
-                if (completed)
+                string insertText = "INSERT INTO addresses (building, apartment) " +
+               " VALUES (@p1, @p2) RETURNING id";
+                var saveCmd = new NpgsqlCommand(insertText, scope.Connection, scope.Transaction);
+
+                saveCmd.Parameters.Add(new NpgsqlParameter<int>("p1", _buildingPart.Id));
+                saveCmd.Parameters.Add(new NpgsqlParameter("p2", _apartmentPart == null ? DBNull.Value : (int)_apartmentPart.Id));
+
+                await using (var reader = await saveCmd.ExecuteReaderAsync())
                 {
-                    if (commit)
-                    {
-                        string insertText = "INSERT INTO addresses (building, apartment) " +
-                            " VALUES (@p1, @p2) RETURNING id";
-                        var saveCmd = new NpgsqlCommand(insertText, scope.Connection, scope);
-
-                        saveCmd.Parameters.Add(new NpgsqlParameter<int>("p1", _buildingPart.Id));
-                        saveCmd.Parameters.Add(new NpgsqlParameter("p2", _apartmentPart == null ? DBNull.Value : (int)_apartmentPart.Id));
-
-                        await using (var reader = await saveCmd.ExecuteReaderAsync()){
-                            await reader.ReadAsync();
-                            _id = (int)reader["id"]; ;
-                        };
-                        await wrapper.CommitAsync();
-                        NotifyStateChanged();
-                        return true;
-
-                    }
-                    await wrapper.RollbackAsync();
-                }
-                if (beforeRollbackAction != null)
-                {
-                    onFailureAction?.Invoke();
-                }
-                return false;
+                    await reader.ReadAsync();
+                    _id = (int)reader["id"]; ;
+                };
+                NotifyStateChanged();
             }
-
+            return true;
         }
     }
 
@@ -632,37 +615,49 @@ public class AddressModel : DbValidatedObject
         {
             return false;
         }
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        await using var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT EXISTS(SELECT id FROM addresses WHERE id = @p1)";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)id));
+        await using (cmd)
         {
-            await using (var cmd = new NpgsqlCommand("SELECT EXISTS(SELECT id FROM addresses WHERE id = @p1)", conn))
-            {
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)id));
-                using var reader = await cmd.ExecuteReaderAsync();
-                await reader.ReadAsync();
-                return (bool)reader["exists"];
-            }
+            using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            return (bool)reader["exists"];
         }
     }
 
+
     public override bool Equals(IDbObjectValidated? other)
     {
-        if (other == null){
+        if (other == null)
+        {
             return false;
         }
-        if (this.GetType() != other.GetType()){
+        if (this.GetType() != other.GetType())
+        {
             return false;
         }
-        else {
+        else
+        {
             return _id == ((AddressModel)other)._id;
         }
     }
 
     public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
     {
-        if (await IsIdExists(_id, null)){
+        if (await IsIdExists(_id, stateWithin))
+        {
             return this;
         }
-        else{
+        else
+        {
             return null;
         }
     }

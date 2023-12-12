@@ -7,62 +7,66 @@
 }
 <div class="container">
     <div class="d-flex flex-row">
-        <h5 class="col-3">Номер зачетки</h5>
-        <p class="col-3">@Model.GradeBookNumber</p>
+        <h5 class="col-4">Номер зачетки</h5>
+        <p class="col-4">@Model.GradeBookNumber</p>
     </div>
      @{
             string correctDate = Model.DateOfBirth;  
     }
      <div class="d-flex flex-row">
-        <h5 class="col-3">Дата рождения</h5>
-        <p class="col-3">@correctDate</p>
+        <h5 class="col-4">Дата рождения</h5>
+        <p class="col-4">@correctDate</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Снилс</h5>
-        <p class="col-3">@Model.Snils</p>
+        <h5 class="col-4">Снилс</h5>
+        <p class="col-4">@Model.Snils</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Инн</h5>
-        <p class="col-3">@Model.Inn</p>
+        <h5 class="col-4">Инн</h5>
+        <p class="col-4">@Model.Inn</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Пол</h5>
+        <h5 class="col-4">Пол</h5>
         @{
             string genderName = StudentTracking.Models.Domain.Misc.Genders.Names
                 [(StudentTracking.Models.Domain.Misc.Genders.GenderCodes)Model.Gender];
         }
-        <p class="col-3">@genderName</p>
+        <p class="col-4">@genderName</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Договор о целевом обучении</h5>
+        <h5 class="col-4">Договор о целевом обучении</h5>
         @{
             string targetAgrName = TargetEduAgreement.Names
                 [(TargetEduAgreement.Types)Model.TargetAgreementType];
         }
-        <p class="col-3">@targetAgrName</p>
+        <p class="col-4">@targetAgrName</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Договор об обучении на платной основе</h5>
+        <h5 class="col-4">Договор об обучении на платной основе</h5>
         @{
             string paidAgrName = PaidEduAgreement.Names
                 [(PaidEduAgreement.Types)Model.TargetAgreementType];
         }
-        <p class="col-3">@paidAgrName</p>
+        <p class="col-4">@paidAgrName</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Вступительный балл</h5>
-        <p class="col-3">@Model.AdmissionScore</p>
+        <h5 class="col-4">Вступительный балл</h5>
+        <p class="col-4">@Model.AdmissionScore</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Балл ГИА</h5>
-        <p class="col-3">@Model.GiaMark</p>
+        <h5 class="col-4">Балл ГИА</h5>
+        @{
+            string giaMark = Model.GiaMark == string.Empty ? "Не указан" : Model.GiaMark;
+            string giaMarkDem = Model.GiaDemoExamMark == string.Empty ? "Не указан" : Model.GiaDemoExamMark; 
+        }
+        <p class="col-4">@giaMarkDem</p>
     </div>
      <div class="d-flex flex-row">
-        <h5 class="col-3">Балл ГИА (демэкзамен)</h5>
-        <p class="col-3">@Model.GiaDemoExamMark</p>
+        <h5 class="col-4">Балл ГИА (демэкзамен)</h5>
+        <p class="col-4">@giaMarkDem</p>
     </div>
     <div class="d-flex flex-row">
-        <h5 class="col-3">Фактический адресс</h5>
+        <h5 class="col-4">Фактический адрес</h5>
         @{
             
             string factAddress = "Не указан";
@@ -73,66 +77,49 @@
                  }
             }
         }
-        <p class="col-3">@factAddress</p>
+        <p class="col-8">@factAddress</p>
     </div>
     @{
         RussianCitizenship? citizenship = null;
         if (Model.RussianCitizenshipId != null){
-            citizenship = await RussianCitizenship.GetById((int)Model.RussianCitizenshipId);
+            citizenship = await RussianCitizenship.GetById((int)Model.RussianCitizenshipId, null);
         }
     }
     @if(citizenship != null){
-        <div>
-            <h2>Гражданство (РФ)</h2>
+        <div class="mt-3">
+            <h2 class="mb-4">Гражданство (РФ)</h2>
             <input type="hidden" value="@citizenship.Id"/>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Фамилия</h5>
-                <p class="col-3">@citizenship.Surname</p>
+                <h5 class="col-4">Фамилия</h5>
+                <p class="col-4">@citizenship.Surname</p>
             </div>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Имя</h5>
-                <p class="col-3">@citizenship.Name</p>
+                <h5 class="col-4">Имя</h5>
+                <p class="col-4">@citizenship.Name</p>
             </div>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Отчество</h5>
-                <p class="col-3">@citizenship.Patronymic</p>
+                <h5 class="col-4">Отчество</h5>
+                <p class="col-4">@citizenship.Patronymic</p>
             </div>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Номер паспорта</h5>
-                <p class="col-3">@citizenship.PassportNumber</p>
+                <h5 class="col-4">Номер паспорта</h5>
+                <p class="col-4">@citizenship.PassportNumber</p>
             </div>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Серия паспорта</h5>
-                <p class="col-3">@citizenship.PassportSeries</p>
+                <h5 class="col-4">Серия паспорта</h5>
+                <p class="col-4">@citizenship.PassportSeries</p>
             </div>
             <div class="d-flex flex-row">
-                <h5 class="col-3">Прописка</h5>
+                <h5 class="col-4">Прописка</h5>
                 @{
                    string fullAddress = (await AddressModel.GetAddressById(citizenship.LegalAddressId))?.FullAddressString ?? "";
                 }
-                <p class="col-3">@fullAddress</p>
+                <p class="col-8">@fullAddress</p>
             </div>
         </div>
     }
-    
-
-
-
-
-
-    <button id="save">
-        Сохранить
-    </button>
 
     <input type="hidden" id="student_id"value="@Model.Id"/>
 </div>
-
-
-
-
-
-
-<script src="~/js/site.js"></script>
-<script src="~/js/students.js"></script>
 
 

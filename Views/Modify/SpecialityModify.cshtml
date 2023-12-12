@@ -1,0 +1,141 @@
+@using StudentTracking.Models.Domain;
+@using StudentTracking.Models.Domain.Misc;
+@model StudentTracking.Models.SpecialityModel
+
+@{
+    ViewData["Title"] = "Специальность";
+}
+
+<div class="container">
+    <div class="d-flex flex-row">
+        <h5 class="col-1 mx-0">Код ФГОС</h5>
+    </div>
+
+    <div class="d-flex flex-row">
+        <input id="FgosCode" class="col-1" value="@Model.FgosCode" />
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small class="accent_color" id="FgosCode_err">
+
+            </small>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-9 mx-0">Название ФГОС</h5>
+    </div>
+
+    <div class="d-flex flex-row">
+        <input id="FgosName" class="col-9" value="@Model.FgosName" />
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-6">
+            <small class="accent_color" id="FgosName_err">
+
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Квалификация</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-2 mx-0">Количество курсов</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <input id="Qualification" class="col-5" value="@Model.Qualification"/>
+        <div class="col-1 mx-0"></div>
+        <select id = "CourseCount" class="col-2">
+            @foreach(var i in Enumerable.Range(1,6)){
+                if (i == Model.CourseCount){
+                    <option value="@i" selected> @i.ToString() </option>
+                }
+                else{
+                    <option value="@i">@i.ToString() </option>
+                }
+            }
+        </select>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-5">
+            <small class="accent_color" id="Qualification_err">
+
+            </small>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Префикс имени группы (ФГОС)</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Постфикс имени группы (квалификация)</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <input id="FgosPrefix" class="col-2" value="@Model.FgosPrefix"/>
+        <div class="col-4 mx-0"></div>
+        <input id="QualificationPostfix" class="col-2" value="@Model.QualificationPostfix"/>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-5">
+            <small class="accent_color" id="FgosPrefix_err">
+
+            </small>
+        </div>
+        <div class="col-1"></div>
+        <div class="col-5">
+            <small class="accent_color" id="QualificationPostfix_err">
+
+            </small>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Необходимый уровень образования</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Уровень образования после освоения программы</h5>
+    </div>
+    <div class="d-flex flex-row">
+         <select id = "EducationalLevelIn" class="col-5">
+            @foreach(var i in StudentEducationalLevelRecord.Names){
+                int asInt = (int)i.Key;  
+                if (asInt == Model.EducationalLevelIn){
+                    <option value="@asInt" selected> @i.Value </option>
+                }
+                else{
+                    <option value="@asInt">@i.Value </option>
+                }
+            }
+        </select>
+        <div class="col-1 mx-0"></div>
+        <select id = "EducationalLevelOut" class="col-5">
+            @foreach(var i in StudentEducationalLevelRecord.Names){
+                int asInt = (int)i.Key;  
+                if (asInt == Model.EducationalLevelOut){
+                    <option value="@asInt" selected> @i.Value </option>
+                }
+                else{
+                    <option value="@asInt">@i.Value </option>
+                }
+            }
+        </select>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Уровень образовательной программы</h5>
+    </div>
+    <div class="d-flex flex-row">
+         <select id = "TeachingLevel" class="col-5">
+            @foreach(var i in TeachingDepth.LevelNames){
+                int asInt = (int)i.Key; 
+                if (asInt == Model.TeachingLevel){
+                    <option value="@asInt" selected> @i.Value </option>
+                }
+                else{
+                    <option value="@asInt">@i.Value </option>
+                }
+            }
+        </select>
+    </div>
+    <input type="hidden" id="Id" value="@Model.Id"/>
+    <button id="save">
+        Сохранить
+    </button>
+</div>
+
+<script src="~/js/site.js"></script>
+<script src="~/js/specialities.js"></script>

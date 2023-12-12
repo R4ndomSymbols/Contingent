@@ -5,9 +5,9 @@ public class ValidationError {
 
     private string _message;
     private string _propertyName;
-    [JsonPropertyName("Err")]
+    [JsonPropertyName("err")]
     public string ErrorMessage {get => _message;}
-    [JsonPropertyName("Field")]
+    [JsonPropertyName("field")]
     public string PropertyName {get => _propertyName;}
     
     public ValidationError(string propName, string exceptionMessage){

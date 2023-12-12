@@ -60,149 +60,71 @@ $("#save").click(function () {
     var realAddress = $("#ActualAddress").val();
     var legalAddress = $("#LegalAddress").val();
     document.getElementById("ActualAddress_err").innerHTML = "";
-
-    var actualAddressSaved = false;
-    var studentSaved = false;
-    var legalAddressSaved = false;
-    var rusSaved = false;
+    document.getElementById("LegalAddress_err").innerHTML = "";
 
     $.ajax({
         type: "POST",
-        url: "/addresses/save/" + realAddress,
+        url: "/students/addcomplex",
+        data: JSON.stringify(
+        {
+            actAddress: {
+                Address : realAddress,
+            },
+            student : {
+                GradeBookNumber: $("#GradeBookNumber").val(),
+                DateOfBirth: $("#DateOfBirth").val(),
+                Gender: Number($("#Gender").val()),
+                Snils: $("#Snils").val(),
+                Inn: $("#Inn").val(),
+                TargetAgreementType: Number($("#TargetAgreementType").val()),
+                PaidAgreementType: Number($("#PaidAgreementType").val()),
+                AdmissionScore: $("#AdmissionScore").val(),
+                GiaMark: $("#GiaMark").val(),
+                GiaDemoExamMark: $("#GiaDemoExamMark").val(),
+                RussianCitizenshipId : null
+            },
+            factAddress: {
+                Address : legalAddress,
+            },
+            rusCitizenship:{
+                Name: $("#Name").val(),
+                Surname: $("#Surname").val(),
+                Patronymic: $("#Patronymic").val(),
+                PassportNumber: $("#PassportNumber").val(),
+                PassportSeries: $("#PassportSeries").val(),
+            }
+
+        }),
         dataType: "JSON",
         success: function (response) {
             var realAddressId = response["addressId"];
-            if (realAddressId != undefined && realAddressId != null && realAddressId != "") {
+            var studentId = response["studentId"];
+            var legalAddressId = response["addressId"];
+            var rusId = response["russianCitizenshipId"];
+
+            if (realAddressId != undefined && studentId!=undefined && legalAddressId!=undefined && rusId != undefined) {
                 $("#AddressId").val(realAddressId);
-                actualAddressSaved = true;
+                $("#StudentId").val(studentId);
+                $("#RussianLegalAddressId").val(legalAddressId);
+                $("#RussianCitizenshipId").val(rusId);
             }
             else {
-                document.getElementById("ActualAddress_err").innerHTML = "Ошибка при сохранении адреса";
+                $.each(response, function (index, value) { 
+                    var elem = document.getElementById(value.field + error_postfix);
+                    if (elem != null) {
+                        
+                        elem.innerHTML = value.err;
+                        var parentInput = document.getElementById(value.field);
+                        if (parentInput != null) {
+                            $("#" + value.field).on("click", function () {
+                                elem.innerHTML = "";
+                            })
+                        }
+                    }
+                }); 
             }
-        },
-        complete: function (a, b) {
-            callbackOne();
         }
     });
-    function callbackOne() {
-        if (actualAddressSaved) {
-            $.ajax({
-                type: "POST",
-                url: "/students/add",
-                dataType: "json",
-                data: JSON.stringify(
-                    {
-                        GradeBookNumber: $("#GradeBookNumber").val(),
-                        DateOfBirth: $("#DateOfBirth").val(),
-                        Gender: Number($("#Gender").val()),
-                        Snils: $("#Snils").val(),
-                        Inn: $("#Inn").val(),
-                        TargetAgreementType: Number($("#TargetAgreementType").val()),
-                        PaidAgreementType: Number($("#PaidAgreementType").val()),
-                        AdmissionScore: $("#AdmissionScore").val(),
-                        GiaMark: $("#GiaMark").val(),
-                        GiaDemoExamMark: $("#GiaDemoExamMark").val(),
-                        ActualAddressId: Number($("#AddressId").val()),
-                        RussianCitizenshipId: null
-                    }),
-                success: function (data) {
-                    var studentId = data["studentId"];
-                    if (studentId != null && studentId != undefined) {
-                        studentSaved = true;
-                        $("#StudentId").val(studentId);
-                        alert("student saved")
-                    }
-                    else {
-                        for (element in data) {
-                            var elem = document.getElementById(element["Field"] + error_postfix);
-                            if (elem != null) {
-                                elem.innerHTML = element["Err"];
-                                var parentInput = document.getElementById(element["Field"]);
-                                if (parentInput != null) {
-                                    $("#" + element["Field"]).on("click", function () {
-                                        elem.innerHTML = "";
-                                    })
-                                }
-                            }
-
-                        }
-                    }
-                },
-                complete: function (a, b) {
-                    callbackSecond();
-                }
-            });
-        }
-    }
-
-    function callbackSecond() {
-        if (studentSaved) {
-            $.ajax({
-                type: "POST",
-                url: "/addresses/save/" + legalAddress,
-                dataType: "JSON",
-                success: function (response) {
-                    var legalAddressId = response["addressId"];
-                    if (legalAddressId != undefined && legalAddressId != null) {
-                        $("#RussianLegalAddressId").val(legalAddressId);
-                        legalAddressSaved = true;
-                    }
-                    else {
-                        document.getElementById("legal_address_err").innerHTML = "Ошибка при сохранении прописки";
-                    }
-                },
-                complete: function (a, b) {
-                    callbackThird();
-                }
-            });
-        }
-    }
-
-    function callbackThird() {
-    if (legalAddressSaved) {
-        $.ajax({
-            type: "POST",
-            url: "/students/rus/new",
-            dataType: "JSON",
-            data: JSON.stringify(
-                {
-                    Name: $("#Name").val(),
-                    Surname: $("#Surname").val(),
-                    Patronymic: $("#Patronymic").val(),
-                    PassportNumber: $("#PassportNumber").val(),
-                    PassportSeries: $("#PassportSeries").val(),
-                    StudentId: Number($("#StudentId").val()),
-                    LegalAddressId: Number( $("#RussianLegalAddressId").val())
-
-                }),
-            success: function (data) {
-                var rusId = data["russianCitizenshipId"];
-                if (rusId != null && rusId != undefined) {
-                    rusSaved = true;
-                    $("#RussianCitizenshipId").val(rusId);
-                }
-                else {
-                    for (element in data) {
-                        var elem = document.getElementById(element["Field"] + error_postfix);
-                        if (elem != null) {
-                            elem.innerHTML = element["Err"];
-                            var parentInput = document.getElementById(element["Field"]);
-                            if (parentInput != null) {
-                                $("#" + element["Field"]).on("click", function () {
-                                    elem.innerHTML = "";
-                                })
-                            }
-                        }
-
-                    }
-                }
-            }
-        });
-    }
-    }
-
-
-
 });
 
 

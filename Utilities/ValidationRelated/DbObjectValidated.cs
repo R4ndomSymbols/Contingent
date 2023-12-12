@@ -1,6 +1,8 @@
 
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 using Npgsql;
+using StudentTracking.Models.Domain;
 
 namespace Utilities.Validation;
 
@@ -12,6 +14,9 @@ public class DbValidatedObject : IDbObjectValidated
     private bool _synced;
     private RelationTypes _relationBetweenObjAndDB;
 
+    public void PrintLog(){
+        Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value)));
+    }
     private bool ValidationProperlyInvoked {
         
         get {
@@ -20,6 +25,16 @@ public class DbValidatedObject : IDbObjectValidated
             }
             return _invokationLog.All(x => x.Value > 0);
         } 
+    }
+
+    public bool CheckPropertyValidity(string propertyName){
+        if (_invokationLog == null || _errors == null){
+            throw new InvalidOperationException("Валидация оключена");
+        }
+        if (!_invokationLog.ContainsKey(propertyName)){
+            throw new ArgumentException("Такое поле не зарегитрировано");
+        }
+        return _invokationLog[propertyName] > 0 && !_errors.Any(x => x.PropertyName == propertyName);
     }
 
     public async Task<RelationTypes> GetCurrentState(ObservableTransaction? scope){
@@ -137,9 +152,20 @@ public class DbValidatedObject : IDbObjectValidated
         if (_synced){
             return;
         }
+        if (this.GetType() == typeof(RussianCitizenship)){
+            var tmp = (RussianCitizenship)this;
+            Console.WriteLine("this " + tmp.Id + " " + tmp.PassportNumber + " " + tmp.PassportSeries);
+        }
+
         //Console.WriteLine(this.GetType().ToString() + " " + ValidationProperlyInvoked.ToString() + " " + CheckErrorsExist().ToString());
         //Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value.ToString())));
         var alter = await GetDbRepresentation(scope);
+        
+        if (alter != null && alter.GetType() == typeof(RussianCitizenship)){
+            var tmp1 = (RussianCitizenship)alter;
+            Console.WriteLine("alter " + tmp1.Id + " " + tmp1.PassportNumber + " " + tmp1.PassportSeries);
+        }
+
         if (alter == null){
             if (CheckErrorsExist() || !ValidationProperlyInvoked){
                 _relationBetweenObjAndDB = RelationTypes.UnboundInvalid;
@@ -175,7 +201,7 @@ public class DbValidatedObject : IDbObjectValidated
         throw new NotImplementedException("Метод сравнения не переопределен");
     }
 
-    public virtual async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
+    public virtual async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {   
         await Task.Delay(10);
         throw new NotImplementedException("Метод получения сущности БД не переопределен");
@@ -183,6 +209,10 @@ public class DbValidatedObject : IDbObjectValidated
 
     protected void NotifyStateChanged(){
         _synced = false;
+    }
+    protected async Task DirectNotifyStateChanged(ObservableTransaction? scope){
+        _synced = false;
+        await UpdateObjectIntegrityState(scope);
     }
 
     public void WriteErrors(){

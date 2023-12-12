@@ -44,16 +44,28 @@ public class StudentModel : DbValidatedObject
             }
         }
     }
+
+    public async Task SetActualAddress(int addressId, ObservableTransaction? scope){
+        bool exists = await AddressModel.IsIdExists(addressId, scope);
+
+        if (PerformValidation(
+                () => exists, new DbIntegrityValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
+        ){
+            _actualAddress = addressId;
+        }
+    }
     public int? ActualAddressId
     {
         get => _actualAddress;
-        set
+    }
+    public async Task SetRussianCitizenshipId(int id, ObservableTransaction? scope){
+        bool exists = await RussianCitizenship.IsIdExists(id, scope);
+        if (PerformValidation(
+            () => exists, 
+            new DbIntegrityValidationError(nameof(RussianCitizenshipId), "Указанное гражданство не зарегистрировано"))
+        )
         {
-            if (PerformValidation(
-                () => AddressModel.IsIdExists(value, null).Result, new ValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
-            ){
-                _actualAddress = value;
-            }
+            _russianCitizenshipId = id;
         }
     }
 
@@ -104,21 +116,6 @@ public class StudentModel : DbValidatedObject
     }
     public int? RussianCitizenshipId  {
         get => _russianCitizenshipId;
-        set
-        {   
-            if (PerformValidation(
-                () => {
-                    if (value == null){
-                        return true;
-                    }
-                    else{
-                        return RussianCitizenship.IsIdExists((int)value).Result;
-                    }
-                }, new DbIntegrityValidationError(nameof(RussianCitizenshipId), "Указанное гражданство не зарегистрировано")
-            )){
-                _russianCitizenshipId = value;
-            }      
-        }
     }
     public string GradeBookNumber  {
         get => _gradeBookNumber;
@@ -275,7 +272,8 @@ public class StudentModel : DbValidatedObject
                     _gender = (Genders.GenderCodes)pgreader["gender"],
                     _gradeBookNumber = (string)pgreader["grade_book_number"],
                     _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
-                    _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"]
+                    _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"],
+                    _admissionScore = (decimal)pgreader["admission_score"]
                 };
 
                 object rus_citizenship = pgreader["rus_citizenship_id"];
@@ -314,7 +312,7 @@ public class StudentModel : DbValidatedObject
         
         await using var connection = await Utils.GetAndOpenConnectionFactory(); 
         
-        if (!await IsIdExists(studentId, null) || !await RussianCitizenship.IsIdExists(citizenshipId)){
+        if (!await IsIdExists(studentId, null) || !await RussianCitizenship.IsIdExists(citizenshipId, null)){
             return;
         }
 
@@ -329,11 +327,11 @@ public class StudentModel : DbValidatedObject
         }
     }
 
-    public async Task Save() 
+    public async Task Save(ObservableTransaction? scope) 
     {
         await using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
 
-        if (await GetCurrentState(null) != RelationTypes.Pending){
+        if (await GetCurrentState(scope) != RelationTypes.Pending){
             return;
         }
 
@@ -341,23 +339,31 @@ public class StudentModel : DbValidatedObject
             "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
             "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score) " +
             "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id";
-        var insertCommand = new NpgsqlCommand(cmdText, connection);
+        
+        NpgsqlCommand cmd;
+        if (scope!= null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, connection);
+        }
+        
 
-        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p1", _snils));
-        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p2", _inn));
-        insertCommand.Parameters.Add(new NpgsqlParameter("p3", _actualAddress == null ? DBNull.Value : (int)_actualAddress));
-        insertCommand.Parameters.Add(new NpgsqlParameter<DateTime>("p4", _dateOfBirth));
-        insertCommand.Parameters.Add(new NpgsqlParameter("p5", _russianCitizenshipId == null? DBNull.Value : (int)_russianCitizenshipId));
-        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
-        insertCommand.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
-        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType));
-        insertCommand.Parameters.Add(new NpgsqlParameter("p9", _giaMark == null ? DBNull.Value : (int)_giaMark));
-        insertCommand.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
-        insertCommand.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
-        insertCommand.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _snils));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _inn));
+        cmd.Parameters.Add(new NpgsqlParameter("p3", _actualAddress == null ? DBNull.Value : (int)_actualAddress));
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p4", _dateOfBirth));
+        cmd.Parameters.Add(new NpgsqlParameter("p5", _russianCitizenshipId == null? DBNull.Value : (int)_russianCitizenshipId));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter("p9", _giaMark == null ? DBNull.Value : (int)_giaMark));
+        cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
 
-        await using (insertCommand){
-            using var reader = await insertCommand.ExecuteReaderAsync();
+        await using (cmd){
+            using var reader = await cmd.ExecuteReaderAsync();
             await reader.ReadAsync();
             NotifyStateChanged();
             _id = (int)reader["id"];
@@ -389,17 +395,23 @@ public class StudentModel : DbValidatedObject
     }
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
 
-        await using var connection = await Utils.GetAndOpenConnectionFactory();{
-            string cmdText = "SELECT EXISTS(SELECT id FROM students WHERE id = @p1)";
-            NpgsqlCommand cmd = new NpgsqlCommand(cmdText, connection);
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-            await using (connection)
-            await using (cmd){
-                using var reader = await cmd.ExecuteReaderAsync();
-                await reader.ReadAsync();
-                return (bool)reader["exists"];
-            }
+        await using var connection = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT EXISTS(SELECT id FROM students WHERE id = @p1)";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
+        else{
+            cmd = new NpgsqlCommand(cmdText, connection); 
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        await using (connection)
+        await using (cmd){
+            using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            return (bool)reader["exists"];
+        }
+        
     } 
 
     public override bool Equals(IDbObjectValidated? other)

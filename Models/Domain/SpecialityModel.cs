@@ -1,252 +1,402 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Npgsql;
+using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.JSON;
 using Utilities;
+using Utilities.Validation;
 
 namespace StudentTracking.Models;
 
-public class SpecialityModel
+public class SpecialityModel : DbValidatedObject
 {
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-    [JsonPropertyName("fgosCode")]
-    public string FgosCode { get; set; }
-    [JsonPropertyName("fgosName")]
-    public string FgosName { get; set; }
-    [JsonPropertyName("qualification")]
-    public string Qualification { get; set; }
-    [JsonPropertyName("mainNamePrefix")]
-    public string MainNamePrefix { get; set; }
-    [JsonPropertyName("qualificationPostfix")]
-    public string QualificationPostfix { get; set; }
-    [JsonPropertyName("courseCount")]
-    public int CourseCount { get; set; }
-    [JsonPropertyName("specialityTypeId")]
-    public int SpecialityTypeId { get; set; }
+    public const int MINIMAL_COURSE_COUNT = 1;
+    public const int MAXIMUM_COURSE_COUNT = 6;
+    private int _id;
+    private string _fgosCode;
+    private string _fgosName;
+    private string _qualification;
+    private string _fgosPrefix;
+    private string? _qualificationPostfix;
+    private int _courseCount;
+    private StudentEducationalLevelRecord.EducationalLevels _levelIn;
+    private StudentEducationalLevelRecord.EducationalLevels _levelOut;
+    private TeachingDepth.Levels _educationDepth;
+    public int Id {
+        get => _id;
+    }
+    public string FgosCode
+    {
+        get => _fgosCode;
+        set
+        {
+            if (PerformValidation(
+                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.FgosCode),
+                new ValidationError(nameof(FgosCode), "Номер ФГОС не соответствует формату или не указан")))
+            {
+                _fgosCode = value;
+            }
+        }
+    }
+    public string FgosName
+    {
+        get => _fgosName;
+        set
+        {
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText)
+            , new ValidationError(nameof(FgosName), "Название ФГОС имеет неверный формат или не указано"))
+            )
+            {
+                _fgosName = value;
+            }
+        }
+    }
+    public string Qualification
+    {
+        get => _qualification;
+        set
+        {
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
+            new ValidationError(nameof(Qualification), "Квалификация указана или указана неверно")))
+            {
+                _qualification = value;
+            }
+        }
+    }
+    public string FgosPrefix
+    {
+        get => _fgosPrefix;
+        set
+        {
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianLetters),
+            new ValidationError(nameof(FgosPrefix), "Префикс специальности не указан или указан неверно")))
+            {
+                _fgosPrefix = value;
+            }
+        }
 
-    public SpecialityModel()
-    {
-        Id = -1;
-        FgosCode = "";
-        FgosName = "";
-        Qualification = "";
-        MainNamePrefix = "";
-        QualificationPostfix = "";
-        CourseCount = 0;
-        SpecialityTypeId = -1;
     }
 
-    public static async Task<SpecialityModel?> GetById(int id)
+    public string QualificationPostfix
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        get => _qualificationPostfix ?? "";
+        set
         {
-            await using (var cmd = new NpgsqlCommand("SELECT * FROM specialities WHERE id = @p1", conn)
+            if (string.IsNullOrEmpty(value))
             {
-                Parameters = {
-                    new ("p1", id)
-                }
-            })
+                _qualificationPostfix = null;
+                return;
+            }
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianLetters),
+            new ValidationError(nameof(QualificationPostfix), "Постфикс квалификации имеет неверный формат")))
             {
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {   
-                    await reader.ReadAsync();          
-                    return new SpecialityModel()
-                    {
-                        Id = id,
-                        FgosCode = (string)reader["fgos_code"],
-                        FgosName = (string)reader["fgos_name"],
-                        Qualification = (string)reader["qualification"],
-                        MainNamePrefix = (string)reader["main_name_prefix"],
-                        QualificationPostfix = (string)reader["qualification_postfix"],
-                        CourseCount = (int)reader["course_count"],
-                        SpecialityTypeId = (int)reader["speciality_type"],
-                    };
-                }
+                _qualificationPostfix = value;
             }
         }
     }
-    public static async Task<List<SpecialityModel>?> GetAllGroupView()
+    [JsonIgnore]
+    public int IntCourseCount
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        get => _courseCount;
+    }
+    public int CourseCount
+    {
+        get => _courseCount;
+        set
         {
-            await using (var cmd = new NpgsqlCommand("SELECT * FROM specialities", conn))
+            if (PerformValidation(
+                () => ValidatorCollection.CheckRange(value, 1, 6),
+                new ValidationError(nameof(CourseCount), "Указанное число превышает допустимые пределы")
+            ))
             {
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    var toReturn = new List<SpecialityModel>();
-                    while (await reader.ReadAsync())
-                    {
-                        toReturn.Add(new SpecialityModel()
-                        {
-                            Id = (int)reader["id"],
-                            FgosCode = (string)reader["fgos_code"],
-                            FgosName = (string)reader["fgos_name"],
-                            Qualification = (string)reader["qualification"],
-                            MainNamePrefix = (string)reader["main_name_prefix"],
-                            QualificationPostfix = (string)reader["qualification_postfix"],
-                            CourseCount = (int)reader["course_count"],
-                            SpecialityTypeId = (int)reader["speciality_type"],
-                        });
-                    }
-                    return toReturn;
-                }
+                _courseCount = value;
             }
         }
     }
-    public static async Task<List<SpecialityTypeModel>?> GetAllTypes()
+    public int EducationalLevelIn
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        get => (int)_levelIn;
+        set
         {
-            await using (var cmd = new NpgsqlCommand("SELECT * FROM speciality_types", conn))
-            {
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!reader.HasRows)
+            if (PerformValidation(
+                () =>
                 {
-                    return null;
-                }
-                else
-                {
-                    await reader.ReadAsync();
-                    List<SpecialityTypeModel> toReturn = new List<SpecialityTypeModel>();
-                    do
+                    try
                     {
-                        toReturn.Add(new SpecialityTypeModel()
-                        {
-                            Id = (int)reader["id"],
-                            Name = (string)reader["name"]
-                        }
-                        );
+                        var dummy = (StudentEducationalLevelRecord.EducationalLevels)value;
+                        return true;
                     }
-                    while (await reader.ReadAsync());
-                    return toReturn;
-                }
+                    catch (InvalidCastException)
+                    {
+                        return false;
+                    }
+                }, new ValidationError(nameof(EducationalLevelIn), "Переданное значение не является допустимым")
+            ))
+            {
+                _levelIn = (StudentEducationalLevelRecord.EducationalLevels)value;
             }
         }
     }
-    public static async Task<List<string>?> GetAllFGOSCodes()
+    public int EducationalLevelOut
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        get => (int)_levelOut;
+        set
         {
-            await using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_code FROM specialities", conn))
-            {
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!reader.HasRows)
+            if (PerformValidation(
+                () =>
                 {
-                    return null;
-                }
-                else
-                {
-                    List<string> toReturn = new List<string>();
-                    while (await reader.ReadAsync())
+                    try
                     {
-                        toReturn.Add((string)reader["fgos_code"]);
+                        var dummy = (StudentEducationalLevelRecord.EducationalLevels)value;
+                        return true;
                     }
-                    return toReturn;
-                }
+                    catch (InvalidCastException)
+                    {
+                        return false;
+                    }
+                }, new ValidationError(nameof(EducationalLevelOut), "Переданное значение не является допустимым")
+            ))
+            {
+                _levelOut = (StudentEducationalLevelRecord.EducationalLevels)value;
+            }
+        }
+    }
+    public int TeachingLevel
+    {
+        get => (int)_educationDepth;
+        set
+        {
+            if (PerformValidation(
+                () =>
+                {
+                    try
+                    {
+                        var dummy = (TeachingDepth.Levels)value;
+                        return true;
+                    }
+                    catch (InvalidCastException)
+                    {
+                        return false;
+                    }
+                }, new ValidationError(nameof(TeachingLevel), "Переданное значение уровня изучения не является допустимым")
+            ))
+            {
+                _educationDepth = (TeachingDepth.Levels)value;
+            }
+        }
+    }
 
-            }
-        }
-    }
-    public static async Task<List<string>?> GetAllFGOSNames()
+    public SpecialityModel() : base()
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
-        {
-            await using (var cmd = new NpgsqlCommand("SELECT DISTINCT fgos_name FROM specialities", conn))
-            {
-                using var reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                else
-                {
-                    List<string> toReturn = new List<string>();
-                    while (reader.Read())
-                    {
-                        toReturn.Add((string)reader["fgos_name"]);
-                    }
-                    return toReturn;
-                }
+        RegisterProperty(nameof(FgosCode));
+        RegisterProperty(nameof(FgosName));
+        RegisterProperty(nameof(Qualification));
+        RegisterProperty(nameof(QualificationPostfix));
+        RegisterProperty(nameof(FgosPrefix));
+        RegisterProperty(nameof(EducationalLevelIn));
+        RegisterProperty(nameof(EducationalLevelOut));
+        RegisterProperty(nameof(TeachingLevel));
+        RegisterProperty(nameof(CourseCount));
 
-            }
-        }
+        _fgosName = "";
+        _fgosCode = "";
+        _courseCount = 0;
+        _educationDepth = TeachingDepth.Levels.NotMentioned;
+        _fgosPrefix = "";
+        _levelIn = StudentEducationalLevelRecord.EducationalLevels.NotMentioned;
+        _levelOut = StudentEducationalLevelRecord.EducationalLevels.NotMentioned;
+        _qualification = "";
+        _qualificationPostfix = "";
     }
-    public static async Task<int> CreateOrUpdateSpeciality(SpecialityModel toProcess)
+
+    protected SpecialityModel(int id, string code, string name, string qual, string fPref) : base(RelationTypes.Bound)
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        _id = id;
+        _fgosCode = code;
+        _fgosName = name;
+        _qualification = qual;
+        _fgosPrefix = fPref;
+    }
+    public async Task Save(ObservableTransaction? scope){
+        
+        if (await GetCurrentState(scope) != RelationTypes.Pending){
+            Console.WriteLine(string.Join("\n", GetErrors()));
+            return;
+        }
+        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
+        string cmdText = "INSERT INTO public.educational_program( " +
+	    " fgos_code, fgos_name, qualification, course_count, " + 
+        " speciality_out_education_level, speciality_in_education_level, knowledge_depth, group_prefix, group_postfix) " +
+	    " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9) RETURNING id";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else {
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _fgosCode));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _fgosName));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _qualification));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p4", _courseCount));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)_levelOut));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_levelIn));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_educationDepth));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p8", _fgosPrefix));
+        cmd.Parameters.Add(new NpgsqlParameter<string?>("p9", _qualificationPostfix));
+
+        await using (cmd){
+            await using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            _id = (int)reader["id"];
+            NotifyStateChanged();
+        }
+        if (conn!=null){
+            await conn.DisposeAsync();
+        }   
+    }
+
+    public static async Task<SpecialityModel?> GetById(int id, ObservableTransaction? scope)
+    {
+        SpecialityModel? result = null;
+        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
+        string cmdText = "SELECT * FROM educational_program WHERE id = @p1";
+        NpgsqlCommand cmd;
+        if (scope != null)
         {
-            if (toProcess.Id == -1)
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+
+        await using (cmd)
+        {
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows)
             {
-                await using (var cmd = new NpgsqlCommand("INSERT INTO specialities (fgos_code, fgos_name, qualification, main_name_prefix, qualification_postfix, " +
-                " course_count, speciality_type) VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7) RETURNING id", conn)
-                {
-                    Parameters = {
-                        new ("p1", toProcess.FgosCode),
-                        new ("p2", toProcess.FgosName),
-                        new ("p3", toProcess.Qualification),
-                        new ("p4", toProcess.MainNamePrefix),
-                        new ("p5", toProcess.QualificationPostfix),
-                        new ("p6", toProcess.CourseCount),
-                        new ("p7", toProcess.SpecialityTypeId),
-                    }
-                }
-                )
-                {
-                    using  var reader = cmd.ExecuteReader();
-                    reader.Read();
-                    if (reader.HasRows)
-                    {
-                        return (int)reader["id"];
-                    }
-                    return -1;
-                }
+                return result;
             }
             else
             {
-                using (var cmd = new NpgsqlCommand("UPDATE specialities SET fgos_code = @p1, fgos_name = @p2, qualification = @p3, main_name_prefix = @p4, qualification_postfix = @p5, " +
-                " course_count = @p6, speciality_type = @p7 WHERE id = @p8", conn)
+                await reader.ReadAsync();
+                result = new SpecialityModel(id,
+                    (string)reader["fgos_code"],
+                    (string)reader["fgos_name"],
+                    (string)reader["qualification"],
+                    reader["group_prefix"].GetType() == typeof(DBNull) ? "" : (string)reader["group_prefix"])
                 {
-                    Parameters = {
-                        new ("p1", toProcess.FgosCode),
-                        new ("p2", toProcess.FgosName),
-                        new ("p3", toProcess.Qualification),
-                        new ("p4", toProcess.MainNamePrefix),
-                        new ("p5", toProcess.QualificationPostfix),
-                        new ("p6", toProcess.CourseCount),
-                        new ("p7", toProcess.SpecialityTypeId),
-                        new ("p8", toProcess.Id),
-                    }
-                })
-                {
-                    cmd.ExecuteNonQuery();
-                    return toProcess.Id;
-                }
+                    _qualificationPostfix = reader["group_postfix"].GetType() == typeof(DBNull) ? null : (string)reader["group_postfix"],
+                    _courseCount = (int)reader["course_count"],
+                    _educationDepth = (TeachingDepth.Levels)(int)reader["knowledge_depth"],
+                    _levelIn = (StudentEducationalLevelRecord.EducationalLevels)(int)reader["speciality_in_education_level"],
+                    _levelOut = (StudentEducationalLevelRecord.EducationalLevels)(int)reader["speciality_out_education_level"],
+                };
             }
         }
+        if (conn != null)
+        {
+            await conn.DisposeAsync();
+        }
+        return result;
     }
-}
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
+        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
+        string cmdText = "SELECT (EXISTS(SELECT 1 FROM educational_program WHERE id = @p1))";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        bool result = false;
+        await using (cmd){
+            await using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            result = (bool)reader["exists"];
+        }
+        if (conn!=null){
+            await conn.DisposeAsync();
+        }
+        return result;
+    }
+    public static async Task<List<SpecialitySuggestionJSON>> GetSuggestions(string? searchText, ObservableTransaction? scope){
+        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
+        string cmdText = "";
+        if (searchText!= null){
+            cmdText = "SELECT id, fgos_code, fgos_name, qualification FROM public.educational_program WHERE " +
+            " fgos_name || ' ' || qualification  || ' ' || fgos_code LIKE @p1";
+        }
+        else {
+            cmdText = "SELECT id, fgos_code, fgos_name, qualification FROM public.educational_program";
+        }
 
-public class SpecialityTypeModel
-{
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        if (searchText!=null){
+             cmd.Parameters.Add(new NpgsqlParameter<string>("p1", "%" + searchText + "%"));
+        }
 
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-    [JsonPropertyName("name")]
-    public string Name { get; set; }
+        List<SpecialitySuggestionJSON> result = new List<SpecialitySuggestionJSON>();
+        await using (cmd){
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows){
+                return result;
+            }
+            while (await reader.ReadAsync()){
+                result.Add(
+                    new SpecialitySuggestionJSON(
+                        (int)reader["id"],
+                        (string)reader["fgos_name"],
+                        (string)reader["qualification"],
+                        (string)reader["fgos_code"]
+                    )
+                );
+            };
+            
+        }
+        if (conn!=null){
+            await conn.DisposeAsync();
+        }
+        return result;
+    }
+    public SpecialitySuggestionJSON ToSuggestion(){
+        return new SpecialitySuggestionJSON(_id, _fgosName, _qualification, _fgosCode);
+    } 
 
-    public SpecialityTypeModel()
+    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {
-        Name = "";
+        return await GetById(this._id, scope);
     }
-
+    public override bool Equals(IDbObjectValidated? other)
+    {
+        if (other == null){
+            return false;
+        }
+        if (other.GetType() != this.GetType()){
+            return false;
+        }
+        var unboxed = (SpecialityModel)other;
+        return 
+            _id == unboxed._id &&
+            _courseCount == unboxed._courseCount &&
+            _educationDepth == unboxed._educationDepth &&
+            _fgosCode == unboxed._fgosCode &&
+            _fgosName == unboxed._fgosName &&
+            _levelIn == unboxed._levelIn &&
+            _levelOut == unboxed._levelOut &&
+            _qualification == unboxed._qualification &&
+            _qualificationPostfix == unboxed._qualificationPostfix;
+    }
 }
+
+
