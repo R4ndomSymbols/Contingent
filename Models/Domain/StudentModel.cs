@@ -1,6 +1,8 @@
 using Npgsql;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.JSON.Responses;
+using StudentTracking.Models.SQL;
 using System.Data;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -337,8 +339,8 @@ public class StudentModel : DbValidatedObject
 
         var cmdText = "INSERT INTO students( " +
             "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
-            "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score) " +
-            "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id";
+            "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score, displayed_name) " +
+            "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13) RETURNING id";
         
         NpgsqlCommand cmd;
         if (scope!= null){
@@ -361,6 +363,8 @@ public class StudentModel : DbValidatedObject
         cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
+        var rCitizenship = await RussianCitizenship.GetById((int)_russianCitizenshipId,scope);
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p13", rCitizenship.GetName()));
 
         await using (cmd){
             using var reader = await cmd.ExecuteReaderAsync();
@@ -411,8 +415,24 @@ public class StudentModel : DbValidatedObject
             await reader.ReadAsync();
             return (bool)reader["exists"];
         }
-        
     } 
+    public static async Task<bool> IsAllExists(IEnumerable<int> ids){
+
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT COUNT(id) AS c FROM students WHERE " + 
+        "id = ANY(@p1)";
+        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+        var p = new NpgsqlParameter();
+        p.ParameterName = "p1";
+        p.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
+        p.Value = ids.ToArray();
+        using (conn)
+        using (cmd){
+            using var reader = cmd.ExecuteReader();
+            return (int)reader["c"] == ids.Count();
+        }
+    }  
+
 
     public override bool Equals(IDbObjectValidated? other)
     {
@@ -436,6 +456,30 @@ public class StudentModel : DbValidatedObject
             _inn == p._inn &&
             _gradeBookNumber == p._gradeBookNumber;
     }
+
+    public async Task<string> GetName(){
+        
+        if (_russianCitizenshipId != null){
+            var rCitizenship = await RussianCitizenship.GetById((int)_russianCitizenshipId, null);
+            if (rCitizenship != null){
+                return rCitizenship.GetName();
+            } 
+        }
+        return "Не указано";
+    }
+ 
+    public static async Task<List<StudentViewJSONResponse>?> FilterStudents(SelectQuery<StudentViewJSONResponse> filter){
+
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        await using (conn)
+        {
+            return await filter.Execute(conn, 50);
+        }
+
+    }
+
+
+
     /*
     private void Update(){
         using (var conn = Utils.GetConnectionFactory()){

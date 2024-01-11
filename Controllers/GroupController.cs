@@ -1,8 +1,13 @@
 
+using System.Data.SqlTypes;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using StudentTracking.Models;
 using StudentTracking.Models.JSON;
+using StudentTracking.Models.JSON.Responses;
+using StudentTracking.Models.SQL;
+using Utilities;
 using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
@@ -69,4 +74,41 @@ public class GroupController : Controller{
             return Json(new {GroupName = name});
         }
     }
+
+    [HttpGet]
+    [Route("/groups/find/{query?}")]
+    public async Task<JsonResult> FindGroups(string? query){
+        if (query == null || query.Length <= 2){
+            return Json(new object());
+        }
+        var mapper = new Mapper<GroupViewJSONResponse>(
+            (g, m) => {
+                g.GroupId = (int)m["gid"];
+                g.GroupName = (string)m["gn"];
+                g.IsNameGenerated = (bool)m["gen"];
+            },
+            new List<Column>(){
+                new Column("id", "gid", "educational_group"),
+                new Column("group_name", "gn", "educational_group"),
+                new Column("name_generated", "gen", "educational_group"),
+            } 
+        );
+        var par = new SQLParameters(); 
+        var whereClause = new WhereCondition(
+            par,
+            new Column("group_name", null, "educational_group"),
+            new SQLParameter<string>("%" + query + "%"),
+            WhereCondition.Relations.Like 
+        );
+        SelectQuery<GroupViewJSONResponse> select = new SelectQuery<GroupViewJSONResponse>(
+            "educational_group", par, mapper, null, new ComplexWhereCondition(whereClause)
+        );
+        var got = await GroupModel.FindGroups(select);
+        if (got!=null){
+            return Json(got);
+        }
+        return Json(new object());
+
+    }
+
 }

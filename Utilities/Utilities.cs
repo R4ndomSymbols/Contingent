@@ -1,4 +1,5 @@
 using System;
+using System.Data.SqlTypes;
 using System.Net.Http.Headers;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ public static class Utils {
 
 
     public const int INVALID_ID = -1;
-    public const int ORG_CREATION_YEAR = 1972;
+    public const int ORG_CREATION_YEAR = 1972; 
 
     public static string FormatDateTime(DateTime? date){
         var correctDate = date == null ? DateTime.Now : (DateTime)date;
@@ -138,8 +139,30 @@ public static class Utils {
         else {
             return resultCourseCount;
         }
-
     }
+
+    public static T? ExtractSafeNullable<T>(NpgsqlDataReader r, string parameterName) where T : class
+    {
+        var extracted = r[parameterName];
+        if (extracted.GetType() != typeof(T)){
+            return null;
+        }
+        else {
+            return (T)extracted;
+        }
+    }
+    public static T? ExtractSafeValueType<T>(NpgsqlDataReader r, string parameterName) where T : class
+    {
+        var extracted = r[parameterName];
+        if (extracted.GetType() != typeof(T)){
+            return null;
+        }
+        else {
+            return (T)extracted;
+        }
+    }
+
+
 
 }
 

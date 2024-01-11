@@ -9,6 +9,12 @@ public class GroupSponsorshipType {
         IndividualSponsorship = 4 
     }
 
+    public static bool IsFree(Types type){
+        return type == Types.FederalGovernmentSponsorship || 
+        type == Types.FederalSubjectGovernmentSponsorship ||
+        type == Types.LocalGovenmentSponsorship; 
+    }
+
     public static readonly Dictionary<Types, (string name, string postfix)> Names = new Dictionary<Types, (string name, string postfix)> {
         {Types.NotMentioned, ("Не указано", "")},
         {Types.FederalGovernmentSponsorship, ("Бюджетное финансирование", "")},

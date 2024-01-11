@@ -7,6 +7,9 @@ using Utilities.Validation;
 using StudentTracking.Models.JSON;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using StudentTracking.Models.JSON.Responses;
+using StudentTracking.Models.SQL;
 
 namespace StudentTracking.Models;
 
@@ -267,6 +270,26 @@ public class GroupModel : DbValidatedObject
         }
     }*/
 
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
+        await using var connection = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT EXISTS(SELECT id FROM eductional_group WHERE id = @p1)";
+        NpgsqlCommand cmd;
+        if (scope != null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, connection); 
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        await using (connection)
+        await using (cmd){
+            using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            return (bool)reader["exists"];
+        }
+    }
+
+
     public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
     {
         return await GetGroupById(_id, scope);
@@ -435,5 +458,28 @@ public class GroupModel : DbValidatedObject
         return result;
     }
 
+    public static async Task<bool> IsAllExists(IEnumerable<int> ids){
 
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT COUNT(id) AS c FROM educational_group WHERE " + 
+        "id = ANY(@p1)";
+        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+        var p = new NpgsqlParameter();
+        p.ParameterName = "p1";
+        p.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
+        p.Value = ids.ToArray();
+        using (conn)
+        using (cmd){
+            using var reader = cmd.ExecuteReader();
+            return (int)reader["c"] == ids.Count();
+        }
+    }  
+
+    
+    public static async Task<List<GroupViewJSONResponse>?> FindGroups(SelectQuery<GroupViewJSONResponse> select){
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        using (conn){
+            return await select.Execute(conn, 20);
+        }   
+    }
 }

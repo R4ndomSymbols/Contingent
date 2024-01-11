@@ -145,6 +145,24 @@ public class DbValidatedObject : IDbObjectValidated
         _invokationLog.Add(name, 0);
     }
 
+    public void RegisterProperty(ValidationError? initial){
+        if (_invokationLog == null){
+            throw new InvalidOperationException("Валидация объекта отключена");
+        }
+        if (initial is null){
+            throw new ArgumentNullException("Ошибка должна быть указана");
+        }
+        if (_invokationLog.ContainsKey(initial.PropertyName)){
+            return;
+        }
+        _invokationLog.Add(initial.PropertyName, 0);
+        if (_errors == null){
+            throw new InvalidOperationException("Валидация объекта отключена");
+        }
+        _errors.Add(initial);
+    }
+
+
     private async Task UpdateObjectIntegrityState(ObservableTransaction? scope){
         if (_invokationLog == null){
             throw new InvalidOperationException("Смена состояний неинициализированной валидации невозможна");
@@ -210,10 +228,6 @@ public class DbValidatedObject : IDbObjectValidated
     protected void NotifyStateChanged(){
         _synced = false;
     }
-    protected async Task DirectNotifyStateChanged(ObservableTransaction? scope){
-        _synced = false;
-        await UpdateObjectIntegrityState(scope);
-    }
 
     public void WriteErrors(){
         if (_errors != null){
@@ -228,6 +242,14 @@ public class DbValidatedObject : IDbObjectValidated
         }
         else{
             return _errors.Where(x => x.PropertyName == name).ToList();
+        }
+    }
+
+    public void PrintValidationLog(){
+        if (_invokationLog!=null){
+            Console.WriteLine(
+                string.Join("\n", _invokationLog.Select(x => "Свойство: " + x.Key + " К: " + x.Value))
+            );
         }
     }
 }

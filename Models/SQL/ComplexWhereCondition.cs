@@ -1,0 +1,45 @@
+using Npgsql.Replication.PgOutput.Messages;
+
+namespace StudentTracking.Models.SQL;
+
+public class ComplexWhereCondition {
+  
+    private WhereCondition? _left;
+    private WhereCondition? _right;
+    private ConditionRelation _relation;
+    private bool _isGroup; 
+
+    public enum  ConditionRelation {
+        AND = 1,
+        OR = 2,
+    }
+
+    public ComplexWhereCondition(WhereCondition left, WhereCondition right, ConditionRelation relation, bool isGroup){
+        _left = left;
+        _right = right;
+        _relation = relation;
+        _isGroup = isGroup;
+
+        _strategy = () => {
+            var result = " " + _left.ToString() + " "  + _relation.ToString() + " " + _right.ToString() + " ";
+            if (_isGroup){
+                result = "( " + result + ")";
+            }
+            return result;
+        };
+    }
+
+    public ComplexWhereCondition(WhereCondition single) {
+        _left = single;
+        _strategy = () => _left.ToString();
+    }
+
+    private Func<string> _strategy;
+
+    public override string ToString()
+    {
+       return _strategy.Invoke();
+    }
+
+}
+

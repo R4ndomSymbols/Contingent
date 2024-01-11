@@ -305,7 +305,7 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
 
     public string GetName()
     {
-        throw new NotImplementedException();
+        return (Surname + " " + Name + " " + Patronymic).TrimEnd();
     }
 
     /*

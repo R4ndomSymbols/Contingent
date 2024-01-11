@@ -3,7 +3,7 @@
 }
 <div class="row">
     <h6 class="col-2">Текущий приказ</h6>
-    <input id = "current_order" class="col-8"/>@*  *@ 
+    <input id = "current_order" class="col-8"/>
 </div>
 <div id = "order_err"></div>
 
@@ -11,10 +11,13 @@
     <h6 class="col-9">Фильтр ФИО</h6>
     <h6 class="col-2">Фильтр группы</h6>
 </div>
+
 <div class="row">
     <input class="col-9" id = "fullname_filter" disabled/>
     <input class="col-2" id = "group_filter" disabled/>
-    <button class="col-1" id = "find_students" disabled>Поиск</button>
+    <button class="col-1" id = "find_students" >Поиск</button>
+</div>
+
 <div class = "row">
     <div class="col-6 d-flex">
     <table class ="align-self-start table">
@@ -56,7 +59,6 @@
         Сохранить
     </button>
 </div>
-
 
 
 <script src="~/js/studentflow.js"></script>

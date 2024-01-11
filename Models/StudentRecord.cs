@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using StudentTracking.Models;
+using StudentTracking.Models.Domain.Orders;
 using Npgsql;
 using System.Data;
 using System.Text.Json.Serialization;
@@ -36,16 +37,16 @@ public class StudentRecord
 
 
 
-    public static async Task<List<StudentEssentials>?> FilterByNextOrderType(OrderTypesId id, int currentOrderId, string? searchText = null, string? groupNameLike = null)
+    public static async Task<List<StudentEssentials>?> FilterByNextOrderType(OrderTypes id, int currentOrderId, string? searchText = null, string? groupNameLike = null)
     {
         await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            int[]? ordersAllowed = OrderModel.GetRulesBefore(id);
+            int[]? ordersAllowed = null;
             if (ordersAllowed != null)
             {
 
                 string query = "SELECT * FROM get_student_allowed_for_order(@p1, @p2, @p3, @p4)";
-                if (id == OrderTypesId.FromPaidToFreeGroup)
+                if (id == OrderTypes.FromPaidToFreeGroup)
                 {
                     query += " WHERE group_type = 2"; 
                 }
