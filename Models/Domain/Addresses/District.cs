@@ -77,7 +77,7 @@ public class District : DbValidatedObject
                     new ValidationError(nameof(UntypedName), "Название превышает допустимый лимит символов")))
                 {
                     if (PerformValidation(
-                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
+                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
                         new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
                     {
                         _untypedName = value.ToLower();

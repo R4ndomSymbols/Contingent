@@ -1,9 +1,9 @@
 using StudentTracking.Models.Domain.Orders.OrderData;
 
-namespace StudentTracking.Models.JSON.Responses;
+namespace StudentTracking.Controllers.DTO.Out;
 
 [Serializable]
-public class OrderSuggestionJSONResponse {
+public class OrderResponseDTO {
 
     public string DisplayedName {get; set; } 
     public int OrderId {get; set; }
@@ -13,7 +13,7 @@ public class OrderSuggestionJSONResponse {
         return name + $" ({stringId})"; 
     }
 
-    public OrderSuggestionJSONResponse(){
+    public OrderResponseDTO(){
         DisplayedName = "";
         GroupBehaviour = "";
     }

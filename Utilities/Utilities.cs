@@ -39,7 +39,7 @@ public static class Utils {
         }
     }
     public static bool TryParseDate(string? date){
-        if (date == null){
+        if (string.IsNullOrEmpty(date)){
             return false;
         }
         else{

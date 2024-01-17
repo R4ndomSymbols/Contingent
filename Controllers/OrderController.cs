@@ -1,11 +1,7 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Models;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Models.Domain.Orders.OrderData;
-using StudentTracking.Models.JSON;
-using StudentTracking.Models.JSON.Responses;
-using StudentTracking.Models.Services;
 using StudentTracking.Models.SQL;
 using Utilities.Validation;
 
@@ -23,17 +19,17 @@ public class OrderController : Controller{
     
     [HttpGet]
     [Route("/orders/modify/{query}")]
-    public IActionResult ProcessSpeciality(string query){
+    public async Task<IActionResult> ProcessSpeciality(string query){
         if (query == "new"){
-            return View(@"Views/Modify/OrderModify.cshtml", new FreeEnrollmentOrder()); 
+            return View(@"Views/Modify/OrderModify.cshtml", EmptyOrder.Empty); 
         }
         else if(int.TryParse(query, out int id)){
-            var got = OrderConsistencyMaintain.GetByIdTypeIndependent(id);
-            if (got!=null){
-                return View(@"Views/Modify/OrderModify.cshtml", got);
+            var result = await Order.GetOrderById(id);
+            if (result.IsSuccess){
+                return View(@"Views/Modify/OrderModify.cshtml", result.ResultObject);
             }
             else{
-                return View(@"Views/Shared/Error.cshtml", "Приказа с таким id не существует");
+                return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
             }
             
         }
@@ -47,14 +43,11 @@ public class OrderController : Controller{
     public async Task<JsonResult> Save(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
-            var deserialized = JsonSerializer.Deserialize<OrderModelJSON>(body);
-            var built = await OrderBuilder.Build(deserialized);
-            if (built!=null){
-                await built.Save(null);
-                if (await built.GetCurrentState(null) != RelationTypes.Bound){
-                    return Json(built.GetErrors());
-                }
-                return Json(new {OrderId = built.Id});
+            var built = await Order.Build(body);
+            if (built.IsSuccess){
+                var order = built.ResultObject; 
+                await order.Save(null);
+                return Json(new {OrderId = order.Id});
             }
             return Json(new object());  
         }
@@ -64,11 +57,11 @@ public class OrderController : Controller{
     public async Task<JsonResult> GenerateIndentity(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
-            var deserialized = JsonSerializer.Deserialize<OrderModelJSON>(body);
-            var built = await OrderBuilder.Build(deserialized);
-            if (built!=null){
-                return Json(new {built.OrderStringId});
+            var result = await Order.Build(body);
+            if (result.IsSuccess){
+                return Json(new {result.ResultObject.OrderOrgId});
             }
+            Console.WriteLine(result.Errors?.ErrorsToString() ?? "");
             return Json(new object());  
         }
     }
@@ -78,13 +71,13 @@ public class OrderController : Controller{
         if (query == null || query.Length < 3){
             return Json(new object());
         }
-        var mapper = new Mapper<OrderSuggestionJSONResponse>(
+        var mapper = new Mapper<OrderResponseDTO>(
             (o, m) => {
                 o.OrderId = (int)m["id"];
                 o.GroupBehaviour = OrderTypeInfo.GetByType((OrderTypes)(int)m["type"]).GroupBehaviour.ToString();
                 var name = (string)m["name"];
                 var stringId = (string)m["org_id"];
-                o.DisplayedName = OrderSuggestionJSONResponse.FormatOrderName(name, stringId);
+                o.DisplayedName = OrderResponseDTO.FormatOrderName(name, stringId);
             },
             new List<Column>(){
                 new Column("id", null, "orders"),
@@ -106,7 +99,7 @@ public class OrderController : Controller{
             new SQLParameter<string>("%" + query + "%"),
             WhereCondition.Relations.Like
         );
-        var select = new SelectQuery<OrderSuggestionJSONResponse>(
+        var select = new SelectQuery<OrderResponseDTO>(
             "orders",
             par,
             mapper,

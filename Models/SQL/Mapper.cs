@@ -1,5 +1,4 @@
 using Npgsql;
-using StudentTracking.Models.JSON.Responses;
 
 namespace StudentTracking.Models.SQL;
 

@@ -27,5 +27,6 @@ public enum OrderTypes
 
     FreeEnrollment = 11,
     FreeDeductionWithGraduation = 12,
+    FreeTransferGroupToGroup = 13,
 
 }

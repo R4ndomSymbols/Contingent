@@ -99,7 +99,7 @@ public class Street : DbValidatedObject
                     new ValidationError(nameof(UntypedName), "Название улицы вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
-                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
+                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
                         new ValidationError(nameof(UntypedName), "Название улицы содержит недопустимые символы")))
                     {
                         _untypedName = value.ToLower();

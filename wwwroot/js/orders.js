@@ -16,11 +16,13 @@ function updateIdentity(){
                 SpecifiedDate: $("#SpecifiedDate").val(),
                 EffectiveDate: $("#EffectiveDate").val(),
                 OrderType: Number($("#OrderType").val()),
+                OrderDisplayedName: $("#OrderDisplayedName").val(),
+                OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val() 
             }
         ),
         dataType: "JSON",
         success: function (response) {
-            document.getElementById("OrderStringId").innerText = response["orderStringId"];
+            document.getElementById("OrderOrgId").innerText = response["orderOrgId"];
         }
     });
 }
@@ -35,7 +37,7 @@ $("#save").click(function () {
             EffectiveDate: $("#EffectiveDate").val(),
             OrderType: Number($("#OrderType").val()),
             OrderDisplayedName: $("#OrderDisplayedName").val(),
-            OrderDescription: $("#OrderDescription").val()
+            OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val() 
 
         }),
         dataType: "JSON",

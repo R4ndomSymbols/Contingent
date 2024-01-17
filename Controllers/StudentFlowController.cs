@@ -3,17 +3,17 @@ using StudentTracking.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using StudentTracking.Models.Services;
 using StudentTracking.Models.SQL;
 using System.Net.Http.Headers;
-using StudentTracking.Models.JSON.Responses;
 using static Utilities.Utils;
-using StudentTracking.Models.SQL;
 using StudentTracking.Models.Domain;
 using Utilities;
 using StudentTracking.Models.JSON;
 using StudentTracking.Models.Domain.Orders;
 using System.Runtime.Serialization.Json;
+using System.ComponentModel.DataAnnotations;
+using Utilities.Validation;
+using StudentTracking.Controllers.DTO.Out;
 namespace StudentTracking.Controllers;
 public class StudentFlowController : Controller{
 
@@ -33,12 +33,12 @@ public class StudentFlowController : Controller{
     [Route("/studentflow/inorder/{query?}")]
     public async Task<JsonResult> GetStudentsByOrder(string query){
         if (int.TryParse(query, out int id)){
-            var mapper = new Mapper<StudentViewJSONResponse>(
+            var mapper = new Mapper<StudentResponseDTO>(
                 (s, m) => {
                     s.StudentId = (int)m["sid"];
                     s.StudentFullName =  (string)m["dn"];
                     if (s.Group == null){
-                        s.Group = new GroupViewJSONResponse();
+                        s.Group = new GroupResponseDTO();
                     }
                     var groupId = m["gid"];
                     if (groupId.GetType() != typeof(DBNull)){
@@ -72,7 +72,7 @@ public class StudentFlowController : Controller{
                 new SQLParameter<int>(id),
                 WhereCondition.Relations.Equal
             );
-            SelectQuery<StudentViewJSONResponse> sqlQuery = new SelectQuery<StudentViewJSONResponse>(
+            SelectQuery<StudentResponseDTO> sqlQuery = new SelectQuery<StudentResponseDTO>(
                 "students",
                 param,
                 mapper,
@@ -90,12 +90,12 @@ public class StudentFlowController : Controller{
     [Route("/studentflow/notinorder/{query?}")]
     public async Task<JsonResult> FilterStudents(string query){
         if (int.TryParse(query, out int id)){
-            var mapper = new Mapper<StudentViewJSONResponse>(
+            var mapper = new Mapper<StudentResponseDTO>(
                 (s, m) => {
                     s.StudentId = (int)m["sid"];
                     s.StudentFullName =  (string)m["dn"];
                     if (s.Group == null){
-                        s.Group = new GroupViewJSONResponse();
+                        s.Group = new GroupResponseDTO();
                     }
                     var groupId = m["gid"];
                     if (groupId.GetType() != typeof(DBNull)){
@@ -130,7 +130,7 @@ public class StudentFlowController : Controller{
                 new Column("order_id", null, "student_flow"),
                 WhereCondition.Relations.Is
             );
-            SelectQuery<StudentViewJSONResponse> sqlQuery = new SelectQuery<StudentViewJSONResponse>(
+            SelectQuery<StudentResponseDTO> sqlQuery = new SelectQuery<StudentResponseDTO>(
                 "students",
                 param,
                 mapper,
@@ -146,41 +146,24 @@ public class StudentFlowController : Controller{
     }
 
     [HttpPost]
-    [Route("studentflow/save")]
-    public async Task<ActionResult> SaveFlowChanges(){
+    [Route("studentflow/save/{id?}")]
+    // контроллер проведения приказов, не зависит от типа приказа
+    public async Task<ActionResult> SaveFlowChanges(string id){
 
-        OrderInStudentFlowJSON? deserialized = null;      
-        try {
-            deserialized = JsonSerializer.Deserialize<OrderInStudentFlowJSON>(Request.Body);
+        bool parsed = int.TryParse(id, out int orderId); 
+        if (!parsed){
+            return BadRequest("id приказа указан неверно");
         }
-        catch {
-            return BadRequest("Неверный формат тела запроса");
+        using var stream = new StreamReader(Request.Body);
+        var jsonString = await stream.ReadToEndAsync();
+        var result = await Order.GetOrderForConduction(orderId, jsonString);
+        if (result.IsSuccess){
+            var order = result.ResultObject;
+            await order.ConductByOrder();
+            return Ok(); 
         }
-        if (deserialized == null){
-            return BadRequest("Неверный формат json");
-        }
-        if (deserialized.OrderId == null){
-            return BadRequest("Приказ не указан");
-        }
-        if (!await Order.IsOrderExists((int)deserialized.OrderId)){
-            return BadRequest("Приказа не существует");
-        }
-        if (deserialized.Records == null){
-            return BadRequest("В приказе не указано ни одного студента");
-        }
-        var order = Order.
-
-        if (!await StudentModel.IsAllExists(deserialized.Records.Select(x => x.StudentId))){
-            return BadRequest("В приказе указаны несуществующие студенты");
-        }
-        if (!await GroupModel.IsAllExists(deserialized.Records.Select(x => x.GroupToId))){
-            return BadRequest("В приказе указаны несуществующие группы");
-        }
-
-
-
+        else {
+            return BadRequest(result.Errors?.ErrorsToString() ?? "");
+        }        
     } 
-
-
-   
 }

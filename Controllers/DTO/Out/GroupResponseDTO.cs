@@ -1,13 +1,13 @@
-namespace StudentTracking.Models.JSON.Responses;
+namespace StudentTracking.Controllers.DTO.Out;
 
 [Serializable]
-public class GroupViewJSONResponse {
+public class GroupResponseDTO {
 
     public int? GroupId {get; set;}
     public string GroupName {get; set;}
     public bool IsNameGenerated {get; set;}
 
-    public GroupViewJSONResponse(){
+    public GroupResponseDTO(){
         GroupName = "Нет";
         GroupId = null;
         IsNameGenerated = true;

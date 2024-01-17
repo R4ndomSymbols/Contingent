@@ -2,8 +2,8 @@ using System.Collections;
 using System.Runtime.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.JSON.Responses;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Flow;
@@ -141,7 +141,7 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
 
 
 
-    public static async Task<GroupViewJSONResponse?> GetCurrentStudentGroup(int studentId)
+    public static async Task<GroupResponseDTO?> GetCurrentStudentGroup(int studentId)
     {
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT educational_group.id AS gid, group_name, name_generated FROM educational_group " +

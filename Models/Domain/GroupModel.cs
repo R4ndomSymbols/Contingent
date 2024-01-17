@@ -8,8 +8,8 @@ using StudentTracking.Models.JSON;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using StudentTracking.Models.JSON.Responses;
 using StudentTracking.Models.SQL;
+using StudentTracking.Controllers.DTO.Out;
 
 namespace StudentTracking.Models;
 
@@ -476,10 +476,10 @@ public class GroupModel : DbValidatedObject
     }  
 
     
-    public static async Task<List<GroupViewJSONResponse>?> FindGroups(SelectQuery<GroupViewJSONResponse> select){
+    public static async Task<List<GroupResponseDTO>?> FindGroups(SelectQuery<GroupResponseDTO> select){
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         using (conn){
-            return await select.Execute(conn, 20);
+            return await select.Execute(conn, 20, () => new GroupResponseDTO());
         }   
     }
 }

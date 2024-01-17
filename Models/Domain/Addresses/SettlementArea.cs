@@ -75,7 +75,7 @@ public class SettlementArea : DbValidatedObject
                     new ValidationError(nameof(UntypedName), "Название поселения вне допустимых пределов длины")))
                 {
                     if (PerformValidation(
-                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
+                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
                         new ValidationError(nameof(UntypedName), "Название поселения содержит недопустимые символы")))
                     {
                         _untypedName = value.ToLower();

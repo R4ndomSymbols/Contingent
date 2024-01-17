@@ -1,97 +1,39 @@
-using System.Xml.Linq;
 using Npgsql;
-using StudentTracking.Models.Services;
-using StudentTracking.Models.JSON;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.Models.JSON.Responses;
 using StudentTracking.Models.SQL;
-using System.Data.SqlTypes;
+using StudentTracking.Controllers.DTO;
+using StudentTracking.Controllers.DTO.Out;
+using System.Text.Json;
+using StudentTracking.Models.Domain.Flow;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public abstract class Order : DbValidatedObject
+public abstract class Order
 {
     protected int _id;
     protected DateTime _specifiedDate;
     protected DateTime _effectiveDate;
-    // получать из базы (при создании или чтении)
+    // порядковый номер приказа в году и по типу
     protected int _orderNumber;
-    // автогенерация
-    protected string _orderStringId;
-    protected string _orderDescription;
+    protected string? _orderDescription;
     protected string _orderDisplayedName;
+    protected bool _alreadyConducted;
 
     public int Id
     {
         get => _id;
     }
-    public void SetEffectiveDateFromString(string? effectiveDate)
-    {
-        if (!PerformValidation(
-            () => !string.IsNullOrEmpty(effectiveDate) && !string.IsNullOrWhiteSpace(effectiveDate),
-            new ValidationError(nameof(EffectiveDate), "Дата вступления в силу должна быть указана")
-        ))
-        {
-            return;
-        }
-        if (PerformValidation(
-            () => Utils.TryParseDate(effectiveDate),
-            new ValidationError(nameof(EffectiveDate), "Дата вступления в силу указана в неверном формате")
-        ))
-        {
-            EffectiveDate = Utils.ParseDate(effectiveDate);
-        }
-    }
-    public void SetSpecifiedDateFromString(string? specifiedDate)
-    {
-        if (!PerformValidation(
-            () => !string.IsNullOrEmpty(specifiedDate) && !string.IsNullOrWhiteSpace(specifiedDate),
-            new ValidationError(nameof(SpecifiedDate), "Дата приказа должна быть указана")
-        ))
-        {
-            return;
-        }
-        if (PerformValidation(
-            () => Utils.TryParseDate(specifiedDate),
-            new ValidationError(nameof(SpecifiedDate), "Дата приказа указана в неверном формате")
-        ))
-        {
-            SpecifiedDate = Utils.ParseDate(specifiedDate);
-        }
-    }
-
+    // дата вступления в силу
     public DateTime EffectiveDate
     {
         get => _effectiveDate;
-        set
-        {
-            var maxDate = DateTime.Now;
-            maxDate = maxDate.AddYears(1);
-            if (PerformValidation(
-                () => ValidatorCollection.CheckDateRange(value, new DateTime(Utils.ORG_CREATION_YEAR, 1, 1), maxDate),
-                new ValidationError(nameof(EffectiveDate), "Дата вступления в силу указана неверно")
-            ))
-            {
-                _effectiveDate = value;
-            }
-        }
+        private set => _effectiveDate = value;
     }
     public DateTime SpecifiedDate
     {
         get => _specifiedDate;
-        set
-        {
-            var maxDate = DateTime.Now;
-            maxDate = maxDate.AddYears(1);
-            if (PerformValidation(
-                () => ValidatorCollection.CheckDateRange(value, new DateTime(Utils.ORG_CREATION_YEAR, 1, 1), maxDate),
-                new ValidationError(nameof(SpecifiedDate), "Дата приказа указана неверно")
-            ))
-            {
-                _specifiedDate = value;
-            }
-        }
+        private set => _specifiedDate = value;
     }
     public string FormattedSpecifiedDate{
         get => Utils.FormatDateTime(_specifiedDate);
@@ -99,107 +41,152 @@ public abstract class Order : DbValidatedObject
     public string FormattedEffectiveDate{
         get => Utils.FormatDateTime(_effectiveDate);
     }
-    // порядковый номер приказа, рассчитывается в пределах года
     public int OrderNumber
     {
         get => _orderNumber;
-    }
-
-    public virtual string OrderStringId
-    {
-        get => _orderNumber.ToString();
-    }
-
-    public string OrderDescription
-    {
-        get => _orderDescription;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText) && !string.IsNullOrWhiteSpace(value),
-                new ValidationError(nameof(OrderDescription), "Описание приказа указано с нарушением формы")
-            ))
-            {
-                _orderDescription = value;
-            }
+        private set {
+            _orderNumber = value;
         }
     }
+    // индентификатор приказа в организации
+    public abstract string OrderOrgId {get;}
+    // описание приказа
+    public string OrderDescription
+    {
+        get => _orderDescription ?? "";
+        private set => _orderDescription = value;
+    }
+    // отображаемое имя приказа
     public string OrderDisplayedName
     {
         get => _orderDisplayedName;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText) && !string.IsNullOrWhiteSpace(value),
-                new ValidationError(nameof(OrderDisplayedName), "Название приказа указано в нарушение формы")
-            ))
-            {
-                _orderDisplayedName = value;
-            }
+        private set => _orderDisplayedName = value;
+    }
+
+    protected Order()
+    {
+        
+    }
+
+    protected Result<Order?> MapBase(OrderDTO? source){
+
+        // добавить проверку на диапазон дат дату, но потом
+        var errors = new List<ValidationError?>();
+        var nullErr = (source is not null).CheckRuleViolation("DTO приказа не может быть null"); 
+        if (nullErr is not null){
+            return Result<Order?>.Failure(nullErr);
+        }
+
+        if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate), 
+        message: "Дата вступления в силу указана неверно",
+        propName: nameof(EffectiveDate))){
+            _effectiveDate = Utils.ParseDate(source.EffectiveDate);
+        }
+        if (errors.IsValidRule(
+            Utils.TryParseDate(source.SpecifiedDate),
+            message: "Дата приказа указана неверно",
+            propName: nameof(SpecifiedDate)
+        )){
+            _specifiedDate = Utils.ParseDate(source.SpecifiedDate);
+        }
+        Console.WriteLine(source.OrderDescription);
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || source.OrderDescription == null,
+            message: "Описание приказа указано неверно",
+            propName: nameof(OrderDescription))
+        ){
+            _orderDescription = source.OrderDescription;
+        }
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(source.OrderDisplayedName, ValidatorCollection.OnlyText),
+            message: "Описание приказа указано неверно",
+            propName: nameof(OrderDisplayedName))
+        ){
+            _orderDisplayedName = source.OrderDisplayedName;
+        }
+        errors.IsValidRule(
+            TryParseOrderType(source.OrderType),
+            message: "Тип приказа указан неверно",
+            propName: "orderType"
+        );
+
+        if (errors.Any()){
+            return Result<Order?>.Failure(errors);
+        }
+        else {
+            return Result<Order?>.Success(this);
         }
     }
-
-    protected Order() : base()
-    {
-        RegisterProperty(nameof(EffectiveDate));
-        RegisterProperty(nameof(SpecifiedDate));
-        RegisterProperty(nameof(OrderDescription));
-        RegisterProperty(nameof(OrderDisplayedName));
-        _orderStringId = "";
-        _orderDescription = "";
-        _orderDisplayedName = "";
-        _effectiveDate = DateTime.Now;
-        _specifiedDate = DateTime.Now;
-    }
-    protected Order(int id) : base(RelationTypes.Bound)
-    {
-        _orderStringId = "";
-        _id = id;
-        _orderDescription = "";
-        _orderDisplayedName = "";
-    }
-
-    protected abstract Task<bool> CheckInsertionPossibility();
-    public abstract OrderTypes GetOrderType();
-    public abstract Task<bool> ConductOrder(object orderConductData);
-
-    public abstract Task Save(ObservableTransaction? scope);
-    public virtual async Task FromJSON(OrderModelJSON json)
-    {
-        SetEffectiveDateFromString(json.EffectiveDate);
-        SetSpecifiedDateFromString(json.SpecifiedDate);
-        OrderDescription = json.OrderDescription;
-        OrderDisplayedName = json.OrderDisplayedName;
-        await RequestIdentity();
-    }
-    public abstract Task<bool> AddPendingMoves(OrderInStudentFlowJSON json);
-    protected async Task RequestIdentity()
-    {
-        if (!CheckPropertyValidity(nameof(SpecifiedDate)))
-        {
-            return;
-        }
-        _orderNumber = await OrderConsistencyMaintain.GetNextOrderNumber(_specifiedDate);
-    }
-
-    public override bool Equals(IDbObjectValidated? other)
-    {
-        throw new NotImplementedException();
-    }
-    public override Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
-    {
-        throw new NotImplementedException();
-    }
-
-    public static async Task<List<OrderSuggestionJSONResponse>?> FindOrders(SelectQuery<OrderSuggestionJSONResponse> query){
+    protected async Task<Result<Order?>> GetBase(int id){
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        return await query.Execute(conn, 20, () => new OrderSuggestionJSONResponse());
+        string cmdText = "SELECT * FROM orders WHERE id = @p1";
+        var cmd = new NpgsqlCommand(cmdText, conn);
+        using (cmd){
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows){
+                return Result<Order?>.Failure(new ValidationError(nameof(_id), "Приказа с таким id не существует"));
+            }
+            OrderTypes typeGot = (OrderTypes)(int)reader["type"]; 
+            if (GetOrderType() != typeGot){
+                return Result<Order?>.Failure(new ValidationError(nameof(GetOrderType), "Тип приказа не совпадает с найденным"));
+            }
+            _effectiveDate = (DateTime)reader["effective_date"];
+            _specifiedDate = (DateTime)reader["specified_date"];
+            _orderDescription = (string)reader["description"];
+            _orderDisplayedName = (string)reader["name"];
+            _orderNumber = (int)reader["serial_number"];
+            return Result<Order?>.Success(this);
+        }
+    }
+
+
+    internal abstract Task<bool> CheckConductionPossibility(); 
+    public abstract OrderTypes GetOrderType();
+    public abstract Task ConductByOrder();
+    public abstract Task Save(ObservableTransaction? scope);
+    protected async Task RequestAndSetNumber()
+    {
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        DateTime lowest = new DateTime(_specifiedDate.Year, 1, 1);
+        DateTime highest = new DateTime(_specifiedDate.Year, 12, 31);
+
+        string cmdText = "SELECT MAX(serial_number) AS current_max FROM public.orders WHERE " +
+        "specified_date >= @p1 AND specified_date <= @p2";
+        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p1", lowest));
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", highest));
+        await using (conn)
+        await using (cmd)
+        {
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!reader.HasRows)
+            {
+                _orderNumber = 1;
+            }
+            await reader.ReadAsync();
+            if (reader["current_max"].GetType() == typeof(DBNull))
+            {
+                _orderNumber = 1;
+            }
+            else
+            {
+                var next = (int)reader["current_max"];
+                next++;
+                _orderNumber = next;
+            }
+        } 
+    }
+    public static async Task<List<OrderResponseDTO>?> FindOrders(SelectQuery<OrderResponseDTO> query){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        return await query.Execute(conn, 20, () => new OrderResponseDTO());
     }
 
     public static async Task<bool> IsOrderExists(int id){
         var conn = await Utils.GetAndOpenConnectionFactory();
         string cmtText = "SELECT EXISTS(SELECT id FROM orders WHERE id = @p1)";
         NpgsqlCommand cmd = new NpgsqlCommand(cmtText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
         using (conn)
         using (cmd) {
             using var reader = cmd.ExecuteReader();
@@ -207,85 +194,159 @@ public abstract class Order : DbValidatedObject
             return (bool)reader["exists"];
         }
     }
-    // получение приказа по Id
-    // генерация запроса, т.к. существует и будет добавлено множество видов приказов
+    protected static async Task InsertMany(IEnumerable<StudentFlowRecord> records)
+    {
+        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "COPY student_flow (student_id, order_id, group_id_to)" +
+        " FROM STDIN (FORMAT BINARY) ";
+        await using (var writer = await conn.BeginBinaryImportAsync(cmdText))
+        {
+            foreach (var r in records)
+            {
+                writer.StartRow();
+                writer.Write<int>(r.StudentId);
+                writer.Write<int>(r.OrderId);
+                if (r.GroupToId != null)
+                {
+                    writer.Write<int>((int)r.GroupToId);
+                }
+                else
+                {
+                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer);
+                }
+            }
+            await writer.CompleteAsync();
+        }
+    }
 
-    public static async Task<Order?> GetOrderById(int id){
+    // получение приказа по Id независимо от типа
+
+    public static async Task<Result<Order?>> GetOrderById(int id){
         var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT type FROM orders WHERE id = @p1";
         var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
         Order? found = null; 
         using(cmd){
             using var reader = cmd.ExecuteReader();
             if (!reader.HasRows){
-                return null;
+                return Result<Order?>.Failure(new ValidationError(nameof(id), "Приказа не существует"));
             }
             OrderTypes type = (OrderTypes)(int)reader["type"];
             // добавить еще классы
             switch(type)
             {
                 case OrderTypes.FreeEnrollment:
-                    found = new FreeEnrollmentOrder(id);
+                    found = (await FreeEnrollmentOrder.Create(id)).ResultObject;
                     break;
+                case OrderTypes.FreeDeductionWithGraduation:
+                    found = (await FreeDeductionWithGraduationOrder.Create(id)).ResultObject;
+                    break;
+                case OrderTypes.FreeTransferGroupToGroup:
+                    found = (await FreeTransferGroupToGroupOrder.Create(id)).ResultObject;
+                    break;
+                
                 default:
-                    throw new InvalidDataException("Такой тип приказа не зарегистрирован"); 
+                    return Result<Order?>.Failure(new ValidationError(nameof(GetOrderById), "Неизвестная ошибка")); 
             }
         }
-        var param = new SQLParameters();
-        var mapper = new Mapper<Order>(
-            (o, r) => {
-                o._effectiveDate = (DateTime)r["effective_date"];
-                o._specifiedDate = (DateTime)r["specified_date"];
-                o._orderDescription = (string)r["description"];
-                o._orderDisplayedName = (string)r["name"];
-                o._orderNumber = (int)r["serial_number"];
-                o._orderStringId = (string)r["org_id"];
-            }, new List<Column>(){
-                new Column("effective_date", null, "orders"),
-                new Column("specified_date", null, "orders"),
-                new Column("description", null, "orders"),
-                new Column("name", null, "orders"),
-                new Column("serial_number", null, "orders"),
-                new Column("org_id", null, "orders")
-            });
-        JoinSection? js = null;
-        ComplexWhereCondition cwc = new ComplexWhereCondition(
-            new WhereCondition(param, new Column("id", null, "orders"),new SQLParameter<int>(id),  WhereCondition.Relations.Equal));
-        var sqlQuery = new SelectQuery<Order>("orders", param, mapper, js, cwc); 
-        await sqlQuery.Execute(conn, 1, () => found);
-        await conn.DisposeAsync();
-        return found;
+        return Result<Order?>.Success(found);
+    }
+    public static async Task<Result<Order?>> GetOrderForConduction(int id, string conductionDataDTO){
+        var conn = await Utils.GetAndOpenConnectionFactory();
+        string cmdText = "SELECT type FROM orders WHERE id = @p1";
+        var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+        using (conn) 
+        using(cmd){
+            using var reader = cmd.ExecuteReader();
+            if (!reader.HasRows){
+                return Result<Order?>.Failure(new ValidationError(nameof(id), "Приказа не существует"));
+            }
+            OrderTypes type = (OrderTypes)(int)reader["type"];
+            IReadOnlyCollection<ValidationError>? errors;
+            Utilities.IResult result;
+            // добавить еще классы
+            switch(type)
+            {
+                case OrderTypes.FreeEnrollment:
+                    var data1 = JsonSerializer.Deserialize<EnrollmentOrderFlowDTO>(conductionDataDTO);
+                    result = await FreeEnrollmentOrder.Create(id, data1);
+                    break;
+                case OrderTypes.FreeDeductionWithGraduation:
+                    var data2 = JsonSerializer.Deserialize<DeductionWithGraduationOrderFlowDTO>(conductionDataDTO);
+                    result = await FreeDeductionWithGraduationOrder.Create(id, data2);
+                    break;
+                case OrderTypes.FreeTransferGroupToGroup:
+                    var data3 = JsonSerializer.Deserialize<TransferGroupToGroupOrderFlowDTO>(conductionDataDTO);
+                    result = await FreeTransferGroupToGroupOrder.Create(id, data3);
+                    break;
+                
+                default:
+                    return Result<Order?>.Failure(new ValidationError(nameof(GetOrderById), "Неизвестная ошибка")); 
+            }
+            if (result.IsSuccess){
+                return Result<Order?>.Success((Order?)result.GetResultObject());    
+            }
+            else {
+                return Result<Order?>.Failure(result.GetErrors());
+            }
+            
+        }
+
+        
+    }
+    public static async Task<Result<Order?>> Build(string orderJson){
+        OrderDTO? mapped = null;
+        try {
+            mapped = JsonSerializer.Deserialize<OrderDTO>(orderJson);
+        }
+        catch (Exception ex){
+            return Result<Order?>.Failure(new ValidationError(nameof(orderJson), ex.Message));
+        }
+        var err = (mapped is not null).CheckRuleViolation("Ошибка при маппинге JSON"); 
+        if (err is not null){
+            return Result<Order?>.Failure(err);
+        }
+        err = TryParseOrderType(mapped.OrderType).CheckRuleViolation("Такого типа приказа не существует"); 
+        if (err is not null){
+            return Result<Order?>.Failure(err);
+        }
+    
+        Utilities.IResult result;
+        OrderTypes type = (OrderTypes)mapped.OrderType;
+        // добавить еще классы
+        switch(type)
+        {
+            case OrderTypes.FreeEnrollment:
+                result = await FreeEnrollmentOrder.Create(mapped);
+                break;
+            case OrderTypes.FreeDeductionWithGraduation:
+                result = await FreeDeductionWithGraduationOrder.Create(mapped);
+                break;
+            case OrderTypes.FreeTransferGroupToGroup:
+                result = await FreeTransferGroupToGroupOrder.Create(mapped);
+                break;
+            
+            default:
+                return Result<Order?>.Failure(new ValidationError(nameof(GetOrderById), "Неизвестная ошибка")); 
+        }
+        if (result.IsSuccess){
+            return Result<Order?>.Success((Order?)result.GetResultObject());
+        }
+        else {
+            return Result<Order?>.Failure(result.GetErrors());
+        }
     }
 
-    public static async Task<Order?> Get(OrderModelJSON? json){
-        OrderTypes typeConverted;
-        Order? toReturn = null;
-        if (json == null){
-            return null;
-        }
-        try {
-            typeConverted = (OrderTypes)json.OrderType;
+    private static bool TryParseOrderType(int orderType){
+        try{
+            var type = (OrderTypes)orderType;
+            return true;
         }
         catch (InvalidCastException){
-            return toReturn;
+            return false;
         }
-        
-        switch (typeConverted){
-            case OrderTypes.FreeEnrollment:
-                toReturn = new FreeEnrollmentOrder();
-                break;
-            case OrderTypes.DeductionWithGraduation:
-                toReturn = new DeductionWithGraduationOrder();
-                break;
-            case OrderTypes.TransferGroupToGroup:
-                toReturn = new TransferGroupToGroupOrder();
-                break;
-            default:
-                return null;
-        }
-
-        await toReturn.FromJSON(json);
-        return toReturn;
     }
 
 }

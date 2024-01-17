@@ -1,6 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Npgsql.Replication;
 
 namespace Utilities.Validation;
 
@@ -9,9 +12,9 @@ public static class ValidatorCollection {
     public static readonly Regex OnlyDigits = new Regex(@"^[0-9]+\z");
     public static readonly Regex Snils = new Regex(@"^[0-9]{3}-[0-9]{3}-[0-9]{3}[^\S\t\n\r][0-9]{2}\z");
     public static readonly Regex DecimalFormat = new Regex(@"^[0-9]+\.[0-9]+\z");
-    public static readonly Regex OnlyRussianText = new Regex(@"^[\p{IsCyrillic}\s0-9\.\?!]+$");
-    public static readonly Regex OnlyRussianLetters = new Regex(@"^[\p{IsCyrillic}]+\z");
-    public static readonly Regex RussianNamePart = new Regex(@"^[\p{IsCyrillic}]+([-][\p{IsCyrillic}]+)?\z");
+    public static readonly Regex OnlyText = new Regex(@"^[a-zA-Za-åa-ö-w-я 0-9.,\s]+");
+    public static readonly Regex OnlyLetters = new Regex(@"^[a-zA-Za-åa-ö-w-я]+");
+    public static readonly Regex RussianNamePart = new Regex(@"^[a-zA-Za-åa-ö-w-я]+([-][a-zA-Za-åa-ö-w-я]+)?\z");
     public static readonly Regex FgosCode = new Regex(@"^[0-9]{2}\.[0-9]{2}\.[0-9]{2}\z");
 
     // больше либо равно минимальному, меньше либо равно максимальному
@@ -61,7 +64,7 @@ public static class ValidatorCollection {
         }
     }
     public static bool CheckStringPattern(string? value, Regex expression){
-        if (value == null){
+        if (string.IsNullOrWhiteSpace(value) || value==string.Empty){
             return false;
         }
         return expression.Match(value).Captures.Count > 0;
@@ -83,6 +86,25 @@ public static class ValidatorCollection {
         return toCheck >= minimal && toCheck <= maximal;
     }
 
+    public static ValidationError? CheckRuleViolation(this bool res, string message, [CallerMemberName]string name = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0){
+        if (res){
+            return null;
+        }
+        var err = new ValidationError(name, message, path, line.ToString());
+        err.Log(); 
+        return err;
+    }
+    public static bool IsValidRule([NotNull]this IList<ValidationError?> source, bool res,  string message, string propName = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0){
+        if (!res){
+            var err = new ValidationError(propName, message, path, line.ToString());
+            err.Log();
+            source.Add(err);
+        }
+        return res;
+    } 
+    public static string ErrorsToString(this IReadOnlyCollection<ValidationError> source){
+        return string.Join("\n", source);
+    } 
 
 
 }

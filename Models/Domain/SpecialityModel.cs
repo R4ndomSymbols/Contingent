@@ -43,7 +43,7 @@ public class SpecialityModel : DbValidatedObject
         get => _fgosName;
         set
         {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText)
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText)
             , new ValidationError(nameof(FgosName), "Название ФГОС имеет неверный формат или не указано"))
             )
             {
@@ -56,7 +56,7 @@ public class SpecialityModel : DbValidatedObject
         get => _qualification;
         set
         {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianText),
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
             new ValidationError(nameof(Qualification), "Квалификация указана или указана неверно")))
             {
                 _qualification = value;
@@ -68,7 +68,7 @@ public class SpecialityModel : DbValidatedObject
         get => _fgosPrefix;
         set
         {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianLetters),
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyLetters),
             new ValidationError(nameof(FgosPrefix), "Префикс специальности не указан или указан неверно")))
             {
                 _fgosPrefix = value;
@@ -87,7 +87,7 @@ public class SpecialityModel : DbValidatedObject
                 _qualificationPostfix = null;
                 return;
             }
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyRussianLetters),
+            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyLetters),
             new ValidationError(nameof(QualificationPostfix), "Постфикс квалификации имеет неверный формат")))
             {
                 _qualificationPostfix = value;

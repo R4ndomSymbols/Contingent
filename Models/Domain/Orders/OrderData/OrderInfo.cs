@@ -26,7 +26,8 @@ public class OrderTypeInfo
         Vipe = 3
     }
 
-    public static OrderTypeInfo GetByType(OrderTypes type){
+    public static OrderTypeInfo? GetByType(OrderTypes type){
+
         switch (type) {
             case OrderTypes.FreeEnrollment:
                 return new OrderTypeInfo(){
@@ -37,18 +38,30 @@ public class OrderTypeInfo
             case OrderTypes.FreeDeductionWithGraduation:
                 return new OrderTypeInfo(){
                     _frontendGroupBehaviour = GroupDisplayBehaviour.Vipe,
-                    _orderTypeDisplayedName = "Отчисление (внебюджет)",
+                    _orderTypeDisplayedName = "Отчисление (бюджет)",
                     _type = OrderTypes.FreeDeductionWithGraduation
                 };
+            case OrderTypes.FreeTransferGroupToGroup:
+                return new OrderTypeInfo(){
+                    _frontendGroupBehaviour = GroupDisplayBehaviour.MustChange,
+                    _orderTypeDisplayedName = "Перевод (бюджет)",
+                    _type = OrderTypes.FreeTransferGroupToGroup
+                };
             default:
-                throw new InvalidOperationException("Указаный тип приказа не зарегистрирован");
+                return null;
         }  
     }
 
     public static IEnumerable<OrderTypeInfo> GetAllTypes(){
         var result = new List<OrderTypeInfo>();
+        // метод получает не все типы, а только те, для которых
+        // на данный момент написаны обработчики
+        // исключений не выбрасывает
         foreach (int t in Enum.GetValues(typeof(OrderTypes))){
-            result.Add(GetByType((OrderTypes)t));
+            var got = GetByType((OrderTypes)t);
+            if (got!=null){
+                result.Add(got);
+            }
         }
         return result;
     }

@@ -1,36 +1,38 @@
+using System.Runtime.CompilerServices;
 using Npgsql;
 using StudentTracking.Controllers.DTO;
-using StudentTracking.Models.Domain.Orders.OrderData;
 using StudentTracking.Models.JSON;
 using Utilities;
 using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public class FreeDeductionWithGraduationOrder : FreeEducationOrder
+
+public class FreeTransferGroupToGroupOrder : FreeEducationOrder
 {
-    private DeductionWithGraduationOrderFlowDTO _graduates;
-    protected FreeDeductionWithGraduationOrder() : base()
+    private TransferGroupToGroupOrderFlowDTO _moves;
+    protected FreeTransferGroupToGroupOrder() : base()
     {
 
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(OrderDTO? order)
+    public static async Task<Result<FreeTransferGroupToGroupOrder?>> Create(OrderDTO? order)
     {
-        var created = new FreeDeductionWithGraduationOrder();
+
+        var created = new FreeTransferGroupToGroupOrder();
         var valResult = created.MapBase(order);
         await created.RequestAndSetNumber();
         created._alreadyConducted = false;
 
         if (valResult.IsSuccess)
         {
-            return Result<FreeDeductionWithGraduationOrder>.Success(created);
+            return Result<FreeTransferGroupToGroupOrder>.Success(created);
         }
         else
         {
-            return Result<FreeDeductionWithGraduationOrder>.Failure(valResult.Errors);
+            return Result<FreeTransferGroupToGroupOrder>.Failure(valResult.Errors);
         }
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, DeductionWithGraduationOrderFlowDTO? dto)
+    public static async Task<Result<FreeTransferGroupToGroupOrder?>> Create(int id, TransferGroupToGroupOrderFlowDTO? dto)
     {
         var result = await Create(id);
         if (!result.IsSuccess)
@@ -41,48 +43,47 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
         var errors = new List<ValidationError?>();
 
         if (!errors.IsValidRule(
-            dto != null && dto.Students != null && dto.Students.Count > 0,
+            dto != null && dto.Moves != null && dto.Moves.Count > 0,
             message: "Агрументы проведения приказа не указаны",
-            propName: nameof(_graduates)
+            propName: nameof(_moves)
         ))
         {
-            return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
+            return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
         }
 
-        foreach (int student in dto.Students)
+        foreach (StudentMoveDTO sm in dto.Moves)
         {
             if (!errors.IsValidRule(
-                await StudentModel.IsIdExists(student, null),
+                await StudentModel.IsIdExists(sm.StudentId, null) && await GroupModel.IsIdExists(sm.GroupToId, null),
                 message: "Неверно указаны студенты или группы при проведении приказа",
-                propName: nameof(_graduates)
+                propName: nameof(_moves)
             ))
             {
-                return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
+                return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
             }
         }
         if (errors.IsValidRule(
             await found.CheckConductionPossibility(),
             message: "Проведение приказа невозможно",
-            propName: nameof(_graduates)
+            propName: nameof(_moves)
         ))
         {
-            return Result<FreeDeductionWithGraduationOrder>.Success(found);
+            return Result<FreeTransferGroupToGroupOrder>.Success(found);
         }
 
-        return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
+        return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
     }
 
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id)
+    public static async Task<Result<FreeTransferGroupToGroupOrder?>> Create(int id)
     {
-        var order = new FreeDeductionWithGraduationOrder();
+        var order = new FreeTransferGroupToGroupOrder();
         var result = await order.GetBase(id);
         if (!result.IsSuccess)
         {
-            return Result<FreeDeductionWithGraduationOrder?>.Failure(result.Errors);
+            return Result<FreeTransferGroupToGroupOrder?>.Failure(result.Errors);
         }
-        return Result<FreeDeductionWithGraduationOrder?>.Success(order);
+        return Result<FreeTransferGroupToGroupOrder?>.Success(order);
     }
-
 
     public override Task<bool> ConductByOrder()
     {
@@ -91,7 +92,7 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
 
     public override OrderTypes GetOrderType()
     {
-        return OrderTypes.FreeDeductionWithGraduation;
+        return OrderTypes.FreeTransferGroupToGroup;
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -107,10 +108,10 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
         cmd.Parameters.Add(new NpgsqlParameter<string>("p4", OrderOrgId));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderType()));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p6", _orderDisplayedName));
-        if (_orderDescription == null){
+        if (_orderDescription is null){
             cmd.Parameters.Add(new NpgsqlParameter<DBNull>("p7", DBNull.Value));
         }
-        else{   
+        else {
             cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _orderDescription));
         }
 
@@ -123,6 +124,7 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
             return;
         }
     }
+    // приказ о переводе с одной группы в другую 
 
     internal override Task<bool> CheckConductionPossibility()
     {

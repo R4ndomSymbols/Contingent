@@ -1,7 +1,7 @@
 using Npgsql;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Misc;
-using StudentTracking.Models.JSON.Responses;
 using StudentTracking.Models.SQL;
 using System.Data;
 using System.Globalization;
@@ -468,12 +468,12 @@ public class StudentModel : DbValidatedObject
         return "Не указано";
     }
  
-    public static async Task<List<StudentViewJSONResponse>?> FilterStudents(SelectQuery<StudentViewJSONResponse> filter){
+    public static async Task<List<StudentResponseDTO>?> FilterStudents(SelectQuery<StudentResponseDTO> filter){
 
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         await using (conn)
         {
-            return await filter.Execute(conn, 50);
+            return await filter.Execute(conn, 50, () => new StudentResponseDTO());
         }
 
     }

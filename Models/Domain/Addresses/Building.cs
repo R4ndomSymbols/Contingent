@@ -56,7 +56,6 @@ public class Building : DbValidatedObject
             {
                 _buildingType = (Types)value;
             }
-
         }
     }
     public string UntypedName

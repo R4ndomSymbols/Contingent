@@ -6,40 +6,90 @@ using Utilities;
 using Utilities.Validation;
 using StudentTracking.Models.JSON;
 using System.Net.Http.Headers;
-using StudentTracking.Models.Services;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Microsoft.AspNetCore.Mvc;
 using System.Runtime.ExceptionServices;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.SQL;
+using StudentTracking.Controllers.DTO;
+using Npgsql.Replication;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 
 namespace StudentTracking.Models.Domain.Orders;
 
 public class FreeEnrollmentOrder : FreeEducationOrder
-{    
-    private List<StudentMove> _moves;
-    private bool _populated; 
-    public FreeEnrollmentOrder() : base()
+{
+    private EnrollmentOrderFlowDTO _moves; 
+
+    protected FreeEnrollmentOrder() : base()
     {
-        _populated = false;
+        
     }
-    public FreeEnrollmentOrder(int id) : base(id){
-        _populated = false;
+
+    public static async Task<Result<FreeEnrollmentOrder?>> Create(OrderDTO? order){
+        
+        var created = new FreeEnrollmentOrder();
+        var valResult = created.MapBase(order);
+        await created.RequestAndSetNumber();
+        created._alreadyConducted = false;
+         
+        if (valResult.IsSuccess){
+            return Result<FreeEnrollmentOrder>.Success(created);
+        }
+        else {
+            return Result<FreeEnrollmentOrder>.Failure(valResult.Errors);
+        }  
     }
-    
-    public override async Task FromJSON(OrderModelJSON json){
-        await base.FromJSON(json);
+    public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, EnrollmentOrderFlowDTO? dto){
+        var result = await Create(id);
+        if (!result.IsSuccess){
+            return result;
+        }
+        var found = result.ResultObject;
+        var errors = new List<ValidationError?>();
+
+        if (!errors.IsValidRule(
+            dto != null && dto.Moves != null && dto.Moves.Count > 0,
+            message: "Агрументы проведения приказа не указаны",
+            propName: nameof(_moves)
+        )){
+            return Result<FreeEnrollmentOrder>.Failure(errors);
+        }
+
+        foreach (StudentMoveDTO sm in dto.Moves){
+            if (!errors.IsValidRule(
+                await StudentModel.IsIdExists(sm.StudentId, null) && await GroupModel.IsIdExists(sm.GroupToId, null),
+                message: "Неверно указаны студенты или группы при проведении приказа",
+                propName: nameof(_moves)
+            )){
+                return Result<FreeEnrollmentOrder>.Failure(errors);
+            }
+        }
+        if (errors.IsValidRule(
+            await found.CheckConductionPossibility(),
+            message: "Проведение приказа невозможно",
+            propName: nameof(_moves)
+        )){
+            return Result<FreeEnrollmentOrder>.Success(found);
+        }
+        
+        return Result<FreeEnrollmentOrder>.Failure(errors); 
+    }
+
+    public static async Task<Result<FreeEnrollmentOrder?>> Create (int id){
+        var order = new FreeEnrollmentOrder();
+        var result = await order.GetBase(id);
+        if (!result.IsSuccess){
+            return Result<FreeEnrollmentOrder?>.Failure(result.Errors);
+        }
+        return Result<FreeEnrollmentOrder?>.Success(order);   
     }
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        if (await GetCurrentState(scope) != RelationTypes.Pending)
-        {
-            return;
-        }
-        PrintValidationLog();
         NpgsqlConnection? conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "INSERT INTO public.orders( " +
         " specified_date, effective_date, serial_number, org_id, type, name, description) " +
@@ -48,10 +98,16 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p1", _specifiedDate));
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", _effectiveDate));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p3", _orderNumber));
-        cmd.Parameters.Add(new NpgsqlParameter<string>("p4", OrderStringId));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p4", OrderOrgId));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderType()));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p6", _orderDisplayedName));
-        cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _orderDescription));
+        if (_orderDescription is null){
+            cmd.Parameters.Add(new NpgsqlParameter<DBNull>("p7", DBNull.Value));
+        }
+        else {
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _orderDescription));
+        }
+        
 
         await using (conn)
         await using (cmd)
@@ -59,29 +115,10 @@ public class FreeEnrollmentOrder : FreeEducationOrder
             using var reader = cmd.ExecuteReader();
             await reader.ReadAsync();
             _id = (int)reader["id"];
-            NotifyStateChanged();
             return;
         }  
     }
 
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
-    {
-        return await GetOrderById(_id);
-    }
-
-    // минимальное сравнение, модификация полей не предусмотрена
-    public override bool Equals(IDbObjectValidated? other)
-    {
-        if (other is null){
-            return false;
-        }
-        if (other.GetType() != this.GetType()){
-            return false;
-        }
-        var unboxed = (FreeEnrollmentOrder)other;
-        return 
-            _id == unboxed._id;
-    }
     // условия приказа о зачислении
     // Студент должен не иметь статуса вообще 
     // либо он должен быть отчислен в связи с выпуском
@@ -94,10 +131,10 @@ public class FreeEnrollmentOrder : FreeEducationOrder
     // сейчас возможна запись только одного приказа в день на каждого студента
     // нет проверки на совпадение даты, спросить у предст. предметной области
      
-    protected override async Task<bool> CheckInsertionPossibility()
+    internal override async Task<bool> CheckConductionPossibility()
     {
-        if (_moves.Count == 0){
-            return false;
+        if (_moves is null){
+            throw new Exception("Приказ не может быть пустым при вызове:" + nameof(CheckConductionPossibility));
         }
 
         var conn = await Utils.GetAndOpenConnectionFactory();
@@ -115,7 +152,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         "JOIN students ON education_tag_history.student_id = student.id " +
         "WHERE education_tag_history.student_id = @p1";
         
-        foreach (var stm in _moves){
+        foreach (var stm in _moves.Moves){
             var history = new StudentHistory(stm.StudentId); 
             await history.PopulateHistory();
             bool orderBeforeHasCorrectType = false;
@@ -176,58 +213,20 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         return OrderTypes.FreeEnrollment;
     }
 
-    public override async Task<bool> ConductOrder(object orderConductData)
+    public override async Task ConductByOrder()
     {
-        
-
-        if (await CheckInsertionPossibility()){
-            return false; 
+        if (!_alreadyConducted){
+            throw new Exception("Невозможно провести приказ повторно");
         }
         var toInsert = new List<StudentFlowRecord>();
-        foreach(var stm in _moves){
+        foreach(var stm in _moves.Moves){
             toInsert.Add(new StudentFlowRecord(
                 _id,
                 stm.StudentId,
                 stm.GroupToId
             ));
         }
-        await OrderConsistencyMaintain.InsertMany(toInsert);
-        return true;
-
-    }
-    public override Task<bool> AddPendingMoves(OrderInStudentFlowJSON json)
-    {   
-
-        _moves ??= new List<StudentMove>();
-        _moves.Clear();
-        _populated = false;
-        return new Task<bool>(
-            () => {
-                if (json == null){
-                    return false;
-                }
-                if (Order.IsOrderExists(json.OrderId)){
-                    return false;
-                }
-                if (json.Records == null || json.Records.Count == 0){
-                    return false;
-                }
-                _populated = true;
-                json.Records?.ForEach((x) => 
-                    {
-                        var pending = new StudentMove();
-                        pending.GroupToId = x.GroupToId;
-                        pending.StudentId = x.StudentId;
-                        if (pending.CheckErrorsExist()){
-                            _moves.Clear();
-                            _populated = false;
-                            return;
-                        }
-                        _moves.Add(pending);
-                    }  
-                );
-                return _populated;
-            });
+        await InsertMany(toInsert);
     }
 }
 

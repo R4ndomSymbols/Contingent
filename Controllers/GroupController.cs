@@ -3,9 +3,9 @@ using System.Data.SqlTypes;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
 using StudentTracking.Models.JSON;
-using StudentTracking.Models.JSON.Responses;
 using StudentTracking.Models.SQL;
 using Utilities;
 using Utilities.Validation;
@@ -81,7 +81,7 @@ public class GroupController : Controller{
         if (query == null || query.Length <= 2){
             return Json(new object());
         }
-        var mapper = new Mapper<GroupViewJSONResponse>(
+        var mapper = new Mapper<GroupResponseDTO>(
             (g, m) => {
                 g.GroupId = (int)m["gid"];
                 g.GroupName = (string)m["gn"];
@@ -100,7 +100,7 @@ public class GroupController : Controller{
             new SQLParameter<string>("%" + query + "%"),
             WhereCondition.Relations.Like 
         );
-        SelectQuery<GroupViewJSONResponse> select = new SelectQuery<GroupViewJSONResponse>(
+        SelectQuery<GroupResponseDTO> select = new SelectQuery<GroupResponseDTO>(
             "educational_group", par, mapper, null, new ComplexWhereCondition(whereClause)
         );
         var got = await GroupModel.FindGroups(select);

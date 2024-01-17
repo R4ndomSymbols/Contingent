@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Npgsql;
-using StudentTracking.Models.JSON.Responses;
 
 namespace StudentTracking.Models.SQL;
 
