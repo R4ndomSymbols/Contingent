@@ -1,6 +1,7 @@
 @using StudentTracking.Models.Domain;
 @using StudentTracking.Models.Domain.Misc;
 @using StudentTracking.Models.Domain.Orders.OrderData;
+@using Utilities;
 @model StudentTracking.Models.Domain.Orders.Order;
 
 @{
@@ -56,9 +57,9 @@
         <h5 class="col-2 mx-0">Дата вступления в силу</h5>
     </div>
     <div class="d-flex flex-row">
-        <input id="SpecifiedDate" class="col-5 identity_dependency" value="@Model.FormattedSpecifiedDate"/>
+        <input id="SpecifiedDate" class="col-5 identity_dependency" value="@Utils.FormatDateTime(Model.SpecifiedDate)"/>
         <div class="col-1 mx-0"></div>
-        <input id="EffectiveDate" class="col-5" value="@Model.FormattedEffectiveDate"/>
+        <input id="EffectiveDate" class="col-5" value="@Utils.FormatDateTime(Model.EffectiveDate)"/>
         
     </div>
     <div class="d-flex flex-row">
@@ -82,11 +83,11 @@
       <select id = "OrderType" class="col-6 identity_dependency">
         @foreach(var i in types){
             int asInt = (int)i.Type;  
-            if (asInt == (int)Model.GetOrderType()){
-                <option value="@asInt" selected> @i.OrderTypeDisplayedName </option>
+            if (asInt == (int)Model.GetOrderTypeDetails().Type){
+                <option value="@asInt" selected> @i.OrderTypeName </option>
             }
             else{
-                <option value="@asInt">@i.OrderTypeDisplayedName</option>
+                <option value="@asInt">@i.OrderTypeName</option>
             }
         }
         </select>

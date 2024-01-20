@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Data.SqlTypes;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Npgsql;
 using NpgsqlTypes;
@@ -7,21 +8,22 @@ using NpgsqlTypes;
 namespace StudentTracking.Models.SQL;
 
 
-public class SQLParameters : IEnumerable<NpgsqlParameter>{
+public class SQLParameterCollection : IEnumerable<SQLParameter>{
 
-    private List<NpgsqlParameter> _parameters;
+    private List<SQLParameter> _parameters;
 
-    public SQLParameters() {
-        _parameters = new List<NpgsqlParameter>();
+    public SQLParameterCollection() {
+        _parameters = new List<SQLParameter>();
     }
     // возвращает имя параметра в запросе
-    public string Add(SQLParameter p){
+    public SQLParameter Add<T>(T value){
         string name = GetNextName();
-        _parameters.Add(p.ToNpgsqlParameter(name));
-        return "@"+name;
+        var result = new SQLParameter<T>(new NpgsqlParameter<T>(name, value));
+        _parameters.Add(result);
+        return result;
     }
 
-    public IEnumerator<NpgsqlParameter> GetEnumerator()
+    public IEnumerator<SQLParameter> GetEnumerator()
     {
         return _parameters.GetEnumerator();
     }
@@ -35,19 +37,27 @@ public class SQLParameters : IEnumerable<NpgsqlParameter>{
         return  "p" + (_parameters.Count + 1).ToString();
     }
 } 
-public abstract class SQLParameter {
-    
-    public abstract NpgsqlParameter ToNpgsqlParameter(string name);
+public abstract class SQLParameter { 
+
+    public abstract NpgsqlParameter ToNpgsqlParameter();
+
+    public abstract string GetName();
 }
 
 public class SQLParameter<T> : SQLParameter {
     
-    private T _value;
-    public SQLParameter(T value) : base(){
+    private NpgsqlParameter<T> _value;
+    public SQLParameter(NpgsqlParameter<T> value){
         _value = value;
     }
-    public override NpgsqlParameter ToNpgsqlParameter(string name)
+
+    public override string GetName()
     {
-        return new NpgsqlParameter<T>(name, _value);
+        return _value.ParameterName;
+    }
+
+    public override NpgsqlParameter ToNpgsqlParameter()
+    {
+        return _value;
     }   
 }

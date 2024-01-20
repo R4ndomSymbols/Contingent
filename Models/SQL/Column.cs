@@ -1,6 +1,6 @@
 namespace StudentTracking.Models.SQL;
 
-public class Column {
+public class Column : IQueryPart{
 
     public readonly string Name;
     public readonly string? Alias;
@@ -11,8 +11,12 @@ public class Column {
         Alias = alias;
         TableName = tableName;
     }
-
-    public override string ToString()
+    public Column(string name,  string tableName){
+        Name = name;
+        Alias = null;
+        TableName = tableName;
+    }
+    public string AsSQLText()
     {
         return TableName + "." + Name +
             (Alias == null ? "" : " AS " + Alias);

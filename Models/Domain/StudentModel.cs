@@ -467,7 +467,7 @@ public class StudentModel : DbValidatedObject
         }
         return "Не указано";
     }
- 
+    /*
     public static async Task<List<StudentResponseDTO>?> FilterStudents(SelectQuery<StudentResponseDTO> filter){
 
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
@@ -476,7 +476,7 @@ public class StudentModel : DbValidatedObject
             return await filter.Execute(conn, 50, () => new StudentResponseDTO());
         }
 
-    }
+    }*/
 
 
 

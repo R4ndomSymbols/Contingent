@@ -1,59 +1,138 @@
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Npgsql;
+using Utilities;
 
 namespace StudentTracking.Models.SQL;
 
 
-public class SelectQuery<T> {
+public class SelectQuery<T>
+{
 
-    private SQLParameters _parameters;
+    private SQLParameterCollection? _parameters;
     private Mapper<T> _mapper;
     private JoinSection? _joins;
-    private ComplexWhereCondition _whereClause;
+    private ComplexWhereCondition? _whereClause;
+    private OrderByCondition? _orderBy;
     private string _sourceTable;
+    private bool _finished;
 
-    public SelectQuery(string sourceTable, SQLParameters par, Mapper<T> mapper, JoinSection? joins, ComplexWhereCondition statement){
-        _parameters = par;
-        _mapper = mapper;
-        _joins = joins;
-        _whereClause = statement;
-        _sourceTable = sourceTable; 
+    private SelectQuery()
+    {
+        _finished = false;
     }
 
-    private string ToQuery(){
-        StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.Append("SELECT ");
-        queryBuilder.Append(string.Join(", ", _mapper.GetSelectedColumns()));
-        queryBuilder.Append("\nFROM " +  _sourceTable + "\n");
-        if (_joins!=null){
-            queryBuilder.Append(_joins.ToString());
+    public static SelectQuery<T> Init(string sourceTable)
+    {
+        var tmp = new SelectQuery<T>();
+        tmp._sourceTable = sourceTable;
+        return tmp;
+    }
+    public SelectQuery<T> AddMapper(Mapper<T> mapper)
+    {
+        _mapper = mapper;
+        return this;
+    }
+    public SelectQuery<T> AddJoins(JoinSection? joins)
+    {
+        _joins = joins;
+        return this;
+    }
+    public SelectQuery<T> AddWhereStatement(ComplexWhereCondition? condition)
+    {
+        _whereClause = condition;
+        return this;
+    }
+    public SelectQuery<T> AddOrderByStatement(OrderByCondition? orderBy)
+    {
+        _orderBy = orderBy;
+        return this;
+    }
+    public SelectQuery<T> AddParameters(SQLParameterCollection? parameters)
+    {
+        _parameters = parameters;
+        return this;
+    }
+
+    public Result<SelectQuery<T>?> Finish()
+    {
+        if (_mapper == null)
+        {
+            return Result<SelectQuery<T>>.Failure(new ValidationError(nameof(_mapper), "О"));
         }
-        queryBuilder.Append("\n");
-        queryBuilder.Append("WHERE " + _whereClause.ToString());
+        if (_parameters == null)
+        {
+            _parameters = new SQLParameterCollection();
+        }
+        _finished = true;
+        return Result<SelectQuery<T>>.Success(this);
+    }
+    private string ToQuery()
+    {
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.Append(_mapper.AsSQLText() + "\n");
+        queryBuilder.Append("FROM " + _sourceTable + "\n");
+        if (_joins != null)
+        {
+            queryBuilder.Append(_joins.AsSQLText() + "\n");
+        }
+        if (_whereClause != null)
+        {
+            queryBuilder.Append(_whereClause.AsSQLText() + "\n");
+        }
+        if (_orderBy != null)
+        {
+            queryBuilder.Append(_orderBy.AsSQLText() + "\n");
+        }
         return queryBuilder.ToString();
     }
 
-    public async Task<List<T>?> Execute(NpgsqlConnection conn, int maxRows, Func<T> newObjectGetter)
-    {   
+    public async Task<IReadOnlyCollection<T>?> Execute(NpgsqlConnection conn, QueryLimits limits)
+    {
+        if (!_finished)
+        {
+            throw new Exception("неполный SQL запрос");
+        }
         var cmdText = ToQuery();
+        cmdText += "LIMIT " + limits.PageLength;
+        // логирование
         Console.WriteLine(cmdText);
         var cmd = new NpgsqlCommand(cmdText, conn);
-        foreach (var c in _parameters){
-            cmd.Parameters.Add(c);
+        if (_parameters != null)
+        {
+            foreach (var c in _parameters)
+            {
+                cmd.Parameters.Add(c.ToNpgsqlParameter());
+            }
         }
-        await using (cmd){
+        await using (cmd)
+        {
             await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows){
+            if (!reader.HasRows)
+            {
                 return null;
             }
             var result = new List<T>();
-            while(reader.Read() && result.Count < maxRows){
-                var built = newObjectGetter.Invoke();
-                _mapper.Map(built, reader);
+            while (reader.Read())
+            {
+                var built = await _mapper.Map(reader);
                 result.Add(built);
             }
-            return result; 
-        }   
+            return result;
+        }
     }
+}
+
+public class QueryLimits
+{
+
+    public readonly int PageSkipCount;
+    public readonly int PageLength;
+
+    public QueryLimits(int pageSkipCount, int pageLength)
+    {
+        PageSkipCount = pageSkipCount;
+        PageLength = pageLength;
+    }
+
 }

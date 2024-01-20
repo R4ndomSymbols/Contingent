@@ -1,3 +1,5 @@
+using System.Data.Common;
+using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Orders;
@@ -25,8 +27,7 @@ public sealed class EmptyOrder : Order
         throw new NotImplementedException("Невозможно провести пустой приказ");
     }
 
-    public override OrderTypes GetOrderType()
-    {
+    protected override OrderTypes GetOrderType(){
         return OrderTypes.NoOrder;
     }
 

@@ -1,0 +1,39 @@
+@using StudentTracking.Controllers.DTO.Out; 
+
+@model IReadOnlyCollection<OrderCardResponseDTO>;
+
+<div class="col 11 row">
+    <button class="btn btn-primary" id="find_orders">
+        Поиск приказов
+    </button>
+
+
+</div>
+
+<div class="col-11 row">
+    <table class="table">
+        <thead>
+            <th scope="col">Номер</th>
+            <th scope="col">Название</th>
+            <th scope="col">Дата приказа</th>
+            <th scope="col">Вступление в силу</th>
+            <th scope="col">Действия</th>
+        </thead>
+        <tbody id = "search_results">
+            @foreach(var card in Model){
+                <tr>
+                    <th scope="row">@card.OrderOrgId</th>
+                    <td>@card.OrderFullName</td>
+                    <td>@card.OrderSpecifiedDate</td>
+                    <td>@card.OrderEffectiveDate</td>
+                    <td>
+                        <div class="row">
+                            <a href="@card.OrderModifyLink">Изменить</a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script src="~/js/orderSearch.js"></script>

@@ -6,6 +6,8 @@ using StudentTracking.Controllers.DTO;
 using StudentTracking.Controllers.DTO.Out;
 using System.Text.Json;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Orders.OrderData;
+using System.Data.SqlTypes;
 
 namespace StudentTracking.Models.Domain.Orders;
 
@@ -34,12 +36,6 @@ public abstract class Order
     {
         get => _specifiedDate;
         private set => _specifiedDate = value;
-    }
-    public string FormattedSpecifiedDate{
-        get => Utils.FormatDateTime(_specifiedDate);
-    }
-    public string FormattedEffectiveDate{
-        get => Utils.FormatDateTime(_effectiveDate);
     }
     public int OrderNumber
     {
@@ -121,18 +117,27 @@ public abstract class Order
         using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT * FROM orders WHERE id = @p1";
         var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
         using (cmd){
             using var reader = await cmd.ExecuteReaderAsync();
             if (!reader.HasRows){
                 return Result<Order?>.Failure(new ValidationError(nameof(_id), "Приказа с таким id не существует"));
             }
+            reader.Read();
             OrderTypes typeGot = (OrderTypes)(int)reader["type"]; 
-            if (GetOrderType() != typeGot){
-                return Result<Order?>.Failure(new ValidationError(nameof(GetOrderType), "Тип приказа не совпадает с найденным"));
+            if (GetOrderTypeDetails().Type != typeGot){
+                return Result<Order?>.Failure(new ValidationError(nameof(GetOrderTypeDetails), "Тип приказа не совпадает с найденным"));
             }
+            _id = id;
             _effectiveDate = (DateTime)reader["effective_date"];
             _specifiedDate = (DateTime)reader["specified_date"];
-            _orderDescription = (string)reader["description"];
+            var description = reader["description"];
+            if (description.GetType() == typeof(DBNull)){
+                _orderDescription = null;
+            }
+            else {
+                _orderDescription = (string)reader["description"];
+            }
             _orderDisplayedName = (string)reader["name"];
             _orderNumber = (int)reader["serial_number"];
             return Result<Order?>.Success(this);
@@ -141,9 +146,12 @@ public abstract class Order
 
 
     internal abstract Task<bool> CheckConductionPossibility(); 
-    public abstract OrderTypes GetOrderType();
+    public OrderTypeInfo GetOrderTypeDetails(){
+        return OrderTypeInfo.GetByType(GetOrderType());
+    }
     public abstract Task ConductByOrder();
     public abstract Task Save(ObservableTransaction? scope);
+    protected abstract OrderTypes GetOrderType();
     protected async Task RequestAndSetNumber()
     {
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
@@ -177,9 +185,28 @@ public abstract class Order
             }
         } 
     }
-    public static async Task<List<OrderResponseDTO>?> FindOrders(SelectQuery<OrderResponseDTO> query){
+    public static async Task<IReadOnlyCollection<Order>?> FindOrders(ComplexWhereCondition? filter, JoinSection? additionalJoins, SQLParameterCollection? additionalParams, QueryLimits limits){
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        return await query.Execute(conn, 20, () => new OrderResponseDTO());
+        var mapper = new Mapper<Order>(
+            async (r) => { 
+                return (await GetOrderById((int)r["ordid"])).ResultObject;
+            },
+            new List<Column>(){
+                new Column("id", "ordid", "orders"),
+            } 
+        );
+        var result = SelectQuery<Order>.Init("orders")
+        .AddMapper(mapper)
+        .AddJoins(additionalJoins)
+        .AddWhereStatement(filter)
+        .AddOrderByStatement(new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC))
+        .AddParameters(additionalParams)
+        .Finish();
+        if (!result.IsSuccess){
+            throw new Exception("Запрос сгенерирован неверно");
+        }
+        var query = result.ResultObject;
+        return await query.Execute(conn, limits);
     }
 
     public static async Task<bool> IsOrderExists(int id){
@@ -232,6 +259,7 @@ public abstract class Order
             if (!reader.HasRows){
                 return Result<Order?>.Failure(new ValidationError(nameof(id), "Приказа не существует"));
             }
+            reader.Read();
             OrderTypes type = (OrderTypes)(int)reader["type"];
             // добавить еще классы
             switch(type)
@@ -252,6 +280,7 @@ public abstract class Order
         }
         return Result<Order?>.Success(found);
     }
+
     public static async Task<Result<Order?>> GetOrderForConduction(int id, string conductionDataDTO){
         var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT type FROM orders WHERE id = @p1";

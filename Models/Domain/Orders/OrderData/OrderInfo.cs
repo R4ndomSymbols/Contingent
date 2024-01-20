@@ -2,21 +2,14 @@ namespace StudentTracking.Models.Domain.Orders.OrderData;
 
 public class OrderTypeInfo
 {
-    private GroupDisplayBehaviour _frontendGroupBehaviour;
-    private string _orderTypeDisplayedName;
-    private OrderTypes _type;
-    public GroupDisplayBehaviour GroupBehaviour {
-        get => _frontendGroupBehaviour;
-    }
-    public string OrderTypeDisplayedName {
-        get => _orderTypeDisplayedName;
-    }
-    public OrderTypes Type {
-        get => _type;
-    }
-
-    private OrderTypeInfo(){
-        _orderTypeDisplayedName = "";
+    public readonly GroupDisplayBehaviour FrontendGroupBehaviour;
+    public readonly string OrderTypeName;
+    public readonly OrderTypes Type;
+    public OrderTypeInfo(OrderTypes orderType, string orderTypeName, GroupDisplayBehaviour behaviour)
+    {
+        OrderTypeName = orderTypeName;
+        Type = orderType;
+        FrontendGroupBehaviour = behaviour;
     }
 
     public enum GroupDisplayBehaviour
@@ -26,47 +19,52 @@ public class OrderTypeInfo
         Vipe = 3
     }
 
-    public static OrderTypeInfo? GetByType(OrderTypes type){
+    public static OrderTypeInfo GetByType(OrderTypes type)
+    {
 
-        switch (type) {
+        switch (type)
+        {
             case OrderTypes.FreeEnrollment:
-                return new OrderTypeInfo(){
-                    _frontendGroupBehaviour = GroupDisplayBehaviour.MustChange,
-                    _orderTypeDisplayedName = "Зачисление (бюджет)",
-                    _type = OrderTypes.FreeEnrollment
-                };
+                return new OrderTypeInfo(
+                    OrderTypes.FreeEnrollment,
+                    "Зачисление (бюджет)",
+                    GroupDisplayBehaviour.MustChange);
             case OrderTypes.FreeDeductionWithGraduation:
-                return new OrderTypeInfo(){
-                    _frontendGroupBehaviour = GroupDisplayBehaviour.Vipe,
-                    _orderTypeDisplayedName = "Отчисление (бюджет)",
-                    _type = OrderTypes.FreeDeductionWithGraduation
-                };
+                return new OrderTypeInfo(
+                    OrderTypes.FreeDeductionWithGraduation,
+                    "Отчисление (бюджет)",
+                    GroupDisplayBehaviour.Vipe);
             case OrderTypes.FreeTransferGroupToGroup:
-                return new OrderTypeInfo(){
-                    _frontendGroupBehaviour = GroupDisplayBehaviour.MustChange,
-                    _orderTypeDisplayedName = "Перевод (бюджет)",
-                    _type = OrderTypes.FreeTransferGroupToGroup
-                };
+                return new OrderTypeInfo(
+                    OrderTypes.FreeTransferGroupToGroup,
+                    "Перевод внутри колледжа (бюджет)",
+                    GroupDisplayBehaviour.MustChange);
             default:
-                return null;
-        }  
+                throw new Exception("Такой тип приказа не зарегистрирован");
+        }
     }
 
-    public static IEnumerable<OrderTypeInfo> GetAllTypes(){
+    public static IEnumerable<OrderTypeInfo> GetAllTypes()
+    {
         var result = new List<OrderTypeInfo>();
         // метод получает не все типы, а только те, для которых
         // на данный момент написаны обработчики
-        // исключений не выбрасывает
-        foreach (int t in Enum.GetValues(typeof(OrderTypes))){
-            var got = GetByType((OrderTypes)t);
-            if (got!=null){
+        foreach (int t in Enum.GetValues(typeof(OrderTypes)))
+        {   
+            try {
+                var got = GetByType((OrderTypes)t);
                 result.Add(got);
             }
+            catch {
+                continue;
+            }
+
         }
         return result;
     }
 
-    public static bool IsAnyEnrollment(OrderTypes type){
+    public static bool IsAnyEnrollment(OrderTypes type)
+    {
         return type == OrderTypes.FreeEnrollment;
 
     }

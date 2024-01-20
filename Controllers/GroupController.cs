@@ -78,14 +78,17 @@ public class GroupController : Controller{
     [HttpGet]
     [Route("/groups/find/{query?}")]
     public async Task<JsonResult> FindGroups(string? query){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
         if (query == null || query.Length <= 2){
             return Json(new object());
         }
         var mapper = new Mapper<GroupResponseDTO>(
-            (g, m) => {
+            (m) => {
+                var g = new GroupResponseDTO();
                 g.GroupId = (int)m["gid"];
                 g.GroupName = (string)m["gn"];
                 g.IsNameGenerated = (bool)m["gen"];
+                return new Task<GroupResponseDTO>(() => g);
             },
             new List<Column>(){
                 new Column("id", "gid", "educational_group"),
@@ -93,17 +96,22 @@ public class GroupController : Controller{
                 new Column("name_generated", "gen", "educational_group"),
             } 
         );
-        var par = new SQLParameters(); 
+        var par = new SQLParameterCollection();
+        var p1 = par.Add("%" + query + "%");  
         var whereClause = new WhereCondition(
-            par,
-            new Column("group_name", null, "educational_group"),
-            new SQLParameter<string>("%" + query + "%"),
+            new Column("group_name",  "educational_group"),
+            p1,
             WhereCondition.Relations.Like 
         );
-        SelectQuery<GroupResponseDTO> select = new SelectQuery<GroupResponseDTO>(
-            "educational_group", par, mapper, null, new ComplexWhereCondition(whereClause)
-        );
-        var got = await GroupModel.FindGroups(select);
+        var result = SelectQuery<GroupResponseDTO>.Init("educational_group")
+        .AddMapper(mapper)
+        .AddWhereStatement(new ComplexWhereCondition(whereClause))
+        .AddParameters(par)
+        .Finish();
+        if (result.IsFailure){
+            throw new Exception("Не удалось создать запрос на поиск групп");
+        }
+        var got = await result.ResultObject.Execute(conn, new QueryLimits(0,20));
         if (got!=null){
             return Json(got);
         }

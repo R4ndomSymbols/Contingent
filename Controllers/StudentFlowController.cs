@@ -32,14 +32,14 @@ public class StudentFlowController : Controller{
     [HttpGet]
     [Route("/studentflow/inorder/{query?}")]
     public async Task<JsonResult> GetStudentsByOrder(string query){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
         if (int.TryParse(query, out int id)){
             var mapper = new Mapper<StudentResponseDTO>(
-                (s, m) => {
+                (m) => {
+                    var s = new StudentResponseDTO();
                     s.StudentId = (int)m["sid"];
                     s.StudentFullName =  (string)m["dn"];
-                    if (s.Group == null){
-                        s.Group = new GroupResponseDTO();
-                    }
+                    s.Group = new GroupResponseDTO();
                     var groupId = m["gid"];
                     if (groupId.GetType() != typeof(DBNull)){
                         s.Group.GroupId = (int)groupId;
@@ -47,7 +47,8 @@ public class StudentFlowController : Controller{
                     var groupName = m["gn"];
                     if (groupId.GetType() != typeof(DBNull)){
                         s.Group.GroupId = (int)groupId;
-                    } 
+                    }
+                    return new Task<StudentResponseDTO>(() => s); 
                 }, new List<Column>(){
                     new Column("id", "sid", "students"),
                     new Column("displayed_name", "dn", "students"),
@@ -57,29 +58,31 @@ public class StudentFlowController : Controller{
             );
             var joinSection = new JoinSection()
             .AppendJoin(JoinSection.JoinType.InnerJoin,
-                 new Column("id", null, "students"),
-                 new Column("student_id", null, "student_flow"))
+                 new Column("id", "students"),
+                 new Column("student_id", "student_flow"))
             .AppendJoin(JoinSection.JoinType.InnerJoin,
-                 new Column("order_id", null, "student_flow"),
-                 new Column("id", null, "orders"))
+                 new Column("order_id", "student_flow"),
+                 new Column("id", "orders"))
             .AppendJoin(JoinSection.JoinType.RightJoin,
-                 new Column("group_id_to", null, "student_flow"),
-                 new Column("id", null, "educational_group"));
-            var param = new SQLParameters(); 
+                 new Column("group_id_to", "student_flow"),
+                 new Column("id", "educational_group"));
+            var param = new SQLParameterCollection(); 
+            var p1 = param.Add(id);
             var filter = new WhereCondition(
-                param,
-                new Column("id", null, "orders"),
-                new SQLParameter<int>(id),
+                new Column("id", "orders"),
+                p1,
                 WhereCondition.Relations.Equal
             );
-            SelectQuery<StudentResponseDTO> sqlQuery = new SelectQuery<StudentResponseDTO>(
-                "students",
-                param,
-                mapper,
-                joinSection,
-                new ComplexWhereCondition(filter)
-            );
-            var got = await StudentModel.FilterStudents(sqlQuery);
+            var result = SelectQuery<StudentResponseDTO>.Init("students")
+            .AddMapper(mapper)
+            .AddJoins(joinSection)
+            .AddWhereStatement(new ComplexWhereCondition(filter))
+            .AddParameters(param)
+            .Finish();
+            if (result.IsFailure){
+                throw new Exception("Неверно сформированный запрос"); 
+            }
+            var got = await result.ResultObject.Execute(conn, new QueryLimits(0,20));
             if (got!=null){
                 return Json(got);
             }
@@ -90,13 +93,13 @@ public class StudentFlowController : Controller{
     [Route("/studentflow/notinorder/{query?}")]
     public async Task<JsonResult> FilterStudents(string query){
         if (int.TryParse(query, out int id)){
+            using var conn = await Utils.GetAndOpenConnectionFactory();
             var mapper = new Mapper<StudentResponseDTO>(
-                (s, m) => {
+                (m) => {
+                    var s = new StudentResponseDTO();
                     s.StudentId = (int)m["sid"];
-                    s.StudentFullName =  (string)m["dn"];
-                    if (s.Group == null){
-                        s.Group = new GroupResponseDTO();
-                    }
+                    s.StudentFullName =  (string)m["dn"];                        
+                    s.Group = new GroupResponseDTO();
                     var groupId = m["gid"];
                     if (groupId.GetType() != typeof(DBNull)){
                         s.Group.GroupId = (int)groupId;
@@ -104,7 +107,8 @@ public class StudentFlowController : Controller{
                     var groupName = m["gn"];
                     if (groupId.GetType() != typeof(DBNull)){
                         s.Group.GroupId = (int)groupId;
-                    } 
+                    }
+                    return new Task<StudentResponseDTO>(() => s); 
                 }, new List<Column>(){
                     new Column("id", "sid", "students"),
                     new Column("displayed_name", "dn", "students"),
@@ -114,30 +118,32 @@ public class StudentFlowController : Controller{
             );
             var joinSection = new JoinSection()
             .AppendJoin(JoinSection.JoinType.LeftJoin,
-                 new Column("id", null, "students"),
-                 new Column("student_id", null, "student_flow"))
+                 new Column("id", "students"),
+                 new Column("student_id", "student_flow"))
             .AppendJoin(JoinSection.JoinType.LeftJoin,
-                 new Column("group_id_to", null, "student_flow"),
-                 new Column("id", null, "educational_group"));
-            var param = new SQLParameters(); 
+                 new Column("group_id_to", "student_flow"),
+                 new Column("id", "educational_group"));
+            var param = new SQLParameterCollection();
+            var p1 = param.Add(id); 
             var left = new WhereCondition(
-                param,
-                new Column("order_id", null, "student_flow"),
-                new SQLParameter<int>(id),
+                new Column("order_id", "student_flow"),
+                p1,
                 WhereCondition.Relations.NotEqual
             );
             var right = new WhereCondition(
-                new Column("order_id", null, "student_flow"),
+                new Column("order_id", "student_flow"),
                 WhereCondition.Relations.Is
             );
-            SelectQuery<StudentResponseDTO> sqlQuery = new SelectQuery<StudentResponseDTO>(
-                "students",
-                param,
-                mapper,
-                joinSection,
-                new ComplexWhereCondition(left, right, ComplexWhereCondition.ConditionRelation.OR, true)  
-            );
-            var got = await StudentModel.FilterStudents(sqlQuery);
+            var result = SelectQuery<StudentResponseDTO>.Init("students")
+            .AddMapper(mapper)
+            .AddJoins(joinSection)
+            .AddWhereStatement( new ComplexWhereCondition(left, right, ComplexWhereCondition.ConditionRelation.OR, true))
+            .AddParameters(param)
+            .Finish();
+            if (result.IsFailure){
+                throw new Exception("Запрос написан неверно");
+            }
+            var got = await result.ResultObject.Execute(conn, new QueryLimits(0, 20));
             if (got!=null){
                 return Json(got);
             }

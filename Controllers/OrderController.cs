@@ -1,8 +1,12 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using StudentTracking.Models.SQL;
+using Utilities;
 using Utilities.Validation;
 
 namespace StudentTracking.Controllers;
@@ -71,13 +75,13 @@ public class OrderController : Controller{
         if (query == null || query.Length < 3){
             return Json(new object());
         }
+        using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<OrderResponseDTO>(
-            (o, m) => {
+            (m) => {
+                var o = new OrderResponseDTO((string)m["name"], (string)m["org_id"]);
                 o.OrderId = (int)m["id"];
-                o.GroupBehaviour = OrderTypeInfo.GetByType((OrderTypes)(int)m["type"]).GroupBehaviour.ToString();
-                var name = (string)m["name"];
-                var stringId = (string)m["org_id"];
-                o.DisplayedName = OrderResponseDTO.FormatOrderName(name, stringId);
+                o.GroupBehaviour = OrderTypeInfo.GetByType((OrderTypes)(int)m["type"]).FrontendGroupBehaviour.ToString();
+                return new Task<OrderResponseDTO>(() => o);
             },
             new List<Column>(){
                 new Column("id", null, "orders"),
@@ -86,34 +90,52 @@ public class OrderController : Controller{
                 new Column("org_id", null, "orders")
             }   
         );
-        var par = new SQLParameters();
+        var par = new SQLParameterCollection();
+        var whereParam = par.Add("%" + query + "%");
         var where1 = new WhereCondition(
-            par,
-            new Column("name", null, "orders"),
-            new SQLParameter<string>("%" + query + "%"),
+            new Column("name", "orders"),
+            whereParam,
             WhereCondition.Relations.Like
         );
         var where2 = new WhereCondition(
-            par,
-            new Column("org_id", null, "orders"),
-            new SQLParameter<string>("%" + query + "%"),
+            new Column("org_id", "orders"),
+            whereParam,
             WhereCondition.Relations.Like
         );
-        var select = new SelectQuery<OrderResponseDTO>(
-            "orders",
-            par,
-            mapper,
-            null,
-            new ComplexWhereCondition(where1, where2, ComplexWhereCondition.ConditionRelation.OR, false)
-        );
+        var result = SelectQuery<OrderResponseDTO>.Init("orders")
+        .AddMapper(mapper)
+        .AddWhereStatement(new ComplexWhereCondition(where1, where2, ComplexWhereCondition.ConditionRelation.OR, false))
+        .AddParameters(par)
+        .Finish();
 
-        
-        var found = await Order.FindOrders(select);
+        if (result.IsFailure){
+            throw new Exception("Неверно сформирован запрос SQL");
+        }
+        var found = await result.ResultObject.Execute(conn, new QueryLimits(0, 20));
         if (found == null){
             return Json(new object());
         }
         else {
             return Json(found);
         }
+    }
+    [HttpGet]
+    [Route("/orders/search")]
+    public IActionResult GetSearchPage(){
+        return View(@"Views/Search/Orders.cshtml", new List<OrderCardResponseDTO>());
+    }
+    [HttpPost]
+    [Route("/orders/search/find")]
+    public async Task<JsonResult> GetOrdersByFilters(){
+        using var stream = new StreamReader(Request.Body);
+        var parameters = JsonSerializer.Deserialize<OrderSearchParamentersDTO>(await stream.ReadToEndAsync());
+        var result = await Order.FindOrders(null, null, null, new QueryLimits(0,20));
+        List<OrderCardResponseDTO> cards = new List<OrderCardResponseDTO>();
+        if (result!=null){
+            foreach (Order o in result){
+                cards.Add(new OrderCardResponseDTO(o));
+            }
+        }
+        return Json(cards);
     }
 }

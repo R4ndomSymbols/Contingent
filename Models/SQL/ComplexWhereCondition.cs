@@ -2,7 +2,7 @@ using Npgsql.Replication.PgOutput.Messages;
 
 namespace StudentTracking.Models.SQL;
 
-public class ComplexWhereCondition {
+public class ComplexWhereCondition : IQueryPart{
   
     private WhereCondition? _left;
     private WhereCondition? _right;
@@ -36,10 +36,9 @@ public class ComplexWhereCondition {
 
     private Func<string> _strategy;
 
-    public override string ToString()
+    public string AsSQLText()
     {
-       return _strategy.Invoke();
+        return "WHERE " + _strategy.Invoke();
     }
-
 }
 

@@ -99,7 +99,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", _effectiveDate));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p3", _orderNumber));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p4", OrderOrgId));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderType()));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderTypeDetails().Type));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p6", _orderDisplayedName));
         if (_orderDescription is null){
             cmd.Parameters.Add(new NpgsqlParameter<DBNull>("p7", DBNull.Value));
@@ -208,7 +208,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         return true;
     }
 
-    public override OrderTypes GetOrderType()
+    protected override OrderTypes GetOrderType()
     {
         return OrderTypes.FreeEnrollment;
     }

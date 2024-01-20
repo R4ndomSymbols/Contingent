@@ -1,24 +1,19 @@
 namespace StudentTracking.Models.SQL;
 
-public class WhereCondition {
+public class WhereCondition : IQueryPart{
 
-    private SQLParameters _parameters;
     private Column _columnConstrained;
     private SQLParameter _value;
     private Relations _relation; 
-    private readonly string _name;
-    public WhereCondition(SQLParameters sqlP,
+    public WhereCondition(
         Column constrainedColumn, 
         SQLParameter value,
         Relations relation){
-        _parameters = sqlP;
         _columnConstrained = constrainedColumn;
         _value = value;
         _relation = relation;
-        _name = _parameters.Add(_value);
-
         _strategy = () => {
-            return _columnConstrained.ToString() + " " + _sqlRelations[_relation] + " " + _name; 
+            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " " + _value.GetName(); 
         };
     }
     // ограничение на NULL
@@ -28,14 +23,13 @@ public class WhereCondition {
         _columnConstrained = constrainedColumn;
         _relation = relation;
         _strategy = () => {
-            return _columnConstrained.ToString() + " " + _sqlRelations[_relation] + " NULL"; 
+            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " NULL"; 
         };
     }
 
     private Func<string> _strategy;
-
-    public override string ToString()
-    { 
+    public string AsSQLText()
+    {
         return _strategy.Invoke();
     }
 

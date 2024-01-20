@@ -21,6 +21,9 @@ public sealed class Result<T> : IResult{
     public bool IsSuccess {
         get => _isSuccess;
     }
+    public bool IsFailure{
+        get => !_isSuccess;
+    }
     public IReadOnlyCollection<ValidationError>? Errors {
         get {
             if (_isSuccess || _errors is null){

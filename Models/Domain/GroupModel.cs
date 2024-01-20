@@ -479,7 +479,9 @@ public class GroupModel : DbValidatedObject
     public static async Task<List<GroupResponseDTO>?> FindGroups(SelectQuery<GroupResponseDTO> select){
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         using (conn){
-            return await select.Execute(conn, 20, () => new GroupResponseDTO());
-        }   
+
+        }
+        return null;
+           
     }
 }

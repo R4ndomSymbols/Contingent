@@ -1,6 +1,6 @@
 namespace StudentTracking.Models.SQL;
 
-public class JoinSection {
+public class JoinSection : IQueryPart{
 
     private List<string> _joins;
 
@@ -16,7 +16,7 @@ public class JoinSection {
         return this;
     }
 
-    public override string ToString()
+    public string AsSQLText()
     {
         return string.Join("\n", _joins);
     }

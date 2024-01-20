@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Npgsql;
 using StudentTracking.Controllers.DTO;
+using StudentTracking.Models.Domain.Orders.OrderData;
 using StudentTracking.Models.JSON;
 using Utilities;
 using Utilities.Validation;
@@ -90,9 +91,9 @@ public class FreeTransferGroupToGroupOrder : FreeEducationOrder
         throw new NotImplementedException();
     }
 
-    public override OrderTypes GetOrderType()
+    protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.FreeTransferGroupToGroup;
+        return  OrderTypes.FreeTransferGroupToGroup;
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -106,7 +107,7 @@ public class FreeTransferGroupToGroupOrder : FreeEducationOrder
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", _effectiveDate));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p3", _orderNumber));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p4", OrderOrgId));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderType()));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)GetOrderTypeDetails().Type));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p6", _orderDisplayedName));
         if (_orderDescription is null){
             cmd.Parameters.Add(new NpgsqlParameter<DBNull>("p7", DBNull.Value));
