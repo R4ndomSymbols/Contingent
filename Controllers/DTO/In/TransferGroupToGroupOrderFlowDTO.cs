@@ -2,15 +2,15 @@ using System.Text.Json.Serialization;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Models.Domain.Orders.OrderData;
 
-namespace StudentTracking.Controllers.DTO;
+namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class EnrollmentOrderFlowDTO {
+public class TransferGroupToGroupOrderFlowDTO {
 
     [JsonRequired]
     public List<StudentMoveDTO> Moves {get; set; }
 
-    public EnrollmentOrderFlowDTO(){
+    public TransferGroupToGroupOrderFlowDTO(){
         Moves = new List<StudentMoveDTO>();
     }
 }

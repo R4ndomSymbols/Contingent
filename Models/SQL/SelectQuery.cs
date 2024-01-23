@@ -87,7 +87,7 @@ public class SelectQuery<T>
         return queryBuilder.ToString();
     }
 
-    public async Task<IReadOnlyCollection<T>?> Execute(NpgsqlConnection conn, QueryLimits limits)
+    public async Task<IReadOnlyCollection<T>> Execute(NpgsqlConnection conn, QueryLimits limits)
     {
         if (!_finished)
         {
@@ -107,16 +107,20 @@ public class SelectQuery<T>
         }
         await using (cmd)
         {
+            var result = new List<T>();
             await using var reader = await cmd.ExecuteReaderAsync();
             if (!reader.HasRows)
             {
-                return null;
+                return result;
             }
-            var result = new List<T>();
+            
             while (reader.Read())
             {
                 var built = await _mapper.Map(reader);
-                result.Add(built);
+                if (built.IsFound){
+                    result.Add(built.ResultObject);
+                }
+                
             }
             return result;
         }

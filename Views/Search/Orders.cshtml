@@ -28,8 +28,24 @@
                     <td>@card.OrderEffectiveDate</td>
                     <td>
                         <div class="row">
-                            <a href="@card.OrderModifyLink">Изменить</a>
+                            <a href="@card.OrderViewLink">Детали</a>
                         </div>
+                        @if(card.OrderModifyLink!=null){
+                            <div class="row">
+                                <a href="@card.OrderModifyLink">Изменить</a>
+                            </div>
+                        }
+                        @if(card.OrderFlowLink!=null){
+                            <div class="row">
+                                <a href="@card.OrderFlowLink">Движение</a>
+                            </div>
+                        }
+                        @if(card.OrderCloseLink!=null){
+                            <div class="row">
+                                <a href="@card.OrderCloseLink">Закрыть</a>
+                            </div>
+                        }
+                        
                     </td>
                 </tr>
             }

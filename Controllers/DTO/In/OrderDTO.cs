@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using StudentTracking.Models.Domain.Orders;
 
-namespace StudentTracking.Controllers.DTO;
+namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
 public class OrderDTO {

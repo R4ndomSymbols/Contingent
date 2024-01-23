@@ -53,7 +53,7 @@ public class SQLParameter<T> : SQLParameter {
 
     public override string GetName()
     {
-        return _value.ParameterName;
+        return "@" + _value.ParameterName;
     }
 
     public override NpgsqlParameter ToNpgsqlParameter()

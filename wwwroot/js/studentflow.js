@@ -7,73 +7,22 @@ var identityIncludedPostfix = "_inc_id";
 var identityExcludedPostfix = "_ex_id";
 var currentGroupFlag = false;
 var studentPinnedGroupInputPostfix = "_n_group"
+var groupPolicy
 // здесь хранятся все студенты
 // pinned - свойство, отвечающее за прикрепленность
 var students = [];
 
 const invalidGroupId = "invalid_g"
-var orderSearchNow = null;
 
-$("#current_order").on("keyup", function () {
-    if (orderSearchNow != null) {
-        orderSearchNow.abort();
-    }
-    orderSearchNow = $.ajax({
-        type: "GET",
-        url: "/orders/filter/" + String($("#current_order").val()),
-        dataType: "json",
-        success: function (response) {
-            orderSelectionSource = [];
-            orderAutoCompleteSource = [];
-            $.each(response, function (index, orderSug) {
-                orderSelectionSource.push(
-                    {
-                        name: orderSug["displayedName"],
-                        id: orderSug["orderId"],
-                        groupBehaviour: orderSug["groupBehaviour"]
-                    }
-                )
-                orderAutoCompleteSource.push(
-                    {
-                        value: orderSug["orderId"],
-                        label: orderSug["displayedName"]
-                    }
-                );
-            });
-            $("#current_order").autocomplete({
-                delay: 100,
-                source: orderAutoCompleteSource,
-                change: function (event, ui) {
-                    if (ui.item === null) {
-                        return;
-                    }
-                    getStudentsByOrderId(ui.item.value);
-                },
-                select: function (event, ui) {
-                    if (ui.item === null) {
-                        return;
-                    }
-                    $("#current_order").val(ui.item.label)
-                    $("#current_order").prop("order_id", ui.item.value);
-                    $("#current_order").prop("group_behaviour", orderSelectionSource.find(x => x.id === ui.item.value).groupBehaviour);
-                    event.preventDefault();
-                }
-            });
-        }
-    });
-});
-
-function getStudentsByOrderId(orderId) {
+$(document).ready(function () {
     $.ajax({
         type: "GET",
-        url: "/studentflow/inorder/" + String($("#current_order").prop("order_id")),
+        url: "/studentflow/inorder/" + String($("#current_order").prop("value")),
         dataType: "json",
         success: function (response) {
-            document.getElementById("students_in_order").innerHTML = "";
-            document.getElementById("students_not_in_order").innerHTML = "";
             $.each(response, function (index, elem) {
-                if (elem["group"]["groupId"] === null) {
-                    elem["group"]["groupId"] = invalidGroupId
+                if (elem["groupId"] === null) {
+                    elem["groupId"] = undefined
                 }
                 $("#students_in_order").append(
                     `
@@ -81,8 +30,8 @@ function getStudentsByOrderId(orderId) {
                         <td id = ${elem["studentId"]}>
                             ${elem["studentFullName"]}
                         </td>
-                        <td id = "${elem["group"]["groupId"]}">
-                            ${elem["group"]["groupName"]}
+                        <td id = "${elem["groupId"]}">
+                            ${elem["groupName"]}
                         </td>
                         <td>
                             Нет
@@ -93,17 +42,18 @@ function getStudentsByOrderId(orderId) {
             });
         }
     });
-}
+    groupPolicy = String($("#current_order").attr("group_behaviour"))
+});
 
 $("#find_students").on("click", function () {
     document.getElementById("students_not_in_order").innerHTML = "";
-    students = students.filter(x => x.pinned != undefined || x.pinned !== true);
+    students = students.filter((x) => x.pinned);
     $.ajax({
         type: "GET",
-        url: "/studentflow/notinorder/" + String($("#current_order").prop("order_id")),
+        url: "/studentflow/notinorder/" + String($("#current_order").prop("value")),
         success: function (studentsJSON) {
-            $.each(studentsJSON, function (i, val) { 
-                if (!isStudentPinned(Number(val["studentId"]))) {
+            $.each(studentsJSON, function (i, val) {
+                if (!isStudentPinned(val["studentId"])) {
                     addStudentToPool(val);
                 }
             });
@@ -114,39 +64,21 @@ $("#find_students").on("click", function () {
 // id - айди студента
 // groupNow - айди текущей группы студента
 // groupAfter - айди группы после регистрации в приказе
-function addOrUpdateStudentPinned(studentRecordObject) {
-    var found = studentPinned.find(x => x.id == studentRecordObject.id);
-    if (found == undefined) {
-        studentPinned.push(studentRecordObject);
-    }
-    else {
-        if ("groupNow" in studentRecordObject) {
-            found.groupNow = studentRecordObject.groupNow;
-        }
-        if ("groupAfter" in studentRecordObject) {
-            found.groupAfter = studentRecordObject.groupAfter;
-        }
-    }
-}
-function removeStudentById(id) {
-    var toDelete = studentPinned.find(x => x.id == id);
-    if (toDelete != undefined) {
-        studentPinned.splice(studentPinned.indexOf(toDelete), 1);
-    }
-}
+
 function isStudentPinned(id = -1) {
-    var studentfound = students.find(x => x.id == id);
+    var studentfound = students.find((x) => x.studentId == id);
     if (studentfound == undefined) {
         return false;
     }
     else {
-        return studentfound.pinned === true;
+        return studentfound.pinned
     }
 
 
 }
 
 function addStudentToPool(student) {
+    students.push(student);
     student.pinned = false;
     $("#students_not_in_order").append(
         `
@@ -155,7 +87,7 @@ function addStudentToPool(student) {
                 ${student["studentFullName"]}
             </td>
             <td>
-                ${student["group"]["groupName"]}
+                ${student["groupName"]}
             </td>
             <td>
                 <button id = "${student["studentId"] + includePostfix}">
@@ -171,11 +103,10 @@ function addStudentToPool(student) {
 
 
 function includeStudent(student) {
-    if (student != null) {
-        var groupPolicy = $("#current_order").prop("group_behaviour")
-        if (groupPolicy === "MustChange") {
-            $("#students_in_order").append(
-                `
+    student.pinned = true
+    if (groupPolicy === "MustChange") {
+        $("#students_in_order").append(
+            `
                     <tr id="${student["studentId"] + identityIncludedPostfix}"> 
                         <td>
                             ${student["studentFullName"]}
@@ -190,11 +121,11 @@ function includeStudent(student) {
                         </td>
                     </tr>
                     `);
-            findGroupsAndSetAutoComplete(student["studentId"]);
-        }
-        else if (groupPolicy === "Vipe") {
-            $("#students_in_order").append(
-                `
+        findGroupsAndSetAutoComplete(student);
+    }
+    else if (groupPolicy === "Vipe") {
+        $("#students_in_order").append(
+            `
                     <tr id="${student["studentId"] + identityIncludedPostfix}"> 
                         <td>
                             ${student["studentFullName"]}
@@ -209,43 +140,20 @@ function includeStudent(student) {
                         </td>
                     </tr>
                     `);
-        }
-        else if (groupPolicy === "NoChange") {
-            $("#students_in_order").append(
-                `
-                    <tr id="${student["studentId"] + identityIncludedPostfix}"> 
-                        <td>
-                            ${student["studentFullName"]}
-                        </td>
-                        <td>
-                            ${student["group"]["groupName"]}
-                        </td>
-                        <td>
-                            <button id="${student["studentId"] + excludePostfix}">
-                            -
-                            </button>
-                        </td>
-                    </tr>
-                    `);
-        }
-        document.getElementById(student["studentId"] + identityExcludedPostfix).innerHTML = "";
-        $("#" + student["studentId"] + excludePostfix).on("click", function () { excludeStudent(student); });
-
     }
+    document.getElementById(student["studentId"] + identityExcludedPostfix).remove()
+    $("#" + student["studentId"] + excludePostfix).on("click", function () { excludeStudent(student); });
 }
 
 function excludeStudent(student) {
-
-    var includedStudentHTML = document.getElementById(student["studentId"] + identityIncludedPostfix);
-    if (student != null) {
-        $("#students_not_in_order").append(
-            `
+    $("#students_not_in_order").append(
+        `
             <tr id="${student["studentId"] + identityExcludedPostfix}"> 
                 <td>
                     ${student["studentFullName"]}
                 </td>
                 <td>
-                    ${student["group"]["groupName"]}
+                    ${student["groupName"]}
                 </td>
                 <td>
                     <button id="${student["studentId"] + includePostfix}">
@@ -255,17 +163,18 @@ function excludeStudent(student) {
 
             </tr>
             `
-        );
-        $("#" + student["studentId"] + includePostfix).on("click", function () { includeStudent(student) });
-        includedStudentHTML.innerHTML = "";
-
-    }
+    );
+    document.getElementById(student["studentId"] + identityIncludedPostfix).remove();
+    $("#" + student["studentId"] + includePostfix).on("click", function () { includeStudent(student) });
 }
 
-function findGroupsAndSetAutoComplete(studentId) {
-    var inputName = String(studentId) + studentPinnedGroupInputPostfix
+function findGroupsAndSetAutoComplete(student) {
+    var inputName = String(student.studentId) + studentPinnedGroupInputPostfix
     $("#" + inputName).on("keyup", function () {
         var searchText = $("#" + inputName).val()
+        if (String(searchText).length < 3) {
+            return
+        }
         var groupsAvailable = [];
         $.ajax({
             type: "GET",
@@ -285,6 +194,7 @@ function findGroupsAndSetAutoComplete(studentId) {
                     select: function (event, ui) {
                         $("#" + inputName).val(ui.item.label)
                         $("#" + inputName).attr("group_id", ui.item.value)
+                        student.nextGroup = ui.item.value;
                         event.preventDefault();
                     }
                 });
@@ -294,21 +204,43 @@ function findGroupsAndSetAutoComplete(studentId) {
 }
 
 $("#save_changes").on("click", function () {
+    var obj = getOrderJsonData();
     $.ajax({
         type: "POST",
-        url: "/flow/save",
-        data: JSON.stringify(studentPinned.map(
-            (x) => ({
-                studentId: x.id,
-                groupFromId: x.groupNow,
-                groupToId: x.groupAfter,
-                orderId: selectedOrder.id
-            }))),
-        dataType: "json",
+        url: "/studentflow/save/" + String($("#current_order").prop("value")),
+        data: JSON.stringify(obj),
+        contentType: "application/json",
         success: function (response) {
-
+            alert("Сохранение прошло успешно")
         }
     });
 });
 
+function getOrderJsonData() {
+    type = String($("#current_order").attr("order_type"))
+    var result;
+    var mainModel = students.filter((xo) => xo.pinned).map(
+        (x) => {
+            return {
+                id: x.studentId,
+                newGroup: x.nextGroup
+            }
+        });
+
+    switch (type) {
+        case "FreeEnrollment":
+            result = 
+            {
+                Moves: mainModel.map(
+                    (x) => {
+                        return {
+                            StudentId: x.id,
+                            GroupToId: x.newGroup
+                        }
+                    }
+                )
+            }       
+    }
+    return result
+}
 

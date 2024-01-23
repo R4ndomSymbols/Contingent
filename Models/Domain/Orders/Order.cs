@@ -2,8 +2,7 @@ using Npgsql;
 using Utilities;
 using Utilities.Validation;
 using StudentTracking.Models.SQL;
-using StudentTracking.Controllers.DTO;
-using StudentTracking.Controllers.DTO.Out;
+using StudentTracking.Controllers.DTO.In;
 using System.Text.Json;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -21,10 +20,15 @@ public abstract class Order
     protected string? _orderDescription;
     protected string _orderDisplayedName;
     protected bool _alreadyConducted;
+    protected bool _isClosed;
 
     public int Id
     {
         get => _id;
+    }
+    public bool IsClosed
+    {
+        get => _isClosed;
     }
     // дата вступления в силу
     public DateTime EffectiveDate
@@ -129,6 +133,7 @@ public abstract class Order
                 return Result<Order?>.Failure(new ValidationError(nameof(GetOrderTypeDetails), "Тип приказа не совпадает с найденным"));
             }
             _id = id;
+            _isClosed = (bool)reader["is_closed"];
             _effectiveDate = (DateTime)reader["effective_date"];
             _specifiedDate = (DateTime)reader["specified_date"];
             var description = reader["description"];
@@ -185,11 +190,19 @@ public abstract class Order
             }
         } 
     }
-    public static async Task<IReadOnlyCollection<Order>?> FindOrders(ComplexWhereCondition? filter, JoinSection? additionalJoins, SQLParameterCollection? additionalParams, QueryLimits limits){
+    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<Order>(
-            async (r) => { 
-                return (await GetOrderById((int)r["ordid"])).ResultObject;
+            async (r) => {
+                var id = r["ordid"];
+                if (id.GetType() == typeof(DBNull)){
+                    return QueryResult<Order>.NotFound();
+                }
+                var result = await GetOrderById((int)id);
+                if (result.IsFailure){
+                    throw new Exception("Приказ не может быть не получен на данном этапе");
+                }
+                return QueryResult<Order>.Found(result.ResultObject);
             },
             new List<Column>(){
                 new Column("id", "ordid", "orders"),
@@ -202,7 +215,7 @@ public abstract class Order
         .AddOrderByStatement(new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC))
         .AddParameters(additionalParams)
         .Finish();
-        if (!result.IsSuccess){
+        if (result.IsFailure){
             throw new Exception("Запрос сгенерирован неверно");
         }
         var query = result.ResultObject;
@@ -292,8 +305,8 @@ public abstract class Order
             if (!reader.HasRows){
                 return Result<Order?>.Failure(new ValidationError(nameof(id), "Приказа не существует"));
             }
+            reader.Read();
             OrderTypes type = (OrderTypes)(int)reader["type"];
-            IReadOnlyCollection<ValidationError>? errors;
             Utilities.IResult result;
             // добавить еще классы
             switch(type)
@@ -319,11 +332,8 @@ public abstract class Order
             }
             else {
                 return Result<Order?>.Failure(result.GetErrors());
-            }
-            
+            }   
         }
-
-        
     }
     public static async Task<Result<Order?>> Build(string orderJson){
         OrderDTO? mapped = null;

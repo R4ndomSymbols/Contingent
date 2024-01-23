@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
+using StudentTracking.Models.SQL;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Flow;
@@ -141,29 +142,38 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
 
 
 
-    public static async Task<GroupResponseDTO?> GetCurrentStudentGroup(int studentId)
-    {
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT educational_group.id AS gid, group_name, name_generated FROM educational_group " +
-        "RIGHT JOIN student_flow ON student_flow.group_id_to = educational_group.id " +
-        "JOIN orders ON student_flow.order_id = orders.id " +
-        "WHERE student_flow.student_id = @p1 " +
-        "ORDER BY effective_date DESC " +
-        "LIMIT 1";
-        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", studentId));
-        await using (conn)
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return null;
-            }
-            reader.Read();
-
-            // изменить
+    public static async Task<GroupModel?> GetCurrentStudentGroup(int studentId)
+    {   
+        var joins = new JoinSection()
+        .AppendJoin(
+            JoinSection.JoinType.RightJoin,
+            new Column("id", "educational_group"),
+            new Column("group_id_to", "student_flow")
+            
+        )
+        .AppendJoin(JoinSection.JoinType.InnerJoin,
+            new Column("order_id", "student_flow"),
+            new Column("id" , "orders")
+        );
+        
+        var parameters = new SQLParameterCollection();
+        var p1 = parameters.Add(studentId);
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("student_id", "student_flow"),
+                p1,
+                WhereCondition.Relations.Equal
+            )
+        );
+        var orderBy = new OrderByCondition(new Column("effective_date", "orders"), OrderByCondition.OrderByTypes.DESC);
+        var found = await GroupModel.FindGroups(new QueryLimits(0,1), 
+            additionalJoins: joins, 
+            additionalConditions: where, 
+            additionalOrderBy: orderBy, 
+            addtitionalParameters: parameters);
+        if (found.Count == 0){
             return null;
         }
+        return found.First();
     }
 }

@@ -1,16 +1,17 @@
 using Npgsql;
+using Utilities;
 
 namespace StudentTracking.Models.SQL;
 
 public class Mapper<T> : IQueryPart {
 
-    private Func<NpgsqlDataReader, Task<T>> _map;
+    private Func<NpgsqlDataReader, Task<QueryResult<T>>> _map;
     private IReadOnlyCollection<Column> _columns;
-    public Mapper (Func<NpgsqlDataReader, Task<T>> map, IReadOnlyCollection<Column> mappedColumns){
+    public Mapper (Func<NpgsqlDataReader, Task<QueryResult<T>>> map, IReadOnlyCollection<Column> mappedColumns){
         _map = map;
         _columns = mappedColumns;
     }
-    public async Task<T> Map(NpgsqlDataReader reader){
+    public async Task<QueryResult<T>> Map(NpgsqlDataReader reader){
         return await _map.Invoke(reader);
     }
 

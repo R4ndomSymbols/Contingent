@@ -25,6 +25,7 @@ function updateIdentity(){
             document.getElementById("OrderOrgId").innerText = response["orderOrgId"];
         }
     });
+    
 }
 
 $("#save").click(function () {

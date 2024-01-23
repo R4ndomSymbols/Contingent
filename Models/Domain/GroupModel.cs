@@ -151,9 +151,10 @@ public class GroupModel : DbValidatedObject
     protected GroupModel(int id) : base(RelationTypes.Bound)
     {
         _groupName = "";
+        _id = id;
     }
 
-    public static async Task<GroupModel?> GetGroupById(int id, ObservableTransaction? scope)
+    public static async Task<GroupModel?> GetGroupById(int id, ObservableTransaction? scope = null)
     {
         NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
         string cmdText = "SELECT * FROM educational_group WHERE id = @p1";
@@ -272,7 +273,7 @@ public class GroupModel : DbValidatedObject
 
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
         await using var connection = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT EXISTS(SELECT id FROM eductional_group WHERE id = @p1)";
+        string cmdText = "SELECT EXISTS(SELECT id FROM educational_group WHERE id = @p1)";
         NpgsqlCommand cmd;
         if (scope != null){
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
@@ -476,12 +477,35 @@ public class GroupModel : DbValidatedObject
     }  
 
     
-    public static async Task<List<GroupResponseDTO>?> FindGroups(SelectQuery<GroupResponseDTO> select){
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        using (conn){
-
+    public static async Task<IReadOnlyCollection<GroupModel>> FindGroups(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null, OrderByCondition? additionalOrderBy = null){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        var mapper = new Mapper<GroupModel>(
+            async (m) => {
+                var id = m["group_id_found"];
+                if (id.GetType() == typeof(DBNull)){
+                    return QueryResult<GroupModel>.NotFound();
+                }
+                else {
+                    var found = await GetGroupById((int)id, null)
+                    ?? throw new Exception("Id группы не может быть не найдет в этом запросе");
+                    return QueryResult<GroupModel>.Found(found);
+                }
+               
+            },
+            new List<Column>(){
+                new Column("id", "group_id_found", "educational_group")
+            }
+        );
+        var buildResult = SelectQuery<GroupModel>.Init("educational_group")
+        .AddMapper(mapper)
+        .AddJoins(additionalJoins)
+        .AddWhereStatement(additionalConditions)
+        .AddParameters(addtitionalParameters)
+        .AddOrderByStatement(additionalOrderBy)
+        .Finish();
+        if (buildResult.IsFailure){
+            throw new Exception("Запрос не может быть несконструирован");
         }
-        return null;
-           
+        return await buildResult.ResultObject.Execute(conn, limits);           
     }
 }

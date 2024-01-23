@@ -14,19 +14,44 @@ $(document).ready(function () {
                 table = document.getElementById("search_results");
                 table.innerHTML = "";
                 $.each(response, function (index, value) {
-                    table.innerHTML +=
+                    card =
                         ` <tr>
                             <th scope="row">${value.orderOrgId}</th>
                             <td>${value.orderFullName}</td>
                             <td>${value.orderSpecifiedDate}</td>
                             <td>${value.orderEffectiveDate}</td>
                             <td>
-                                <div class="row">
-                                    <a href="${value.orderModifyLink}">Изменить</a>
-                                </div>
-                            </td>
-                        </tr>
+                        `;
+                    card+= `
+                    <div class="row">
+                            <a href="${value.orderViewLink}">Детали</a>
+                    </div>
+                    `
+                    if (value.orderModifyLink != null){
+                        card += 
                         `
+                        <div class="row">
+                                <a href="${value.orderModifyLink}">Изменить</a>
+                        </div>
+                        `
+                    }
+                    if (value.orderFlowLink != null){
+                        card += 
+                        `
+                        <div class="row">
+                                <a href="${value.orderFlowLink}">Движение</a>
+                        </div>
+                        `
+                    }
+                    if (value.orderCloseLink != null){
+                        card += 
+                        `
+                        <div class="row">
+                                <a href="${value.orderCloseLink}">Закрыть</a>
+                        </div>
+                        `
+                    }
+                    table.innerHTML += card
                 });
             }
         });

@@ -1,5 +1,5 @@
 using Npgsql;
-using StudentTracking.Controllers.DTO;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using StudentTracking.Models.JSON;
 using Utilities;
@@ -98,8 +98,8 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
     {
         NpgsqlConnection? conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "INSERT INTO public.orders( " +
-        " specified_date, effective_date, serial_number, org_id, type, name, description) " +
-        " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7) RETURNING id";
+        " specified_date, effective_date, serial_number, org_id, type, name, description, is_closed) " +
+        " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8) RETURNING id";
         var cmd = new NpgsqlCommand(cmdText, conn);
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p1", _specifiedDate));
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", _effectiveDate));

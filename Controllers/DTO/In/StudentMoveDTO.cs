@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Utilities.Validation;
 
-namespace StudentTracking.Controllers.DTO;
+namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
 public class StudentMoveDTO 

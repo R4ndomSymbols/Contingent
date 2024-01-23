@@ -1,11 +1,22 @@
+
+
+@model StudentTracking.Controllers.DTO.Out.OrderCardResponseDTO
 @{
     ViewData["Title"] = "Движение студентов";
 }
-<div class="row">
-    <h6 class="col-2">Текущий приказ</h6>
-    <input id = "current_order" class="col-8"/>
+<input type="hidden" value="@Model.OrderId" group_behaviour="@Model.OrderGroupChangePolicy" order_type="@Model.OrderEnumTypeName" id="current_order">
+
+<div class="row col-9">
+    <h6 >Проведение по приказу</h6>
 </div>
-<div id = "order_err"></div>
+<div class="row">
+    <h6 class="col-1">@Model.OrderOrgId</h6>
+    <div class="col-1"></div>
+    <h6 class="col-8">@Model.OrderFullName</h6>
+</div>
+<div class="row">
+    <button type="button" class="btn btn-primary" id="close_order">Закрыть приказ</button>
+</div>
 
 <div class="row">
     <h6 class="col-9">Фильтр ФИО</h6>

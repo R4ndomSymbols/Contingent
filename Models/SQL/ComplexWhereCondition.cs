@@ -21,7 +21,7 @@ public class ComplexWhereCondition : IQueryPart{
         _isGroup = isGroup;
 
         _strategy = () => {
-            var result = " " + _left.ToString() + " "  + _relation.ToString() + " " + _right.ToString() + " ";
+            var result = " " + _left.AsSQLText() + " "  + _relation.ToString() + " " + _right.AsSQLText() + " ";
             if (_isGroup){
                 result = "( " + result + ")";
             }
@@ -31,7 +31,7 @@ public class ComplexWhereCondition : IQueryPart{
 
     public ComplexWhereCondition(WhereCondition single) {
         _left = single;
-        _strategy = () => _left.ToString();
+        _strategy = () => _left.AsSQLText();
     }
 
     private Func<string> _strategy;

@@ -69,56 +69,7 @@ public class OrderController : Controller{
             return Json(new object());  
         }
     }
-    [HttpGet]
-    [Route("/orders/filter/{query?}")]
-    public async Task<JsonResult> Filter(string? query){
-        if (query == null || query.Length < 3){
-            return Json(new object());
-        }
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-        var mapper = new Mapper<OrderResponseDTO>(
-            (m) => {
-                var o = new OrderResponseDTO((string)m["name"], (string)m["org_id"]);
-                o.OrderId = (int)m["id"];
-                o.GroupBehaviour = OrderTypeInfo.GetByType((OrderTypes)(int)m["type"]).FrontendGroupBehaviour.ToString();
-                return new Task<OrderResponseDTO>(() => o);
-            },
-            new List<Column>(){
-                new Column("id", null, "orders"),
-                new Column("type", null, "orders"),
-                new Column("name", null, "orders"),
-                new Column("org_id", null, "orders")
-            }   
-        );
-        var par = new SQLParameterCollection();
-        var whereParam = par.Add("%" + query + "%");
-        var where1 = new WhereCondition(
-            new Column("name", "orders"),
-            whereParam,
-            WhereCondition.Relations.Like
-        );
-        var where2 = new WhereCondition(
-            new Column("org_id", "orders"),
-            whereParam,
-            WhereCondition.Relations.Like
-        );
-        var result = SelectQuery<OrderResponseDTO>.Init("orders")
-        .AddMapper(mapper)
-        .AddWhereStatement(new ComplexWhereCondition(where1, where2, ComplexWhereCondition.ConditionRelation.OR, false))
-        .AddParameters(par)
-        .Finish();
 
-        if (result.IsFailure){
-            throw new Exception("Неверно сформирован запрос SQL");
-        }
-        var found = await result.ResultObject.Execute(conn, new QueryLimits(0, 20));
-        if (found == null){
-            return Json(new object());
-        }
-        else {
-            return Json(found);
-        }
-    }
     [HttpGet]
     [Route("/orders/search")]
     public IActionResult GetSearchPage(){
@@ -129,13 +80,16 @@ public class OrderController : Controller{
     public async Task<JsonResult> GetOrdersByFilters(){
         using var stream = new StreamReader(Request.Body);
         var parameters = JsonSerializer.Deserialize<OrderSearchParamentersDTO>(await stream.ReadToEndAsync());
-        var result = await Order.FindOrders(null, null, null, new QueryLimits(0,20));
+        var result = await Order.FindOrders(new QueryLimits(0,20));
         List<OrderCardResponseDTO> cards = new List<OrderCardResponseDTO>();
-        if (result!=null){
-            foreach (Order o in result){
-                cards.Add(new OrderCardResponseDTO(o));
-            }
+        foreach (Order o in result){
+            cards.Add(new OrderCardResponseDTO(o));
         }
         return Json(cards);
+    }
+    [HttpGet]
+    [Route("/orders/close/{id?}")]
+    public async Task<IActionResult> CloseOrder(){
+        return BadRequest();
     }
 }

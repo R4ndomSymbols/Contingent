@@ -8,10 +8,10 @@ public class JoinSection : IQueryPart{
         _joins = new List<string>();
     }
 
-    public JoinSection AppendJoin(JoinType type, Column left, Column right){
+    public JoinSection AppendJoin(JoinType type, Column sourceTableColumn, Column joinColumn){
         string prefix = _joinPrefixes[type];
         _joins.Add(
-            prefix + " " + right.TableName + " ON " +  left.ToString() + " = " + right.ToString()
+            prefix + " " + joinColumn.TableName + " ON " +  sourceTableColumn.AsSQLText() + " = " + joinColumn.AsSQLText()
         );
         return this;
     }

@@ -77,46 +77,27 @@ public class GroupController : Controller{
 
     [HttpGet]
     [Route("/groups/find/{query?}")]
-    public async Task<JsonResult> FindGroups(string? query){
+    public async Task<IActionResult> FindGroups(string? query){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         if (query == null || query.Length <= 2){
-            return Json(new object());
+            return BadRequest("Запрос не может быть пустым");
         }
-        var mapper = new Mapper<GroupResponseDTO>(
-            (m) => {
-                var g = new GroupResponseDTO();
-                g.GroupId = (int)m["gid"];
-                g.GroupName = (string)m["gn"];
-                g.IsNameGenerated = (bool)m["gen"];
-                return new Task<GroupResponseDTO>(() => g);
-            },
-            new List<Column>(){
-                new Column("id", "gid", "educational_group"),
-                new Column("group_name", "gn", "educational_group"),
-                new Column("name_generated", "gen", "educational_group"),
-            } 
-        );
         var par = new SQLParameterCollection();
-        var p1 = par.Add("%" + query + "%");  
-        var whereClause = new WhereCondition(
-            new Column("group_name",  "educational_group"),
-            p1,
-            WhereCondition.Relations.Like 
+        var p1 = par.Add("%" + query + "%");
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("group_name", "educational_group"),
+                p1,
+                WhereCondition.Relations.Like
+            )
         );
-        var result = SelectQuery<GroupResponseDTO>.Init("educational_group")
-        .AddMapper(mapper)
-        .AddWhereStatement(new ComplexWhereCondition(whereClause))
-        .AddParameters(par)
-        .Finish();
-        if (result.IsFailure){
-            throw new Exception("Не удалось создать запрос на поиск групп");
+        var result = await GroupModel.FindGroups(new QueryLimits(0, 30),
+        additionalConditions: where,
+        addtitionalParameters: par);
+        var dtos = new List<GroupResponseDTO>();
+        foreach(var model in result){
+            dtos.Add(new GroupResponseDTO(model));
         }
-        var got = await result.ResultObject.Execute(conn, new QueryLimits(0,20));
-        if (got!=null){
-            return Json(got);
-        }
-        return Json(new object());
-
+        return Json(dtos);
     }
-
 }

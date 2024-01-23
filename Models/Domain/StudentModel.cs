@@ -1,6 +1,7 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Address;
+using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.SQL;
 using System.Data;
@@ -247,67 +248,96 @@ public class StudentModel : DbValidatedObject
         _inn = "";
         _gradeBookNumber = "";
     }
+    public static async Task<IReadOnlyCollection<StudentModel>> FindStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        var mapper = new Mapper<StudentModel>(
+            async (m)=> {
+                var id = m["idstd"];
+                if (id.GetType() == typeof(DBNull)){
+                    return QueryResult<StudentModel>.NotFound();
+                }
+                var result = await GetStudentById((int)id)
+                ?? throw new Exception("Id студента не может быть null в данном запросе");
+                return QueryResult<StudentModel>.Found(result);
+            },
+            new List<Column>(){
+                new Column("id", "idstd", "students")
+            }
+        );
+        var buildResult = SelectQuery<StudentModel>.Init("students")
+        .AddMapper(mapper)
+        .AddJoins(additionalJoins)
+        .AddWhereStatement(additionalConditions)
+        .AddParameters(addtitionalParameters)
+        .Finish();
+        if (buildResult.IsFailure){
+            throw new Exception("Создание запроса по студентам не должно проваливаться");
+        }
+        return await buildResult.ResultObject.Execute(conn, limits);
+    }
+
+
 
     public static async Task<StudentModel?> GetStudentById(int id)
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        
+        using NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM students WHERE id = @p1", conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+
+        using var pgreader = await cmd.ExecuteReaderAsync();
+        if (!pgreader.HasRows)
         {
-            NpgsqlCommand getCommand = new NpgsqlCommand("SELECT * FROM students WHERE id = @p1", conn);
-            getCommand.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-            await using (getCommand)
-            {
-                using var pgreader = await getCommand.ExecuteReaderAsync();
-                if (!pgreader.HasRows)
-                {
-                    return null;
-                }
-
-                var toReturn = new List<StudentModel>();
-                await pgreader.ReadAsync();
-                
-                var built = new StudentModel
-                {
-                    _snils = (string)pgreader["snils"],
-                    _inn = (string)pgreader["inn"],
-                    _actualAddress = (int)pgreader["actual_address"],
-                    _dateOfBirth = (DateTime)pgreader["date_of_birth"],
-                    _gender = (Genders.GenderCodes)pgreader["gender"],
-                    _gradeBookNumber = (string)pgreader["grade_book_number"],
-                    _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
-                    _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"],
-                    _admissionScore = (decimal)pgreader["admission_score"]
-                };
-
-                object rus_citizenship = pgreader["rus_citizenship_id"];
-                if (rus_citizenship.GetType() == typeof(System.DBNull))
-                {
-                    built._russianCitizenshipId = null;
-                }
-                else
-                {
-                    built._russianCitizenshipId = (int)rus_citizenship;
-                }
-                object gia_mark_result = pgreader["gia_mark"];
-                if (gia_mark_result.GetType() == typeof(DBNull))
-                {
-                    built._giaMark = null;
-                }
-                else
-                {
-                    built._giaMark = (int)gia_mark_result;
-                }
-                object gia_mark_dem_result = pgreader["gia_demo_exam_mark"];
-                if (gia_mark_dem_result.GetType() == typeof(DBNull))
-                {
-                    built._giaDemoExamMark = null;
-                }
-                else
-                {
-                    built._giaDemoExamMark = (int)gia_mark_dem_result;
-                }
-                return built;
-            }
+            return null;
         }
+
+        var toReturn = new List<StudentModel>();
+        await pgreader.ReadAsync();
+        
+        var built = new StudentModel
+        {
+            _id = id,
+            _snils = (string)pgreader["snils"],
+            _inn = (string)pgreader["inn"],
+            _actualAddress = (int)pgreader["actual_address"],
+            _dateOfBirth = (DateTime)pgreader["date_of_birth"],
+            _gender = (Genders.GenderCodes)pgreader["gender"],
+            _gradeBookNumber = (string)pgreader["grade_book_number"],
+            _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
+            _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"],
+            _admissionScore = (decimal)pgreader["admission_score"]
+        };
+
+        object rus_citizenship = pgreader["rus_citizenship_id"];
+        if (rus_citizenship.GetType() == typeof(DBNull))
+        {
+            built._russianCitizenshipId = null;
+        }
+        else
+        {
+            built._russianCitizenshipId = (int)rus_citizenship;
+        }
+        object gia_mark_result = pgreader["gia_mark"];
+        if (gia_mark_result.GetType() == typeof(DBNull))
+        {
+            built._giaMark = null;
+        }
+        else
+        {
+            built._giaMark = (int)gia_mark_result;
+        }
+        object gia_mark_dem_result = pgreader["gia_demo_exam_mark"];
+        if (gia_mark_dem_result.GetType() == typeof(DBNull))
+        {
+            built._giaDemoExamMark = null;
+        }
+        else
+        {
+            built._giaDemoExamMark = (int)gia_mark_dem_result;
+        }
+        return built;
+            
+        
     }
 
     public static async Task LinkStudentAndCitizenship(Type citizenshipType, int studentId, int citizenshipId){
@@ -466,6 +496,10 @@ public class StudentModel : DbValidatedObject
             } 
         }
         return "Не указано";
+    }
+
+    public async Task<GroupModel> GetCurrentGroup(){
+        return await StudentHistory.GetCurrentStudentGroup(_id);
     }
     /*
     public static async Task<List<StudentResponseDTO>?> FilterStudents(SelectQuery<StudentResponseDTO> filter){
