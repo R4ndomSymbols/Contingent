@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Npgsql.Replication;
 
@@ -23,6 +24,12 @@ public class ValidationError {
     public ValidationError(string propName, string exceptionMessage){
         _message = exceptionMessage;
         _propertyName = propName;
+        _line = null;
+        _path = null;
+    }
+    public ValidationError(string exceptionMessage){
+        _message = exceptionMessage;
+        _propertyName = "whole_object";
         _line = null;
         _path = null;
     }

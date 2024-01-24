@@ -5,7 +5,7 @@ namespace Utilities;
 public sealed class Result<T> : IResult{
 
     private readonly bool _isSuccess;
-    private readonly IEnumerable<ValidationError>? _errors;
+    private readonly IEnumerable<ValidationError> _errors;
     private T? _resultObject;
     public T? ResultObject {
         get {
@@ -24,7 +24,7 @@ public sealed class Result<T> : IResult{
     public bool IsFailure{
         get => !_isSuccess;
     }
-    public IReadOnlyCollection<ValidationError>? Errors {
+    public IReadOnlyCollection<ValidationError> Errors {
         get {
             if (_isSuccess || _errors is null){
                 throw new Exception("Невозможно получить ошибки из Success запроса"); 

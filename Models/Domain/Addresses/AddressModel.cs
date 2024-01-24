@@ -1,6 +1,7 @@
 namespace StudentTracking.Models.Domain.Address;
 
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.JSON;
 using StudentTracking.Models.SQL;
 using System.Data;
@@ -408,6 +409,17 @@ public class AddressModel : DbValidatedObject
         }
         return await builder.SearchUntyped(toFound, maxCount);
     }
+    public static Result<AddressModel?> Build(AddressDTO dto) {
+        AddressModel? built = BuildFromString(dto.Address);
+        if (built is null){
+            return Result<AddressModel>.Failure(new ValidationError("Пустая строка адреса"));
+        }
+        if (built.GetErrors().Any()){
+            return Result<AddressModel>.Failure(built.GetErrors());
+        }
+        return Result<AddressModel>.Success(built);
+    }
+
 
     public static AddressModel? BuildFromString(string? address)
     {

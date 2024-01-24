@@ -1,8 +1,27 @@
 const error_postfix = "_err"
+const tag_select_postfix = "_tag"
+const minimal_tag_id = 1 
+var currentTagId = 1;
 var addresses = [];
+var selectedTags = [];
+var tags = [];
 
 $(document).ready(function () {
-
+    $.ajax({
+        type: "GET",
+        url: "/students/tags",
+        dataType: "JSON",
+        success: function (response) {
+            $.each(response, function (index, obj) { 
+                tags.push(
+                    {
+                        label: obj["typeName"],
+                        value: obj["type"]
+                    }
+                )
+            });
+        }
+    });
 });
 
 function setAutocompleteCountryRegions() {
@@ -55,6 +74,40 @@ $("#about_legal_address").click(function () {
         }
     });
 });
+$("#add_eduction_level").click(function () 
+{  
+
+    var levels = document.getElementById("education_levels");
+    levels.innerHTML += 
+    `
+        <div class="d-flex flex-row">
+        <select id = ${String(currentTagId)+tag_select_postfix}>
+    
+    `
+    currentTagId++
+    $.each(tags, function (index, value) { 
+        levels.innerHTML+=
+        `
+        <option value = "${value.value}">${value.label}</option>
+        `     
+    });
+    levels.innerHTML+="</select></div>";
+    
+});
+
+function getEducationLevels(){
+    var resultArray = []
+    for (let index = currentTagId; index >= minimal_tag_id; index--) {
+        resultArray.push(
+            {
+                level: Number($("#" + String(index)+tag_select_postfix).val())
+            }
+        )
+        
+    }
+
+}
+
 
 $("#save").click(function () {
     var realAddress = $("#ActualAddress").val();
@@ -92,7 +145,9 @@ $("#save").click(function () {
                 Patronymic: $("#Patronymic").val(),
                 PassportNumber: $("#PassportNumber").val(),
                 PassportSeries: $("#PassportSeries").val(),
-            }
+            },
+            education: getEducationLevels()
+
 
         }),
         dataType: "JSON",

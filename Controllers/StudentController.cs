@@ -4,6 +4,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Misc;
@@ -63,17 +65,31 @@ public class StudentController : Controller
 
     [HttpPost]
     [Route("students/addcomplex")]
-    public async Task<JsonResult> AddComplex(){
-        using(var reader = new StreamReader(Request.Body)){
-            var body = await reader.ReadToEndAsync();
-            var parts = Utils.SplitJsonIntoObjectStrings(body, 2);
-            var actualAddressPart = body.Substring(parts[0].start, parts[0].length);
-            var studentPart = body.Substring(parts[1].start, parts[1].length);
-            var legalAddressPart = body.Substring(parts[2].start, parts[2].length);
-            var russianCitizenshipPart = body.Substring(parts[3].start, parts[3].length);
-            await using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
-            await using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
-            IEnumerable<ValidationError> cumulativeErrors = new List<ValidationError>();
+    public async Task<IActionResult> AddComplex(){
+        using var reader = new StreamReader(Request.Body);
+        string jsonString = await reader.ReadToEndAsync();
+        StudentComplexDTO? dto = null;
+        try {
+            dto = JsonSerializer.Deserialize<StudentComplexDTO>(jsonString);
+        }
+        catch (Exception){
+            return BadRequest("Неверный формат данных");
+        }
+        if (dto is null){
+            return BadRequest("Ошибка десериализации");
+        }
+        using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
+        using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
+        
+        var actualAddress = AddressModel.Build(dto.ActualAddress);
+        var factAddress = AddressModel.Build(dto.FactAddress);
+        var rusCitizenship = RussianCitizenship.
+
+
+        IEnumerable<ValidationError> cumulativeErrors = new List<ValidationError>();
+
+
+
             var actualAddress = JsonSerializer.Deserialize<AddressStringJSON>(actualAddressPart);
             var actualAddressObject = AddressModel.BuildFromString(actualAddress?.Address);
             if (actualAddressObject != null){
@@ -143,4 +159,11 @@ public class StudentController : Controller
             }
         }
     }
+    [HttpGet]
+    [Route("students/tags")]
+    public IActionResult GetTags(){
+        var tags = EducationLevel.GetAllLevels().Select(x => new EducationalLevelRecordDTO(x));
+        return Json(tags);
+    }
+
 }

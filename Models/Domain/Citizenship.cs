@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Address;
+using StudentTracking.Models.Domain.ValueObjects.Students;
 using Utilities;
 using Utilities.Validation;
 
@@ -23,9 +26,9 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     // добавить ограничения уникальности некоторых параметров
     private int _legalAddress;
     private int _id;
-    private string _name;
-    private string _surname;
-    private string? _patronymic;
+    private NamePart _name;
+    private NamePart _surname;
+    private NamePart? _patronymic;
     private string _passportNumber;
     private string _passportSeries;
 
@@ -35,132 +38,36 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     }
     public string Name
     {
-        get => _name;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.RussianNamePart),
-                new ValidationError(nameof(Name), "Имя содержит недопустимые символы")
-            ))
-            {
-                _name = value;
-            }
-        }
+        get => _name.NameToken;
     }
     public string Surname
     {
-        get => _surname;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.RussianNamePart),
-                new ValidationError(nameof(Surname), "Фамилия содержит недопустимые символы")
-            ))
-            {
-                _surname = value;
-            }
-        }
+        get => _surname.NameToken;
     }
     public string Patronymic
     {
-        get => _patronymic == null ? "" : _patronymic;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.RussianNamePart),
-                new ValidationError(nameof(Patronymic), "Отчество содержит недопустимые символы либо имеет неверный формат")
-            ))
-            {
-                _patronymic = value;
-                return;
-            }
-            if (PerformValidation(() => value == string.Empty, new ValidationError(nameof(Patronymic), "Отчество должно быть пустым, либо соответствовать формату")))
-            {
-                _patronymic = null;
-            }
-        }
-
+        get => _patronymic == null ? "" : _patronymic.NameToken;
     }
     public string PassportNumber
     {
         get => _passportNumber;
-        set
-        {
-            if (PerformValidation(
-               () => ValidatorCollection.CheckStringLength(value, 6, 6),
-               new ValidationError(nameof(PassportNumber), "Длина номера паспорта должна быть 6 символов")
-           ))
-            {
-                if (PerformValidation(
-                    () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
-                    new ValidationError(nameof(PassportNumber), "Номер паспорта должен содержать только цифры")
-                ))
-                {
-                    _passportNumber = value;
-                }
-            }
-        }
     }
     public string PassportSeries
     {
         get => _passportSeries;
-        set
-        {
-            if (PerformValidation(
-               () => ValidatorCollection.CheckStringLength(value, 4, 4),
-               new ValidationError(nameof(PassportSeries), "Длина серии паспорта должна быть 4 символа")
-           ))
-            {
-                if (PerformValidation(
-                    () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
-                    new ValidationError(nameof(PassportSeries), "Серия паспорта должна содержать только цифры")
-                ))
-                {
-                    _passportSeries = value;
-                }
-            }
-        }
     }
     public int LegalAddressId
     {
         get => _legalAddress;
     }
 
-    public async Task SetLegalAddressId(int id, ObservableTransaction? scope){
-        bool exists = await AddressModel.IsIdExists(id, scope);
-        if (PerformValidation(
-            () => exists,
-            new DbIntegrityValidationError(nameof(LegalAddressId), "Такой адрес не зарегистрирован"))){
-                _legalAddress = id;
-            }
-    }
-
-
     public RussianCitizenship() : base()
     {
-        RegisterProperty(nameof(Name));
-        RegisterProperty(nameof(Surname));
-        RegisterProperty(nameof(Patronymic));
-        RegisterProperty(nameof(PassportNumber));
-        RegisterProperty(nameof(PassportSeries));
-        RegisterProperty(nameof(LegalAddressId));
-
-        _name = "";
-        _surname = "";
-        _patronymic = "";
-        _passportNumber = "";
-        _passportSeries = "";
-        _id = Utils.INVALID_ID;
 
     }
     public RussianCitizenship(int id) : base(RelationTypes.Bound)
     {
-        _id = id;
-        _name = "";
-        _surname = "";
-        _patronymic = "";
-        _passportNumber = "";
-        _passportSeries = "";
+
     }
 
     public static async Task<RussianCitizenship?> GetById(int id, ObservableTransaction? scope)
@@ -186,9 +93,9 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
             {
                 _passportNumber = (string)cursor["passport_number"],
                 _passportSeries = (string)cursor["passport_series"],
-                _surname = (string)cursor["surname"],
-                _name = (string)cursor["name"],
-                _patronymic = cursor["patronymic"].GetType() == typeof(DBNull) ? null : (string)cursor["patronymic"],
+                _surname = NamePart.Create((string)cursor["surname"]).ResultObject,
+                _name = NamePart.Create((string)cursor["name"]).ResultObject,
+                _patronymic = cursor["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.Create((string)cursor["patronymic"]).ResultObject,
                 _legalAddress = (int)cursor["legal_address"],
             };
         }
@@ -214,9 +121,9 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         }
         command.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
         command.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
-        command.Parameters.Add(new NpgsqlParameter<string>("p3", _surname));
-        command.Parameters.Add(new NpgsqlParameter<string>("p4", _name));
-        command.Parameters.Add(new NpgsqlParameter("p5", _patronymic == null ? DBNull.Value : (string)_patronymic));
+        command.Parameters.Add(new NpgsqlParameter<string>("p3", Surname));
+        command.Parameters.Add(new NpgsqlParameter<string>("p4", Name));
+        command.Parameters.Add(new NpgsqlParameter("p5", _patronymic == null ? DBNull.Value : Patronymic));
         command.Parameters.Add(new NpgsqlParameter<int>("p6", _legalAddress));
 
         await using (conn)
@@ -306,6 +213,58 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     public string GetName()
     {
         return (Surname + " " + Name + " " + Patronymic).TrimEnd();
+    }
+    // переместить валидацию сюда
+    public static Result<RussianCitizenship?> Build(RussianCitizenshipDTO dto){
+        var errors = new List<ValidationError?>();
+        var citizenship = new RussianCitizenship();
+        citizenship._legalAddress = dto.LegalAddressId;
+        var name = NamePart.Create(dto.Name, 40);
+        if (errors.IsValidRule(
+            name.IsSuccess,
+            message: "Имя указано неверно"
+        )){
+            citizenship._name = name.ResultObject;
+        }
+        var surname = NamePart.Create(dto.Surname, 100);
+        if (errors.IsValidRule(
+            surname.IsSuccess,
+            message: "Фамилия указана неверно"
+        )){
+            citizenship._surname = surname.ResultObject;
+        }
+        var patronymic = NamePart.Create(dto.Patronimyc);
+        if (patronymic.IsFailure){
+            patronymic = null;
+        }  
+        if (errors.IsValidRule(
+            patronymic is null ||
+            patronymic.IsSuccess,
+            message: "Имя указано неверно"
+        )){
+            citizenship._patronymic = patronymic.ResultObject;
+        }
+        if (errors.IsValidRule(
+            dto.PassportNumber != null &&
+            dto.PassportNumber.Length == 6 &&
+            dto.PassportNumber.CheckStringPatternD(ValidatorCollection.OnlyDigits),
+            message: "Неверно указан номер паспорта"
+        )){
+            citizenship._passportNumber = dto.PassportNumber;
+        }
+        if (errors.IsValidRule(
+            dto.PassportSeries != null &&
+            dto.PassportSeries.Length == 4 &&
+            dto.PassportSeries.CheckStringPatternD(ValidatorCollection.OnlyDigits),
+            message:"Неверно указана серия паспорта"
+        )){
+            citizenship._passportSeries = dto.PassportSeries;
+        }
+        if (errors.Any()){
+            return Result<RussianCitizenship>.Failure(errors);
+        }
+        return Result<RussianCitizenship>.Success(citizenship);
+         
     }
 
     /*

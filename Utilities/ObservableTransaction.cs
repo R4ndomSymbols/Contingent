@@ -4,7 +4,7 @@ using Npgsql.Internal;
 namespace Utilities;
 
 
-public class ObservableTransaction : IAsyncDisposable {
+public class ObservableTransaction : IAsyncDisposable, IDisposable {
 
     private NpgsqlTransaction _underliedTransaction;
     private NpgsqlConnection _underliedConnection;
@@ -55,5 +55,10 @@ public class ObservableTransaction : IAsyncDisposable {
     public ValueTask DisposeAsync()
     {
         return _underliedTransaction.DisposeAsync();
+    }
+
+    public void Dispose()
+    {
+        _underliedTransaction.Dispose(); 
     }
 }

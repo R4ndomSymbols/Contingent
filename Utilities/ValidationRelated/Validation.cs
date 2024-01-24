@@ -69,6 +69,12 @@ public static class ValidatorCollection {
         }
         return expression.Match(value).Captures.Count > 0;
     }
+    public static bool CheckStringPatternD(this string? value, Regex expression){
+        if (string.IsNullOrWhiteSpace(value) || value==string.Empty){
+            return false;
+        }
+        return expression.Match(value).Captures.Count > 0;
+    }
     public static bool CheckStringPatterns(string? value, IEnumerable<Regex> expressions){
         if (value == null){
             return false;
@@ -102,6 +108,15 @@ public static class ValidatorCollection {
         }
         return res;
     } 
+
+    public static void AppendErrors([NotNull]this IList<ValidationError?> source, IResult result){
+        if(!result.IsSuccess){
+            var errors = result.GetErrors();
+            foreach(var err in errors){
+                source.Add(err);
+            }
+        }
+    }
     public static string ErrorsToString(this IReadOnlyCollection<ValidationError> source){
         return string.Join("\n", source);
     } 

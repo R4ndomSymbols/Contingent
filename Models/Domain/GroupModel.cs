@@ -375,7 +375,7 @@ public class GroupModel : DbValidatedObject
                     speciality.QualificationPostfix +
                     GroupSponsorshipType.Names[_sponsorshipType].postfix +
                     GroupEducationFormat.Names[_eduFormatType].postfix +
-                    (speciality.EducationalLevelIn == (int)StudentEducationalLevelRecord.EducationalLevels.SecondaryGeneralEducation
+                    (speciality.EducationalLevelIn == (int)StudentEducationalLevelRecord.EducationalLevelTypes.SecondaryGeneralEducation
                         ? "/11"
                         : "") +
                     (nextSequenceLetter == null ? "" : ("(" + ((char)nextSequenceLetter).ToString() + ")"));

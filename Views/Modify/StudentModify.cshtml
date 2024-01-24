@@ -292,6 +292,23 @@
             </div>
         </div>
     </div>
+    @{
+        var tags = await StudentEducationalLevelRecord.GetByOwnerId(Model.Id);
+    }
+    <div id="education_levels">
+        @foreach(var t in tags){
+        <div class="d-flex flex-row">
+            <div class="col-4"> 
+                @t.GetLevelName()
+            </div>
+        </div>
+        }
+    </div>
+    <button class="btn btn-primary" id="add_eduction_level">
+        Добавить уровень образования
+    </button>
+
+
     <div class="d-flex flex-row">
         <button id="save" class="mt-4 btn btn-primary">
         Сохранить

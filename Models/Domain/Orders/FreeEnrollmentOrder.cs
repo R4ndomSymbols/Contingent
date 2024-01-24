@@ -136,7 +136,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
     internal override async Task<bool> CheckConductionPossibility()
     {
         if (_moves is null){
-            throw new Exception("Приказ не может быть пустым при вызове:" + nameof(CheckConductionPossibility));
+            throw new Exception("Приказ не может быть пустым при вызове: " + nameof(CheckConductionPossibility));
         }
 
         var conn = await Utils.GetAndOpenConnectionFactory();
@@ -174,7 +174,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
             if (!orderBeforeHasCorrectType || !orderAfterHasCorrectType){
                 return false;
             }
-            var specialityLevel = StudentEducationalLevelRecord.EducationalLevels.NotMentioned;
+            var specialityLevel = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
             var cmd = new NpgsqlCommand(groupQuery, conn);
             cmd.Parameters.Add(new NpgsqlParameter<int>("p1", stm.GroupToId));
             using (cmd){
@@ -189,7 +189,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
                     return false;
                 }
                 specialityLevel = 
-                    (StudentEducationalLevelRecord.EducationalLevels)(int)reader["ln"];
+                    (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["ln"];
             }
             cmd = new NpgsqlCommand(studentQuery, conn);
             cmd.Parameters.Add(new NpgsqlParameter<int>("p1", stm.StudentId));
@@ -201,7 +201,7 @@ public class FreeEnrollmentOrder : FreeEducationOrder
                 reader.Read();
                 // проверка соответствия уровня образования студента и группы
                 var studentLevel = 
-                    (StudentEducationalLevelRecord.EducationalLevels)(int)reader["sm"];
+                    (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["sm"];
                 if (studentLevel<specialityLevel){
                     return false;
                 }

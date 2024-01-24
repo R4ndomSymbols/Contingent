@@ -19,8 +19,8 @@ public class SpecialityModel : DbValidatedObject
     private string _fgosPrefix;
     private string? _qualificationPostfix;
     private int _courseCount;
-    private StudentEducationalLevelRecord.EducationalLevels _levelIn;
-    private StudentEducationalLevelRecord.EducationalLevels _levelOut;
+    private StudentEducationalLevelRecord.EducationalLevelTypes _levelIn;
+    private StudentEducationalLevelRecord.EducationalLevelTypes _levelOut;
     private TeachingDepth.Levels _educationDepth;
     public int Id {
         get => _id;
@@ -123,7 +123,7 @@ public class SpecialityModel : DbValidatedObject
                 {
                     try
                     {
-                        var dummy = (StudentEducationalLevelRecord.EducationalLevels)value;
+                        var dummy = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
                         return true;
                     }
                     catch (InvalidCastException)
@@ -133,7 +133,7 @@ public class SpecialityModel : DbValidatedObject
                 }, new ValidationError(nameof(EducationalLevelIn), "Переданное значение не является допустимым")
             ))
             {
-                _levelIn = (StudentEducationalLevelRecord.EducationalLevels)value;
+                _levelIn = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
             }
         }
     }
@@ -147,7 +147,7 @@ public class SpecialityModel : DbValidatedObject
                 {
                     try
                     {
-                        var dummy = (StudentEducationalLevelRecord.EducationalLevels)value;
+                        var dummy = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
                         return true;
                     }
                     catch (InvalidCastException)
@@ -157,7 +157,7 @@ public class SpecialityModel : DbValidatedObject
                 }, new ValidationError(nameof(EducationalLevelOut), "Переданное значение не является допустимым")
             ))
             {
-                _levelOut = (StudentEducationalLevelRecord.EducationalLevels)value;
+                _levelOut = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
             }
         }
     }
@@ -203,8 +203,8 @@ public class SpecialityModel : DbValidatedObject
         _courseCount = 0;
         _educationDepth = TeachingDepth.Levels.NotMentioned;
         _fgosPrefix = "";
-        _levelIn = StudentEducationalLevelRecord.EducationalLevels.NotMentioned;
-        _levelOut = StudentEducationalLevelRecord.EducationalLevels.NotMentioned;
+        _levelIn = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
+        _levelOut = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
         _qualification = "";
         _qualificationPostfix = "";
     }
@@ -291,8 +291,8 @@ public class SpecialityModel : DbValidatedObject
                     _qualificationPostfix = reader["group_postfix"].GetType() == typeof(DBNull) ? null : (string)reader["group_postfix"],
                     _courseCount = (int)reader["course_count"],
                     _educationDepth = (TeachingDepth.Levels)(int)reader["knowledge_depth"],
-                    _levelIn = (StudentEducationalLevelRecord.EducationalLevels)(int)reader["speciality_in_education_level"],
-                    _levelOut = (StudentEducationalLevelRecord.EducationalLevels)(int)reader["speciality_out_education_level"],
+                    _levelIn = (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["speciality_in_education_level"],
+                    _levelOut = (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["speciality_out_education_level"],
                 };
             }
         }
