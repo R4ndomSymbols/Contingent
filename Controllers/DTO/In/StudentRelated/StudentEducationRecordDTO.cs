@@ -12,5 +12,6 @@ public class StudentEducationRecordDTO{
     
     [JsonRequired]
     public int Level { get; set; }
+    public int StudentId {get; set;}
 
 }

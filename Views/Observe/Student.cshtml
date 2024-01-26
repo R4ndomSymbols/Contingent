@@ -1,7 +1,7 @@
 @using StudentTracking.Models.Domain;
 @using StudentTracking.Models.Domain.Misc;
 @using StudentTracking.Models.Domain.Address;
-@model StudentTracking.Models.Domain.StudentModel
+@model StudentTracking.Controllers.DTO.Out.StudentFullDTO;
 @{
     ViewData["Title"] = "Просмотр";
 }
@@ -10,12 +10,9 @@
         <h5 class="col-4">Номер зачетки</h5>
         <p class="col-4">@Model.GradeBookNumber</p>
     </div>
-     @{
-            string correctDate = Model.DateOfBirth;  
-    }
      <div class="d-flex flex-row">
         <h5 class="col-4">Дата рождения</h5>
-        <p class="col-4">@correctDate</p>
+        <p class="col-4">@Model.DateOfBirth</p>
     </div>
      <div class="d-flex flex-row">
         <h5 class="col-4">Снилс</h5>
@@ -27,11 +24,7 @@
     </div>
      <div class="d-flex flex-row">
         <h5 class="col-4">Пол</h5>
-        @{
-            string genderName = StudentTracking.Models.Domain.Misc.Genders.Names
-                [(StudentTracking.Models.Domain.Misc.Genders.GenderCodes)Model.Gender];
-        }
-        <p class="col-4">@genderName</p>
+        <p class="col-4">@Model.GenderName</p>
     </div>
      <div class="d-flex flex-row">
         <h5 class="col-4">Договор о целевом обучении</h5>
@@ -56,10 +49,10 @@
      <div class="d-flex flex-row">
         <h5 class="col-4">Балл ГИА</h5>
         @{
-            string giaMark = Model.GiaMark == string.Empty ? "Не указан" : Model.GiaMark;
-            string giaMarkDem = Model.GiaDemoExamMark == string.Empty ? "Не указан" : Model.GiaDemoExamMark; 
+            string giaMark = Model.GiaMark is null ? "Не указан" : Model.GiaMark.ToString();
+            string giaMarkDem = Model.GiaDemoExamMark is null ? "Не указан" : Model.GiaDemoExamMark.ToString(); 
         }
-        <p class="col-4">@giaMarkDem</p>
+        <p class="col-4">@giaMark</p>
     </div>
      <div class="d-flex flex-row">
         <h5 class="col-4">Балл ГИА (демэкзамен)</h5>

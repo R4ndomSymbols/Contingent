@@ -1,7 +1,7 @@
 const error_postfix = "_err"
 const tag_select_postfix = "_tag"
 const minimal_tag_id = 1 
-var currentTagId = 1;
+var currentTagId = minimal_tag_id;
 var addresses = [];
 var selectedTags = [];
 var tags = [];
@@ -74,37 +74,39 @@ $("#about_legal_address").click(function () {
         }
     });
 });
-$("#add_eduction_level").click(function () 
+$("#add_education_level").click(function () 
 {  
-
+    var innerSelect = "";
     var levels = document.getElementById("education_levels");
-    levels.innerHTML += 
+    currentTagId++
+    innerSelect += 
     `
         <div class="d-flex flex-row">
         <select id = ${String(currentTagId)+tag_select_postfix}>
     
-    `
-    currentTagId++
+    ` 
     $.each(tags, function (index, value) { 
-        levels.innerHTML+=
+        innerSelect+=
         `
         <option value = "${value.value}">${value.label}</option>
         `     
     });
-    levels.innerHTML+="</select></div>";
+    innerSelect+="</select></div>";
+    levels.innerHTML += innerSelect;
     
 });
 
 function getEducationLevels(){
     var resultArray = []
-    for (let index = currentTagId; index >= minimal_tag_id; index--) {
+    for (let index = currentTagId; index > minimal_tag_id; index--) {
         resultArray.push(
             {
-                level: Number($("#" + String(index)+tag_select_postfix).val())
+                Level: Number($("#" + String(index)+tag_select_postfix).val())
             }
         )
         
     }
+    return resultArray;
 
 }
 
@@ -114,16 +116,19 @@ $("#save").click(function () {
     var legalAddress = $("#LegalAddress").val();
     document.getElementById("ActualAddress_err").innerHTML = "";
     document.getElementById("LegalAddress_err").innerHTML = "";
+    var giaMark = $("#GiaMark").val();
+    var giaDemMark = $("#GiaDemoExamMark").val();
+    var patr = $("#Patronymic").val();
 
     $.ajax({
         type: "POST",
         url: "/students/addcomplex",
         data: JSON.stringify(
         {
-            actAddress: {
+            ActualAddress: {
                 Address : realAddress,
             },
-            student : {
+            Student : {
                 GradeBookNumber: $("#GradeBookNumber").val(),
                 DateOfBirth: $("#DateOfBirth").val(),
                 Gender: Number($("#Gender").val()),
@@ -132,21 +137,21 @@ $("#save").click(function () {
                 TargetAgreementType: Number($("#TargetAgreementType").val()),
                 PaidAgreementType: Number($("#PaidAgreementType").val()),
                 AdmissionScore: $("#AdmissionScore").val(),
-                GiaMark: $("#GiaMark").val(),
-                GiaDemoExamMark: $("#GiaDemoExamMark").val(),
+                GiaMark: giaMark == "" ? null : giaMark,
+                GiaDemoExamMark:  giaDemMark == "" ? null : giaDemMark,
                 RussianCitizenshipId : null
             },
-            factAddress: {
+            FactAddress: {
                 Address : legalAddress,
             },
-            rusCitizenship:{
+            RusCitizenship:{
                 Name: $("#Name").val(),
                 Surname: $("#Surname").val(),
-                Patronymic: $("#Patronymic").val(),
+                Patronymic: patr == "" ? null : patr,
                 PassportNumber: $("#PassportNumber").val(),
                 PassportSeries: $("#PassportSeries").val(),
             },
-            education: getEducationLevels()
+            Education: getEducationLevels()
 
 
         }),
@@ -164,14 +169,15 @@ $("#save").click(function () {
                 $("#RussianCitizenshipId").val(rusId);
             }
             else {
-                $.each(response, function (index, value) { 
-                    var elem = document.getElementById(value.field + error_postfix);
+                var errors = response["errors"]
+                $.each(errors, function (index, value) { 
+                    var elem = document.getElementById(value.frontendFieldName + error_postfix);
                     if (elem != null) {
                         
-                        elem.innerHTML = value.err;
-                        var parentInput = document.getElementById(value.field);
+                        elem.innerHTML = value.messageForUser;
+                        var parentInput = document.getElementById(value.frontendFieldName);
                         if (parentInput != null) {
-                            $("#" + value.field).on("click", function () {
+                            $("#" + value.frontendFieldName).on("click", function () {
                                 elem.innerHTML = "";
                             })
                         }

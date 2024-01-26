@@ -21,7 +21,7 @@ public interface ICitizenship
 
 }
 
-public class RussianCitizenship : DbValidatedObject, ICitizenship
+public class RussianCitizenship : ICitizenship
 {
     // добавить ограничения уникальности некоторых параметров
     private int _legalAddress;
@@ -59,13 +59,10 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     public int LegalAddressId
     {
         get => _legalAddress;
+        set => _legalAddress = value;
     }
 
-    public RussianCitizenship() : base()
-    {
-
-    }
-    public RussianCitizenship(int id) : base(RelationTypes.Bound)
+    private RussianCitizenship() : base()
     {
 
     }
@@ -75,22 +72,26 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         await using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT * FROM rus_citizenship WHERE id = @p1";
         NpgsqlCommand cmd;
-        if (scope!= null){
+        if (scope != null)
+        {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
-        else{
+        else
+        {
             cmd = new NpgsqlCommand(cmdText, conn);
         }
         cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-        await using (cmd){
+        await using (cmd)
+        {
             using var cursor = await cmd.ExecuteReaderAsync();
             if (!cursor.HasRows)
             {
                 return null;
             }
             await cursor.ReadAsync();
-            return new RussianCitizenship(id)
+            return new RussianCitizenship()
             {
+                _id = id,
                 _passportNumber = (string)cursor["passport_number"],
                 _passportSeries = (string)cursor["passport_series"],
                 _surname = NamePart.Create((string)cursor["surname"]).ResultObject,
@@ -102,21 +103,18 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
     }
     public async Task Save(ObservableTransaction? scope)
     {
-
-        if (await GetCurrentState(scope) != RelationTypes.Pending)
-        {
-            return;
-        }
         var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "INSERT INTO rus_citizenship( " +
                         " passport_number, passport_series, surname, name, patronymic, legal_address) " +
                         " VALUES (@p1, @p2, @p3, @p4, @p5, @p6) RETURNING id";
         NpgsqlCommand? command;
-        
-        if (scope!=null){
+
+        if (scope != null)
+        {
             command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-        }        
-        else {
+        }
+        else
+        {
             command = new NpgsqlCommand(cmdText, conn);
         }
         command.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
@@ -133,7 +131,6 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
                 using var reader = await command.ExecuteReaderAsync();
                 await reader.ReadAsync();
                 _id = (int)reader["id"];
-                NotifyStateChanged();
             }
         }
     }
@@ -143,56 +140,24 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         await using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT EXISTS(SELECT id FROM rus_citizenship WHERE id = @p1)";
         NpgsqlCommand cmd;
-        if (scope != null){
+        if (scope != null)
+        {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
-        else{
+        else
+        {
             cmd = new NpgsqlCommand(cmdText, conn);
         }
         cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
         using (cmd)
-        {            
+        {
             using var reader = await cmd.ExecuteReaderAsync();
             await reader.ReadAsync();
             return (bool)reader["exists"];
         }
     }
-    
 
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
-    {
-        var rawCheck = await GetById(_id, scope);
-        if (rawCheck == null)
-        {
-            await using var conn = await Utils.GetAndOpenConnectionFactory();
-            string cmdText = "SELECT id FROM rus_citizenship WHERE passport_number = @p1 AND passport_series = @p2";
-            NpgsqlCommand cmd;
-            if (scope != null){
-                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-            }
-            else{
-                cmd = new NpgsqlCommand(cmdText, conn);
-            }
-            cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
-            cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
-
-            await using (cmd)
-            {
-                await using var reader = await cmd.ExecuteReaderAsync();
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-                await reader.ReadAsync();
-                _id = (int)reader["id"];
-                NotifyStateChanged();
-                return this;
-            }
-        }
-        return rawCheck;
-    }
-
-    public override bool Equals(IDbObjectValidated? other)
+    public override bool Equals(object? other)
     {
         if (other == null)
         {
@@ -215,56 +180,76 @@ public class RussianCitizenship : DbValidatedObject, ICitizenship
         return (Surname + " " + Name + " " + Patronymic).TrimEnd();
     }
     // переместить валидацию сюда
-    public static Result<RussianCitizenship?> Build(RussianCitizenshipDTO dto){
+    public static Result<RussianCitizenship?> Build(RussianCitizenshipDTO? dto)
+    {
         var errors = new List<ValidationError?>();
         var citizenship = new RussianCitizenship();
+        if (dto is null)
+        {
+            return Result<RussianCitizenship>.Failure(new ValidationError(nameof(dto), "Непределенная модель гражданства"));
+        }
         citizenship._legalAddress = dto.LegalAddressId;
         var name = NamePart.Create(dto.Name, 40);
         if (errors.IsValidRule(
             name.IsSuccess,
-            message: "Имя указано неверно"
-        )){
+            message: "Имя указано неверно",
+            propName: nameof(Name)
+        ))
+        {
             citizenship._name = name.ResultObject;
         }
         var surname = NamePart.Create(dto.Surname, 100);
         if (errors.IsValidRule(
             surname.IsSuccess,
-            message: "Фамилия указана неверно"
-        )){
+            message: "Фамилия указана неверно",
+            propName: nameof(Surname)
+        ))
+        {
             citizenship._surname = surname.ResultObject;
         }
-        var patronymic = NamePart.Create(dto.Patronimyc);
-        if (patronymic.IsFailure){
-            patronymic = null;
-        }  
-        if (errors.IsValidRule(
-            patronymic is null ||
-            patronymic.IsSuccess,
-            message: "Имя указано неверно"
-        )){
-            citizenship._patronymic = patronymic.ResultObject;
+        if (dto.Patronimyc is null)
+        {
+            citizenship._patronymic = null;
         }
+        else
+        {
+            var patronymic = NamePart.Create(dto.Patronimyc);
+            if (errors.IsValidRule(
+                patronymic.IsSuccess,
+                message: "Отчество указано неверно",
+                propName: nameof(Patronymic)
+            ))
+            {
+                citizenship._patronymic = patronymic.ResultObject;
+            }
+        }
+
         if (errors.IsValidRule(
             dto.PassportNumber != null &&
             dto.PassportNumber.Length == 6 &&
             dto.PassportNumber.CheckStringPatternD(ValidatorCollection.OnlyDigits),
-            message: "Неверно указан номер паспорта"
-        )){
+            message: "Неверно указан номер паспорта",
+            propName: nameof(PassportNumber)
+        ))
+        {
             citizenship._passportNumber = dto.PassportNumber;
         }
         if (errors.IsValidRule(
             dto.PassportSeries != null &&
             dto.PassportSeries.Length == 4 &&
             dto.PassportSeries.CheckStringPatternD(ValidatorCollection.OnlyDigits),
-            message:"Неверно указана серия паспорта"
-        )){
+            message: "Неверно указана серия паспорта",
+            propName: nameof(PassportSeries)
+        ))
+        {
             citizenship._passportSeries = dto.PassportSeries;
         }
-        if (errors.Any()){
+        if (errors.Any())
+        {
             return Result<RussianCitizenship>.Failure(errors);
         }
         return Result<RussianCitizenship>.Success(citizenship);
-         
+
     }
 
     /*

@@ -1,9 +1,11 @@
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.SQL;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -13,7 +15,7 @@ using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain;
 
-public class StudentModel : DbValidatedObject
+public class StudentModel
 {
 
     private int _id;
@@ -36,218 +38,151 @@ public class StudentModel : DbValidatedObject
     public string Snils
     {
         get => _snils;
-        set
-        {
-            if (PerformValidation(
-            
-            () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.Snils)
-            , new ValidationError(nameof(Snils), "Неверный формат СНИЛС")))
-            {
-                _snils = value;
-            }
-        }
+    }
+    public string Inn
+    {
+        get => _inn;
+    }
+    public DateTime DateOfBirth
+    {
+        get => _dateOfBirth;
+    }
+    public decimal AdmissionScore  {
+        get => Math.Round(_admissionScore, 2);
+    }
+    public string GradeBookNumber  {
+        get => _gradeBookNumber;
+    }
+    public Genders.GenderCodes Gender {
+        get => _gender;
     }
 
-    public async Task SetActualAddress(int addressId, ObservableTransaction? scope){
-        bool exists = await AddressModel.IsIdExists(addressId, scope);
+    public TargetEduAgreement.Types TargetAgreementType {
+        get => _targetAgreementType;
+    }
+    public int? GiaMark {
+        get => _giaMark;
+    }
+    public int? GiaDemoExamMark {
+        get => _giaDemoExamMark;
+    }
+    public PaidEduAgreement.Types PaidAgreementType {
+        get => _paidAgreementType;
+    }
 
-        if (PerformValidation(
-                () => exists, new DbIntegrityValidationError(nameof(ActualAddressId), "Неверно заданный адрес"))
-        ){
-            _actualAddress = addressId;
-        }
+    public int? RussianCitizenshipId  {
+        get => _russianCitizenshipId;
+        set => _russianCitizenshipId = value;
     }
     public int? ActualAddressId
     {
         get => _actualAddress;
-    }
-    public async Task SetRussianCitizenshipId(int id, ObservableTransaction? scope){
-        bool exists = await RussianCitizenship.IsIdExists(id, scope);
-        if (PerformValidation(
-            () => exists, 
-            new DbIntegrityValidationError(nameof(RussianCitizenshipId), "Указанное гражданство не зарегистрировано"))
-        )
-        {
-            _russianCitizenshipId = id;
-        }
+        set => _actualAddress = value; 
     }
 
-    public string Inn
+    private StudentModel()
     {
-        get => _inn;
-        set
+
+    }
+    public static Result<StudentModel?> Build(StudentDTO? dto){
+        if (dto is null){
+            return Result<StudentModel>.Failure(new ValidationError(nameof(dto), "Пустая модель студента"));
+        }
+        var model = new StudentModel();
+        var errors = new List<ValidationError>();
+        // инн и снилс должны быть уникальны в базе
+        if (errors.IsValidRule(
+            dto.Snils.CheckStringPatternD(ValidatorCollection.Snils),
+            message: "Неверный формат СНИЛС",
+            propName: nameof(Snils)))
         {
-            if (PerformValidation(
-            () =>
-            ValidatorCollection.CheckStringLength(value, 12, 12) ||
-            ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits)
-            , new ValidationError(nameof(Inn), "Неверный формат ИНН")))
-            {
-                _inn = value;
+            model._snils = dto.Snils;
+        }
+        if (errors.IsValidRule(
+            dto.Inn.CheckStringPatternD(ValidatorCollection.OnlyDigits) ||
+            dto.Inn.Length == 12,
+            message: "Неверный формат ИНН",
+            propName: nameof(Inn)
+        )){
+            model._inn = dto.Inn;
+        }
+        if (errors.IsValidRule(
+            Utils.TryParseDate(dto.DateOfBirth),
+            message: "Недопустимая дата рождения",
+            propName: nameof(DateOfBirth)
+        )){
+            model._dateOfBirth = Utils.ParseDate(dto.DateOfBirth);
+        }
+        if (errors.IsValidRule(
+            dto.AdmissionScore.CheckStringPatternD(ValidatorCollection.DecimalFormat) ||
+            dto.AdmissionScore.CheckStringPatternD(ValidatorCollection.OnlyDigits),
+            message: "Неверный формат вступительного балла",
+            propName: nameof(AdmissionScore)
+        )){
+            var admScore = Math.Round(decimal.Parse(dto.AdmissionScore),2);
+            if (errors.IsValidRule(
+                admScore >= 3 && admScore <= 5,
+                message: "Неверное значение вступительного балла",
+                propName: nameof(AdmissionScore)
+            )){
+                model._admissionScore = admScore;
             }
         }
-    }
-    public string DateOfBirth
-    {
-        get => Utils.FormatDateTime(_dateOfBirth);
-        set
-        {
-            if (PerformValidation(
-            () => Utils.TryParseDate(value), new ValidationError(nameof(DateOfBirth), "Неверный формат даты либо дата некорректна")))
-            {
-                _dateOfBirth = Utils.ParseDate(value);
-            }
+        if (errors.IsValidRule(
+            dto.GradeBookNumber != null &&
+            dto.GradeBookNumber.CheckStringPatternD(ValidatorCollection.OnlyDigits) &&
+            dto.GradeBookNumber.Length >= 1 && dto.GradeBookNumber.Length <= 6,
+            message: "Неверный номер зачетки",
+            propName: nameof(GradeBookNumber)
+        )){
+            model._gradeBookNumber = dto.GradeBookNumber;
         }
-    }
-    public string AdmissionScore  {
-        get => Math.Round(_admissionScore, 2).ToString();
-        set
-        {
-            if (PerformValidation(
-            () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.DecimalFormat)
-            || ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits),
-            new ValidationError(nameof(AdmissionScore), "Неверный формат среднего балла")))
-            {
-                decimal got = Math.Round(decimal.Parse(value),2);
-                if (PerformValidation(() => ValidatorCollection.CheckRange(got, 3m, 5m),
-                new ValidationError(nameof(AdmissionScore), "Неверное значение среднего балла"))){
-                    _admissionScore = got;
-                }
-                
-            }
+        if (errors.IsValidRule(
+            Enum.TryParse(typeof(Genders.GenderCodes), dto.Gender.ToString(), out object? t),
+            message: "Неверный пол",
+            propName: nameof(Gender)
+        )){
+            model._gender = (Genders.GenderCodes)dto.Gender;
         }
-    }
-    public int? RussianCitizenshipId  {
-        get => _russianCitizenshipId;
-    }
-    public string GradeBookNumber  {
-        get => _gradeBookNumber;
-        set
-        {
-            if (PerformValidation(
-            () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyDigits) &&
-                    ValidatorCollection.CheckStringLength(value, 1, 6),
-            new ValidationError(nameof(GradeBookNumber), "Неверный формат номера в поименной книге")))
-            {
-                _gradeBookNumber = value;
-            }
+        if (errors.IsValidRule(
+            Enum.TryParse(typeof(TargetEduAgreement.Types), dto.TargetAgreementType.ToString(), out object? t1) ,
+            message: "Неверно указан тип договора о целевом обучении",
+            propName: nameof(TargetAgreementType)
+        )){
+            model._targetAgreementType = (TargetEduAgreement.Types)dto.TargetAgreementType;
         }
-    }
-    public int Gender {
-        get => (int)_gender;
-        set
-        {
-            if (PerformValidation(
-            () => Enum.TryParse(typeof(Genders.GenderCodes), value.ToString(), out object? t),
-            new ValidationError(nameof(Gender), "Неверный пол")))
-            {
-                _gender = (Genders.GenderCodes)value;
-            }
+        if(errors.IsValidRule(
+            dto.GiaMark == null || 
+            (int.TryParse(dto.GiaMark, out int mark) && mark >= 3 && mark <= 5),
+            message: "Неверно указана оценка ГИА",
+            propName: nameof(GiaMark) 
+        )){
+            model._giaMark = dto.GiaMark is null ? null : int.Parse(dto.GiaMark);
+        }
+        if(errors.IsValidRule(
+            dto.GiaDemoExamMark == null || 
+            (int.TryParse(dto.GiaDemoExamMark, out int dmark) && dmark >= 3 && dmark <= 5),
+            message: "Неверно указана оценка демонстрационного экзамена",
+            propName: nameof(GiaDemoExamMark) 
+        )){
+            model._giaDemoExamMark = dto.GiaDemoExamMark is null ? null : int.Parse(dto.GiaDemoExamMark);
+        }
+        if (errors.IsValidRule(
+            Enum.TryParse(typeof(PaidEduAgreement.Types), dto.PaidAgreementType.ToString(), out object? t2),
+            message: "Неверно указан тип договора о платном обучении",
+            propName: nameof(PaidAgreementType)
+        )){
+            model._paidAgreementType = (PaidEduAgreement.Types)dto.PaidAgreementType;
+        }
+        if (errors.Any()){
+            return Result<StudentModel>.Failure(errors);
+        }
+        else {
+            return Result<StudentModel>.Success(model);
         }
     }
 
-    public int TargetAgreementType {
-        get => (int)_targetAgreementType;
-        set
-        {
-            if (PerformValidation(
-            () => Enum.TryParse(typeof(TargetEduAgreement.Types), value.ToString(), out object? t),
-            new ValidationError(nameof(TargetAgreementType), "Неверный тип договора о целевом обучении")))
-            {
-                _targetAgreementType = (TargetEduAgreement.Types)value;
-            }
-        }
-    }
-    public string GiaMark {
-        get => _giaMark == null ? "" : ((int)_giaMark).ToString();
-        set
-        {
-            if (PerformValidation(
-                () => int.TryParse(value, out int mark),
-                new ValidationError(nameof(GiaMark), "Неверный формат оценки ГИА")))
-            {
-                if (PerformValidation (
-                    () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                    new ValidationError(nameof(GiaMark), "Неверное значение оценки ГИА"))
-                ){
-                    _giaMark = int.Parse(value);
-                }
-            } else {
-                if (PerformValidation (
-                    () => value == string.Empty,
-                    new ValidationError(nameof(GiaMark), "Недопустимое значение оценки"))
-                ){
-                    _giaMark = null;
-                }
-            }
-                
-            
-        }
-    }
-    public string GiaDemoExamMark {
-        get => _giaDemoExamMark == null ? "" : ((int)_giaDemoExamMark).ToString();
-        set
-        {
-            if (PerformValidation(
-                () => int.TryParse(value, out int mark),
-                new ValidationError(nameof(GiaDemoExamMark), "Неверный формат оценки ГИА")))
-            {
-                if (PerformValidation (
-                    () => ValidatorCollection.CheckRange(int.Parse(value),3,5),
-                    new ValidationError(nameof(GiaDemoExamMark), "Неверное значение оценки ГИА"))
-                ){
-                    _giaDemoExamMark = int.Parse(value);
-                }
-            } else {
-                if (PerformValidation (
-                    () => value == string.Empty,
-                    new ValidationError(nameof(GiaDemoExamMark), "Недопустимое значение оценки"))
-                ){
-                    _giaDemoExamMark = null;
-                }
-            }
-        }
-    }
-    public int PaidAgreementType {
-        get => (int)_paidAgreementType;
-        set
-        {
-            if (PerformValidation(
-            () => Enum.TryParse(typeof(PaidEduAgreement.Types), value.ToString(), out object? t),
-            new ValidationError(nameof(PaidAgreementType), "Неверный тип договора о целевом обучении")))
-            {
-                _paidAgreementType = (PaidEduAgreement.Types)value;
-            }
-        }
-    }
 
-    public StudentModel() : base()
-    {
-        RegisterProperty(nameof(GradeBookNumber));
-        RegisterProperty(nameof(DateOfBirth));
-        RegisterProperty(nameof(Gender));
-        RegisterProperty(nameof(Snils));
-        RegisterProperty(nameof(Inn));
-        RegisterProperty(nameof(PaidAgreementType));
-        RegisterProperty(nameof(TargetAgreementType));
-        RegisterProperty(nameof(AdmissionScore));
-        RegisterProperty(nameof(GiaMark));
-        RegisterProperty(nameof(GiaDemoExamMark));
-        RegisterProperty(nameof(ActualAddressId));
-        RegisterProperty(nameof(RussianCitizenshipId));
-
-        _id = -1;
-        _actualAddress = Utils.INVALID_ID;
-        _dateOfBirth = DateTime.Today;
-        _giaMark = null;
-        _giaDemoExamMark = null;
-        _gender = Genders.GenderCodes.Undefinned;
-        _paidAgreementType = PaidEduAgreement.Types.NotMentioned;
-        _targetAgreementType = TargetEduAgreement.Types.NotMentioned;
-        _snils = "";
-        _inn = "";
-        _gradeBookNumber = "";
-    }
     public static async Task<IReadOnlyCollection<StudentModel>> FindStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<StudentModel>(
@@ -363,14 +298,10 @@ public class StudentModel : DbValidatedObject
     {
         await using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
 
-        if (await GetCurrentState(scope) != RelationTypes.Pending){
-            return;
-        }
-
         var cmdText = "INSERT INTO students( " +
             "snils, inn, actual_address, date_of_birth, rus_citizenship_id, " +
-            "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score, displayed_name) " +
-            "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13) RETURNING id";
+            "gender, grade_book_number, target_education_agreement, gia_mark, gia_demo_exam_mark, paid_education_agreement, admission_score) " +
+            "VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12) RETURNING id";
         
         NpgsqlCommand cmd;
         if (scope!= null){
@@ -393,39 +324,12 @@ public class StudentModel : DbValidatedObject
         cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
-        var rCitizenship = await RussianCitizenship.GetById((int)_russianCitizenshipId,scope);
-        cmd.Parameters.Add(new NpgsqlParameter<string>("p13", rCitizenship.GetName()));
 
         await using (cmd){
             using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
-            NotifyStateChanged();
+            await reader.ReadAsync();;
             _id = (int)reader["id"];
         }
-    }
-
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? stateWithin)
-    {
-        var rawCheck = await GetStudentById(_id);
-        if (rawCheck == null){
-
-            var conn = await Utils.GetAndOpenConnectionFactory();
-            string cmdText = "SELECT id FROM students WHERE inn = @p1";
-            NpgsqlCommand cmd = new NpgsqlCommand (cmdText, conn);
-            cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _inn));
-
-            using (conn)
-            using (cmd){
-                await using var reader = cmd.ExecuteReader();
-                await reader.ReadAsync();
-                if (!reader.HasRows){
-                    return null;
-                }
-                _id = (int)reader["id"];
-                return this;
-            }
-        }
-        return rawCheck;
     }
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
 
@@ -464,7 +368,7 @@ public class StudentModel : DbValidatedObject
     }  
 
 
-    public override bool Equals(IDbObjectValidated? other)
+    public override bool Equals(object? other)
     {
         if (other == null){
             return false;

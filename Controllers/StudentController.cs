@@ -26,37 +26,44 @@ public class StudentController : Controller
     [HttpGet]
     [Route("students/modify/{query}")]
     public async Task<IActionResult> ProcessStudent(string query)
-    {   
-        if (query == "new"){
-            return View(@"Views/Modify/StudentModify.cshtml", new StudentModel());
+    {
+        if (query == "new")
+        {
+            return View(@"Views/Modify/StudentModify.cshtml", new StudentFullDTO());
         }
-        if (int.TryParse(query, out int id)){
+        if (int.TryParse(query, out int id))
+        {
             StudentModel? student = await StudentModel.GetStudentById(id);
-            if (student == null){
+            if (student == null)
+            {
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
             return View(@"Views/Modify/StudentModify.cshtml", student);
         }
-        else{
+        else
+        {
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
         }
-        
+
     }
     [HttpGet]
     [Route("students/view/{query}")]
     public async Task<IActionResult> ViewStudent(string query)
-    {   
-        if (int.TryParse(query, out int id)){
+    {
+        if (int.TryParse(query, out int id))
+        {
             StudentModel? student = await StudentModel.GetStudentById(id);
-            if (student == null){
+            if (student == null)
+            {
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
             return View(@"Views/Observe/Student.cshtml", student);
         }
-        else{
+        else
+        {
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
         }
-        
+
     }
     // сначала идет адрес
     // затем студент,
@@ -65,103 +72,88 @@ public class StudentController : Controller
 
     [HttpPost]
     [Route("students/addcomplex")]
-    public async Task<IActionResult> AddComplex(){
+    public async Task<IActionResult> AddComplex()
+    {
         using var reader = new StreamReader(Request.Body);
         string jsonString = await reader.ReadToEndAsync();
         StudentComplexDTO? dto = null;
-        try {
+        try
+        {
             dto = JsonSerializer.Deserialize<StudentComplexDTO>(jsonString);
         }
-        catch (Exception){
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
             return BadRequest("Неверный формат данных");
         }
-        if (dto is null){
+        if (dto is null)
+        {
             return BadRequest("Ошибка десериализации");
         }
         using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
         using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
+        // реальный адрес проживания
+        var actualAddressResult = AddressModel.Build(dto.ActualAddress);
+        // прописка
+        var factAddressResult = AddressModel.Build(dto.FactAddress);
+        var rusCitizenshipResult = RussianCitizenship.Build(dto.RusCitizenship);
+        var studentResult = StudentModel.Build(dto.Student);
+        var studentTagsResults = dto.Education.Select(x => StudentEducationalLevelRecord.Create(x));
+
         
-        var actualAddress = AddressModel.Build(dto.ActualAddress);
-        var factAddress = AddressModel.Build(dto.FactAddress);
-        var rusCitizenship = RussianCitizenship.
-
-
-        IEnumerable<ValidationError> cumulativeErrors = new List<ValidationError>();
-
-
-
-            var actualAddress = JsonSerializer.Deserialize<AddressStringJSON>(actualAddressPart);
-            var actualAddressObject = AddressModel.BuildFromString(actualAddress?.Address);
-            if (actualAddressObject != null){
-                if (actualAddressObject.CheckErrorsExist()){
-                    cumulativeErrors = cumulativeErrors.Union(actualAddressObject.GetErrors());
-                }
-                else{
-                    await actualAddressObject.Save(savingTransaction);
-                }
+        if (ResultHelper.AnyFailure(actualAddressResult, factAddressResult, rusCitizenshipResult, studentResult) || studentTagsResults.Any(x => x.IsFailure))
+        {   
+            var errors = ResultHelper.MergeErrors(actualAddressResult, factAddressResult, rusCitizenshipResult, studentResult).ToList();
+            if (studentTagsResults.Any(x => x.IsFailure)){
+                errors.AddRange(studentTagsResults.Where(x => x.IsFailure).First().Errors);
             }
-            var legalAddress = JsonSerializer.Deserialize<AddressStringJSON>(legalAddressPart);
-            var legalAddressObject = AddressModel.BuildFromString(actualAddress?.Address);
-            if (legalAddressObject !=  null){
-                if (legalAddressObject.CheckErrorsExist()){
-                    cumulativeErrors = cumulativeErrors.Union(legalAddressObject.GetErrors());
-                }
-                else{
-                    await legalAddressObject.Save(savingTransaction);
-                }
-            }
-            var rusCitizenship = JsonSerializer.Deserialize<RussianCitizenship>(russianCitizenshipPart);
-            if (rusCitizenship is not null){
-                if (rusCitizenship.CheckErrorsExist()){
-                    cumulativeErrors = cumulativeErrors.Union(rusCitizenship.GetErrors());
-                }
-                else{
-                    if (legalAddressObject!=null){
-                        if (await legalAddressObject.GetCurrentState(savingTransaction) == RelationTypes.Bound){
-                            await rusCitizenship.SetLegalAddressId(legalAddressObject.Id, savingTransaction);
-                            await rusCitizenship.Save(savingTransaction);
-
-                        }
-                    }
-                }
-            }
-            var student = JsonSerializer.Deserialize<StudentModel>(studentPart);
-            if (student != null){
-                if (student.CheckErrorsExist()){
-                    cumulativeErrors = cumulativeErrors.Union(student.GetErrors());
-                }
-                else{
-                    if (actualAddressObject != null && rusCitizenship!= null){
-                        if (await actualAddressObject.GetCurrentState(savingTransaction) == RelationTypes.Bound
-                        && await rusCitizenship.GetCurrentState(savingTransaction) == RelationTypes.Bound){
-                            await student.SetActualAddress(actualAddressObject.Id, savingTransaction);
-                            await student.SetRussianCitizenshipId(rusCitizenship.Id, savingTransaction);
-                            await student.Save(savingTransaction);
-                            
-                        }
-                    }
-                }
-            }
+            var err = new ErrorsDTO(errors);
             
-            if (cumulativeErrors.Any()){
-                await savingTransaction.RollbackAsync();
-                return Json(cumulativeErrors);
-            }
-            else{
-                await savingTransaction.CommitAsync();
-                return Json(new {
-                    ActualAddressId = actualAddressObject?.Id ?? 0,
-                    StudentId = student?.Id ?? 0,
-                    LegalAddressId = legalAddressObject?.Id ?? 0,
-                    RussianCitizenshipId = rusCitizenship?.Id ?? 0
+            return Json(err);
+        }
+        var actualAddress = actualAddressResult.ResultObject;
+        var factAddress = factAddressResult.ResultObject;
+        var rusCitizenship = rusCitizenshipResult.ResultObject;
+        var student = studentResult.ResultObject;
+        var tags = studentTagsResults.Select(x => x.ResultObject);
 
-                });
+        try
+        {
+            await actualAddress.Save(savingTransaction);
+            await factAddress.Save(savingTransaction);
+
+            rusCitizenship.LegalAddressId = factAddressResult.ResultObject.Id;
+            await rusCitizenship.Save(savingTransaction);
+
+            student.ActualAddressId = actualAddressResult.ResultObject.Id;
+            student.RussianCitizenshipId = rusCitizenship.Id;
+            await student.Save(savingTransaction);
+
+            foreach (var tag in tags){
+                await tag.SaveRecord(savingTransaction);
             }
         }
+        catch (Exception e)
+        {
+            await savingTransaction.RollbackAsync();
+            return Json(new ErrorsDTO(new ValidationError("general", e.Message)));
+        }
+        await savingTransaction.CommitAsync();
+        return Json(new
+        {
+            ActualAddressId = actualAddress.Id,
+            StudentId = student.Id,
+            LegalAddressId = factAddress.Id,
+            RussianCitizenshipId = rusCitizenship.Id
+
+        });
+
     }
+
     [HttpGet]
     [Route("students/tags")]
-    public IActionResult GetTags(){
+    public IActionResult GetTags()
+    {
         var tags = EducationLevel.GetAllLevels().Select(x => new EducationalLevelRecordDTO(x));
         return Json(tags);
     }

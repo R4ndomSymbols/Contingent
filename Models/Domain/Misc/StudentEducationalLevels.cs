@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml.Serialization;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Misc;
@@ -13,34 +14,42 @@ public class StudentEducationalLevelRecord : EducationLevel{
        
     }
 
-    public int OwnerId { get; init; }
+    public int OwnerId { get; set; }
     public EducationalLevelTypes Recorded {get; init;} 
 
-    public async Task<Result<StudentEducationalLevelRecord?>> Create(int studentId, int typeRecorded){
-        if (!await StudentModel.IsIdExists(studentId, null)){
-            return Result<StudentEducationalLevelRecord>.Failure(new ValidationError(nameof(OwnerId), "Студента не существует"));
+    public static Result<StudentEducationalLevelRecord?> Create(StudentEducationRecordDTO dto){
+        if (dto == null){
+            return Result<StudentEducationalLevelRecord>.Failure(new ValidationError("general", "DTO не может быть null"));
         }
-        if (!Enum.TryParse(typeof(EducationalLevelTypes), typeRecorded.ToString(), out object? parsed)){
+        if (!Enum.TryParse(typeof(EducationalLevelTypes), dto.Level.ToString(), out object? parsed)){
             return Result<StudentEducationalLevelRecord>.Failure(new ValidationError(nameof(Recorded), "Неверный тип записи об обучении"));
         }
-        var created = new StudentEducationalLevelRecord((EducationalLevelTypes)typeRecorded){OwnerId = studentId};
-        var byStudent = await GetByOwnerId(studentId);
-        // один и тот же тег не может быть записан на студента дважды
-        if (byStudent.Any(x => x == created)){
-            return Result<StudentEducationalLevelRecord>.Failure(new ValidationError("Такая запись уже существует"));
-        }
+        var created = new StudentEducationalLevelRecord((EducationalLevelTypes)dto.Level){OwnerId = dto.StudentId};
+       
         return Result<StudentEducationalLevelRecord>.Success(created);
     }
 
-    public async Task SaveRecord(){
+    public async Task SaveRecord(ObservableTransaction? scope = null){
 
+        var byStudent = await GetByOwnerId(OwnerId);
+        // один и тот же тег не может быть записан на студента дважды
+        if (byStudent.Any(x => x == this)){
+            throw new Exception("Такая запись об образовании уже существует");
+        }
+        var cmdText = "INSERT INTO education_tag_history( " +
+                " student_id, level_code) VALUES (@p1, @p2)";
+        NpgsqlCommand cmd;
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        using var command = new NpgsqlCommand("INSERT INTO education_tag_history( " +
-                " student_id, level_code) VALUES (@p1, @p2)", conn);
-        command.Parameters.Add(new NpgsqlParameter<int>("p1", OwnerId));
-        command.Parameters.Add(new NpgsqlParameter<int>("p2", (int)Recorded));
+        if (scope is null){
+            cmd = new NpgsqlCommand(cmdText, conn); 
+        }
+        else {
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", OwnerId));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)Recorded));
 
-        await command.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync();
     }
     public static async Task<IReadOnlyCollection<StudentEducationalLevelRecord>> GetByOwnerId(int ownerId){
         using var conn = await Utils.GetAndOpenConnectionFactory();

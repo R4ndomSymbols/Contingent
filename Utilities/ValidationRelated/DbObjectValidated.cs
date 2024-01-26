@@ -170,10 +170,6 @@ public class DbValidatedObject : IDbObjectValidated
         if (_synced){
             return;
         }
-        if (this.GetType() == typeof(RussianCitizenship)){
-            var tmp = (RussianCitizenship)this;
-            Console.WriteLine("this " + tmp.Id + " " + tmp.PassportNumber + " " + tmp.PassportSeries);
-        }
 
         //Console.WriteLine(this.GetType().ToString() + " " + ValidationProperlyInvoked.ToString() + " " + CheckErrorsExist().ToString());
         //Console.WriteLine(string.Join("\n", _invokationLog.Select(x => x.Key + " " + x.Value.ToString())));

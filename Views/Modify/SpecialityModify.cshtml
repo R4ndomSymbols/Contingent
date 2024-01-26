@@ -92,25 +92,25 @@
     </div>
     <div class="d-flex flex-row">
          <select id = "EducationalLevelIn" class="col-5">
-            @foreach(var i in StudentEducationalLevelRecord.Names){
-                int asInt = (int)i.Key;  
-                if (asInt == Model.EducationalLevelIn){
-                    <option value="@asInt" selected> @i.Value </option>
+            @foreach(var i in StudentEducationalLevelRecord.GetAllLevels()){
+                var level = (int)i.Level;
+                if (level == Model.EducationalLevelIn){
+                    <option value="@level" selected> @i.GetLevelName() </option>
                 }
                 else{
-                    <option value="@asInt">@i.Value </option>
+                    <option value="@level">@i.GetLevelName() </option>
                 }
             }
         </select>
         <div class="col-1 mx-0"></div>
         <select id = "EducationalLevelOut" class="col-5">
-            @foreach(var i in StudentEducationalLevelRecord.Names){
-                int asInt = (int)i.Key;  
-                if (asInt == Model.EducationalLevelOut){
-                    <option value="@asInt" selected> @i.Value </option>
+             @foreach(var i in StudentEducationalLevelRecord.GetAllLevels()){
+                var level = (int)i.Level;
+                if (level == Model.EducationalLevelOut){
+                    <option value="@level" selected> @i.GetLevelName() </option>
                 }
                 else{
-                    <option value="@asInt">@i.Value </option>
+                    <option value="@level">@i.GetLevelName() </option>
                 }
             }
         </select>

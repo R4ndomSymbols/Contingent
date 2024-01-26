@@ -1,5 +1,6 @@
 namespace StudentTracking.Models.Domain.Address;
 
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.JSON;
@@ -526,19 +527,19 @@ public class AddressModel : DbValidatedObject
 
 
 
-    public async Task<bool> Save(ObservableTransaction scope)
+    public async Task Save(ObservableTransaction scope)
     {
 
         if (CheckErrorsExist())
         {
-            return false;
+            throw new Exception("Проблема при сохранении Адреса");
         }
         else
         {
             if (_subjectPart == null || _districtPart == null || _settlementPart == null ||
                 _streetPart == null || _buildingPart == null)
             {
-                return false;
+               throw new Exception("Проблема при сохранении Адреса - одна из частей не указана");
             }
 
             await _subjectPart.Save(scope);
@@ -617,7 +618,7 @@ public class AddressModel : DbValidatedObject
                 };
                 NotifyStateChanged();
             }
-            return true;
+            return;
         }
     }
 

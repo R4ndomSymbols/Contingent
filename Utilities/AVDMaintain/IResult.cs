@@ -6,4 +6,5 @@ public interface IResult {
     public IReadOnlyCollection<ValidationError>? GetErrors();
 
     public bool IsSuccess {get;} 
+    public bool IsFailure {get;} 
 }
