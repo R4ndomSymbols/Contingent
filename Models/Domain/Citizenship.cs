@@ -135,7 +135,7 @@ public class RussianCitizenship : ICitizenship
         }
     }
 
-    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
+    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope = null)
     {
         await using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT EXISTS(SELECT id FROM rus_citizenship WHERE id = @p1)";
@@ -181,13 +181,18 @@ public class RussianCitizenship : ICitizenship
     }
     // переместить валидацию сюда
     public static Result<RussianCitizenship?> Build(RussianCitizenshipDTO? dto)
-    {
-        var errors = new List<ValidationError?>();
-        var citizenship = new RussianCitizenship();
+    {  
         if (dto is null)
         {
             return Result<RussianCitizenship>.Failure(new ValidationError(nameof(dto), "Непределенная модель гражданства"));
         }
+        var errors = new List<ValidationError?>();
+        var citizenship = new RussianCitizenship();
+
+        if (dto.Id != null){
+            citizenship._id = (int)dto.Id;
+        }
+
         citizenship._legalAddress = dto.LegalAddressId;
         var name = NamePart.Create(dto.Name, 40);
         if (errors.IsValidRule(
@@ -207,13 +212,13 @@ public class RussianCitizenship : ICitizenship
         {
             citizenship._surname = surname.ResultObject;
         }
-        if (dto.Patronimyc is null)
+        if (dto.Patronymic is null)
         {
             citizenship._patronymic = null;
         }
         else
         {
-            var patronymic = NamePart.Create(dto.Patronimyc);
+            var patronymic = NamePart.Create(dto.Patronymic);
             if (errors.IsValidRule(
                 patronymic.IsSuccess,
                 message: "Отчество указано неверно",
@@ -251,27 +256,29 @@ public class RussianCitizenship : ICitizenship
         return Result<RussianCitizenship>.Success(citizenship);
 
     }
+    public async Task Update(ObservableTransaction? scope = null){
+        using var conn = await Utils.GetAndOpenConnectionFactory(); 
+        var cmdText = "UPDATE public.rus_citizenship " +
+	    " SET passport_number=@p1, passport_series=@p2, " + 
+        " surname=@p3, name=@p4, patronymic=@p5, legal_address=@p6" + 
+	    " WHERE id = @p7";
+        NpgsqlCommand cmd;
+        if (scope is null){
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _passportNumber));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _passportSeries));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _surname.NameToken));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p4", _name.NameToken));
+        cmd.Parameters.Add(new NpgsqlParameter("p5", _patronymic?.NameToken is null ? DBNull.Value : _patronymic.NameToken));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", _legalAddress));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", _id));
 
-    /*
-
-                using (var command = new NpgsqlCommand("UPDATE rus_citizenship " +
-                    " SET passport_number=@p1, passport_series=@p2, surname=@p3, name=@p4, patronymic=@p5, legal_address= @p6" +
-                    " WHERE id = @p7", conn)
-                {
-                    Parameters = {
-                        new ("p1", _passportNumber),
-                        new ("p2", _passportSeries),
-                        new ("p3", _surname),
-                        new ("p4", _name),
-                        new ("p5", _patronymic == null ? DBNull.Value : _patronymic),
-                        new ("p6", _legalAddress == null ? DBNull.Value : _legalAddress.Id),
-                        new ("p7", _id),
-                    }
-                })
-                {
-                    var cursor = command.ExecuteNonQuery();
-                }
-    
-    */
+        using (cmd){
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
 }
-

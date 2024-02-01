@@ -7,7 +7,8 @@ namespace StudentTracking.Controllers.DTO.In;
 public class StudentDTO {
     public StudentDTO()
     {
-
+        RussianCitizenshipId = null;
+        Id = null;
     }
 
     [JsonRequired]
@@ -31,5 +32,6 @@ public class StudentDTO {
     [JsonRequired]
     public string GiaDemoExamMark { get; set; }
     public int? RussianCitizenshipId { get; set; }
+    public int? Id {get; set; }
     
 }

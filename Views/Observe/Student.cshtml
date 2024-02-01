@@ -29,16 +29,14 @@
      <div class="d-flex flex-row">
         <h5 class="col-4">Договор о целевом обучении</h5>
         @{
-            string targetAgrName = TargetEduAgreement.Names
-                [(TargetEduAgreement.Types)Model.TargetAgreementType];
+            string targetAgrName = TargetEduAgreement.GetByTypeCode(Model.TargetAgreementType).RussianName;
         }
         <p class="col-4">@targetAgrName</p>
     </div>
      <div class="d-flex flex-row">
         <h5 class="col-4">Договор об обучении на платной основе</h5>
         @{
-            string paidAgrName = PaidEduAgreement.Names
-                [(PaidEduAgreement.Types)Model.TargetAgreementType];
+            string paidAgrName = PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName;
         }
         <p class="col-4">@paidAgrName</p>
     </div>

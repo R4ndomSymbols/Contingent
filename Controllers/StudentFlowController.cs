@@ -134,7 +134,6 @@ public class StudentFlowController : Controller
         using (var stream = new StreamReader(Request.Body))
         {
             var jsonString =  await stream.ReadToEndAsync();
-            Console.WriteLine(jsonString);
             var result = await Order.GetOrderForConduction(orderId, jsonString);
             if (result.IsSuccess)
             {

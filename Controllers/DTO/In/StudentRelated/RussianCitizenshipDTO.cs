@@ -6,13 +6,14 @@ public class RussianCitizenshipDTO {
 
     public RussianCitizenshipDTO()
     {
-        
+        Id = null;   
     }
+    public int? Id {get; set; }
     [JsonRequired]
     public string Name { get; set; }
     [JsonRequired]
     public string Surname { get; set; }
-    public string? Patronimyc { get; set; }
+    public string? Patronymic { get; set; }
     [JsonRequired]
     public string PassportNumber {get; set; }
     [JsonRequired]

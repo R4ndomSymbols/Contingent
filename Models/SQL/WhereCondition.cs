@@ -39,6 +39,7 @@ public class WhereCondition : IQueryPart{
         Is = 3,
         IsNot = 4,
         Like = 5,
+        In = 6
     }
 
     private Dictionary<Relations, string> _sqlRelations = new Dictionary<Relations, string>(){
@@ -46,6 +47,7 @@ public class WhereCondition : IQueryPart{
         {Relations.NotEqual, "!="},
         {Relations.Is, "IS"},
         {Relations.IsNot, "IS NOT"},
-        {Relations.Like, "LIKE"}
+        {Relations.Like, "LIKE"},
+        {Relations.In, "IN"},
     };
 }

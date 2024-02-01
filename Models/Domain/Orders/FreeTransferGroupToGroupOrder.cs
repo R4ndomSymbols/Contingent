@@ -51,28 +51,14 @@ public class FreeTransferGroupToGroupOrder : FreeEducationOrder
         {
             return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
         }
-
-        foreach (StudentMoveDTO sm in dto.Moves)
-        {
-            if (!errors.IsValidRule(
-                await StudentModel.IsIdExists(sm.StudentId, null) && await GroupModel.IsIdExists(sm.GroupToId, null),
-                message: "Неверно указаны студенты или группы при проведении приказа",
-                propName: nameof(_moves)
-            ))
-            {
-                return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
-            }
+        var conductionStatus = await found.CheckConductionPossibility(); 
+        if (conductionStatus.IsFailure){
+            errors.AddRange(conductionStatus.Errors);
         }
-        if (errors.IsValidRule(
-            await found.CheckConductionPossibility(),
-            message: "Проведение приказа невозможно",
-            propName: nameof(_moves)
-        ))
-        {
-            return Result<FreeTransferGroupToGroupOrder>.Success(found);
-        }
-
-        return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
+        if (errors.Any()){
+            return Result<FreeTransferGroupToGroupOrder>.Failure(errors);
+        }        
+        return Result<FreeTransferGroupToGroupOrder>.Success(found);
     }
 
     public static async Task<Result<FreeTransferGroupToGroupOrder?>> Create(int id)
@@ -128,7 +114,7 @@ public class FreeTransferGroupToGroupOrder : FreeEducationOrder
     }
     // приказ о переводе с одной группы в другую 
 
-    internal override Task<bool> CheckConductionPossibility()
+    internal override Task<Result<bool>> CheckConductionPossibility()
     {
         throw new NotImplementedException();
     }

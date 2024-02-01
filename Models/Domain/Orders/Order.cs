@@ -150,7 +150,7 @@ public abstract class Order
     }
 
 
-    internal abstract Task<bool> CheckConductionPossibility(); 
+    internal abstract Task<Result<bool>> CheckConductionPossibility(); 
     public OrderTypeInfo GetOrderTypeDetails(){
         return OrderTypeInfo.GetByType(GetOrderType());
     }
@@ -234,7 +234,7 @@ public abstract class Order
             return (bool)reader["exists"];
         }
     }
-    protected static async Task InsertMany(IEnumerable<StudentFlowRecord> records)
+    protected static async Task InsertMany(IEnumerable<RawStudentFlowRecord> records)
     {
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "COPY student_flow (student_id, order_id, group_id_to)" +

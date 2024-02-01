@@ -38,7 +38,7 @@ public class StudentController : Controller
             {
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
-            return View(@"Views/Modify/StudentModify.cshtml", student);
+            return View(@"Views/Modify/StudentModify.cshtml", new StudentFullDTO(student));
         }
         else
         {
@@ -90,6 +90,7 @@ public class StudentController : Controller
         {
             return BadRequest("Ошибка десериализации");
         }
+
         using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
         using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
         // реальный адрес проживания
@@ -108,7 +109,6 @@ public class StudentController : Controller
                 errors.AddRange(studentTagsResults.Where(x => x.IsFailure).First().Errors);
             }
             var err = new ErrorsDTO(errors);
-            
             return Json(err);
         }
         var actualAddress = actualAddressResult.ResultObject;
@@ -119,17 +119,34 @@ public class StudentController : Controller
 
         try
         {
+            // проверка адресации не проходит, адрес каждый раз новый
+            // дописать потом
             await actualAddress.Save(savingTransaction);
             await factAddress.Save(savingTransaction);
 
-            rusCitizenship.LegalAddressId = factAddressResult.ResultObject.Id;
-            await rusCitizenship.Save(savingTransaction);
-
-            student.ActualAddressId = actualAddressResult.ResultObject.Id;
+            rusCitizenship.LegalAddressId = factAddress.Id;
+            if (await RussianCitizenship.IsIdExists(rusCitizenship.Id, savingTransaction)){
+                await rusCitizenship.Update(savingTransaction);
+            }
+            else {
+                await rusCitizenship.Save(savingTransaction);
+            }
+            student.ActualAddressId = actualAddress.Id;
             student.RussianCitizenshipId = rusCitizenship.Id;
-            await student.Save(savingTransaction);
 
+            if (await StudentModel.IsIdExists(student.Id, savingTransaction)){
+                await student.Update(savingTransaction);
+            }
+            else {
+                await student.Save(savingTransaction);
+            }
+            var records = await StudentEducationalLevelRecord.GetByOwnerId(student.Id);
+            // пропуск имеющийся тегов
+            if (records.Any()){
+                tags = tags.Where(x => !records.Any(y => y.Level == x.Level));
+            }
             foreach (var tag in tags){
+                tag.OwnerId = student.Id;
                 await tag.SaveRecord(savingTransaction);
             }
         }
@@ -154,7 +171,7 @@ public class StudentController : Controller
     [Route("students/tags")]
     public IActionResult GetTags()
     {
-        var tags = EducationLevel.GetAllLevels().Select(x => new EducationalLevelRecordDTO(x));
+        var tags = LevelOfEducation.ListOfLevels.Select(x => new EducationalLevelRecordDTO(x));
         return Json(tags);
     }
 

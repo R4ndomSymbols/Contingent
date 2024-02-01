@@ -1,21 +1,11 @@
-using System.Reflection.Metadata;
-using System.Text.Json.Serialization;
 using Npgsql;
 using Npgsql.PostgresTypes;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.Models.JSON;
-using System.Net.Http.Headers;
-using StudentTracking.Models.Domain.Orders.OrderData;
-using Microsoft.AspNetCore.Mvc;
-using System.Runtime.ExceptionServices;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.SQL;
 using StudentTracking.Controllers.DTO.In;
-using Npgsql.Replication;
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 
 namespace StudentTracking.Models.Domain.Orders;
@@ -58,26 +48,15 @@ public class FreeEnrollmentOrder : FreeEducationOrder
         )){
             return Result<FreeEnrollmentOrder>.Failure(errors);
         }
-
-        foreach (StudentMoveDTO sm in dto.Moves){
-            if (!errors.IsValidRule(
-                await StudentModel.IsIdExists(sm.StudentId, null) && await GroupModel.IsIdExists(sm.GroupToId, null),
-                message: "Неверно указаны студенты или группы при проведении приказа",
-                propName: nameof(_moves)
-            )){
-                return Result<FreeEnrollmentOrder>.Failure(errors);
-            }
-        }
         found._moves = dto;
-        if (errors.IsValidRule(
-            await found.CheckConductionPossibility(),
-            message: "Проведение приказа невозможно",
-            propName: nameof(_moves)
-        )){
-            return Result<FreeEnrollmentOrder>.Success(found);
+        var conductionStatus = await found.CheckConductionPossibility(); 
+        if (conductionStatus.IsFailure){
+            errors.AddRange(conductionStatus.Errors);
         }
-        
-        return Result<FreeEnrollmentOrder>.Failure(errors); 
+        if (errors.Any()){
+            return Result<FreeEnrollmentOrder>.Failure(errors);
+        }        
+        return Result<FreeEnrollmentOrder>.Success(found);
     }
 
     public static async Task<Result<FreeEnrollmentOrder?>> Create (int id){
@@ -132,82 +111,39 @@ public class FreeEnrollmentOrder : FreeEducationOrder
     // TODO:
     // сейчас возможна запись только одного приказа в день на каждого студента
     // нет проверки на совпадение даты, спросить у предст. предметной области
+    
      
-    internal override async Task<bool> CheckConductionPossibility()
+    internal override async Task<Result<bool>> CheckConductionPossibility()
     {
         if (_moves is null){
-            throw new Exception("Приказ не может быть пустым при вызове: " + nameof(CheckConductionPossibility));
+            throw new Exception("Данные для проведения не могут быть пустыми при вызове: " + nameof(CheckConductionPossibility));
         }
-
-        var conn = await Utils.GetAndOpenConnectionFactory();
-        string groupQuery = 
-        "SELECT " +
-        "educational_group.type_of_financing AS tof, " +
-        "educational_program.speciality_in_education_level AS ln " +
-        "FROM educational_group " +
-        "LEFT JOIN educational_program ON educational_group.program_id = educational_program.id " +
-        "WHERE educational_group.id = @p1";
-
-        string studentQuery = 
-        "SELECT MAX(level_code) AS sm " +
-        "FROM education_tag_history " +
-        "JOIN students ON education_tag_history.student_id = student.id " +
-        "WHERE education_tag_history.student_id = @p1";
         
         foreach (var stm in _moves.Moves){
-            var history = new StudentHistory(stm.StudentId); 
-            await history.PopulateHistory();
-            bool orderBeforeHasCorrectType = false;
-            bool orderAfterHasCorrectType = false;
-            if (history != null){
-                var orderBefore = history.GetClosestBefore(_effectiveDate);
-                orderBeforeHasCorrectType = orderBefore == null || 
-                ((StudentFlowRecord)orderBefore).OrderType == OrderTypes.FreeDeductionWithGraduation;
-                var orderAfter = history.GetClosestAfter(_effectiveDate);
-                orderAfterHasCorrectType = orderAfter == null || !OrderTypeInfo.IsAnyEnrollment(((StudentFlowRecord)orderAfter).OrderType);
+            var student = await StudentModel.GetStudentById(stm.StudentId);
+            if (student == null){
+                return Result<bool>.Failure(new ValidationError(nameof(_moves), "Одного из указанных студентов не существует"));
             }
-            else {
-                orderBeforeHasCorrectType = true;
-                orderAfterHasCorrectType = true;
-            }
+            var history = await StudentHistory.Create(student.Id); 
+            bool orderBeforeConditionSatisfied = false;
+            var recordBefore = history.GetClosestBefore(_effectiveDate);
+            orderBeforeConditionSatisfied =
+                recordBefore is null || recordBefore.ByOrder.GetOrderTypeDetails().IsAnyDeduction(); 
 
-            if (!orderBeforeHasCorrectType || !orderAfterHasCorrectType){
-                return false;
+            var group = await GroupModel.GetGroupById(stm.GroupToId);
+            if (group is null){
+                return Result<bool>.Failure(new ValidationError(nameof(_moves), "Одна из указанных групп не существует"));
             }
-            var specialityLevel = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
-            var cmd = new NpgsqlCommand(groupQuery, conn);
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", stm.GroupToId));
-            using (cmd){
-                using var reader = cmd.ExecuteReader();
-                if (!reader.HasRows){
-                    return false;
-                }
-                reader.Read();
-                var fin = (GroupSponsorshipType.Types)(int)reader["tof"];
-                // проверка бесплатности обучения в указанной группе
-                if (!GroupSponsorshipType.IsFree(fin)){
-                    return false;
-                }
-                specialityLevel = 
-                    (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["ln"];
-            }
-            cmd = new NpgsqlCommand(studentQuery, conn);
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", stm.StudentId));
-            using (cmd){
-                using var reader = cmd.ExecuteReader();
-                if (!reader.HasRows){
-                    return false;
-                }
-                reader.Read();
-                // проверка соответствия уровня образования студента и группы
-                var studentLevel = 
-                    (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["sm"];
-                if (studentLevel<specialityLevel){
-                    return false;
-                }
+            var studentTags = await StudentEducationalLevelRecord.GetByOwnerId(stm.StudentId); 
+            var validMove =  
+                orderBeforeConditionSatisfied &&
+                studentTags.Any(x => x.Level.Weight >= group.EducationProgram.EducationalLevelIn.Weight) &&
+                group.SponsorshipType.IsFree();
+            if (!validMove){
+                return Result<bool>.Failure(new ValidationError(nameof(_moves), "Не соблюдены критерии по одной из позиций зачисления"));
             }
         }
-        return true;
+        return Result<bool>.Success(true);
     }
 
     protected override OrderTypes GetOrderType()
@@ -217,18 +153,21 @@ public class FreeEnrollmentOrder : FreeEducationOrder
 
     public override async Task ConductByOrder()
     {
-        if (!_alreadyConducted){
+        if (_alreadyConducted){
             throw new Exception("Невозможно провести приказ повторно");
         }
-        var toInsert = new List<StudentFlowRecord>();
+        var toInsert = new List<RawStudentFlowRecord>();
         foreach(var stm in _moves.Moves){
-            toInsert.Add(new StudentFlowRecord(
-                _id,
-                stm.StudentId,
-                stm.GroupToId
-            ));
+            toInsert.Add(new RawStudentFlowRecord()
+            {
+                StudentId = stm.StudentId,
+                OrderId = _id,
+                GroupToId = stm.GroupToId
+            });
+            
         }
         await InsertMany(toInsert);
+        _alreadyConducted = true;
     }
 }
 

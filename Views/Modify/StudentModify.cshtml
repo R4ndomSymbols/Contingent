@@ -59,11 +59,17 @@
         <h5 class="col-5 mx-0">Вступительный (конкурсный) балл</h5>
     </div>
     <div class="d-flex flex-row">
-        <select id="Gender" class="col-3" hint="@Model.Gender">
-            @foreach (var g in StudentTracking.Models.Domain.Misc.Genders.Names)
+        <select id="Gender" class="col-3">
+            @foreach (var g in Genders.Names)
             {
                 var code = (int)g.Key;
-                <option value="@code">@g.Value</option>
+                if (code == Model.Gender){
+                    <option value="@code" selected >@g.Value</option>    
+                }
+                else {
+                    <option value="@code">@g.Value</option>
+                }
+                
             }
         </select>
         <div class="col-3"></div>
@@ -108,11 +114,18 @@
         <h5 class="col-12">Договор о целевом обучении</h5>
     </div>
     <div class="d-flex flex-row mb-3">
-        <select id="TargetAgreementType" class="col-5" hint="@Model.TargetAgreementType">
-            @foreach (var g in StudentTracking.Models.Domain.Misc.TargetEduAgreement.Names)
-            {
-                var code = (int)g.Key;
-                <option value="@code">@g.Value</option>
+        <select id="TargetAgreementType" class="col-5">
+            @foreach (var g in TargetEduAgreement.ListOfTypes)
+            {   
+                var code = (int)g.AgreementType; 
+                if (code == Model.TargetAgreementType){
+                    <option value="@code" selected>@g.RussianName</option>
+                }
+                else{
+                    <option value="@code">@g.RussianName</option>
+                }
+                
+                
             }
         </select>
     </div>
@@ -120,11 +133,16 @@
         <h5 class="col-12">Договор об обучении на платной основе</h5>
     </div>
     <div class="d-flex flex-row mb-3">
-        <select id="PaidAgreementType" class="col-6" hint="@Model.PaidAgreementType">
-            @foreach (var g in StudentTracking.Models.Domain.Misc.PaidEduAgreement.Names)
+        <select id="PaidAgreementType" class="col-6">
+            @foreach (var g in PaidEduAgreement.ListOfTypes)
             {
-                var code = (int)g.Key;
-                <option value="@code">@g.Value</option>
+                var code = (int)g.AgreementType; 
+                if (code == Model.PaidAgreementType){
+                    <option value="@code" selected>@g.RussianName</option>
+                }
+                else{
+                    <option value="@code">@g.RussianName</option>
+                }
             }
         </select>
     </div>
@@ -299,7 +317,7 @@
         @foreach(var t in tags){
         <div class="d-flex flex-row">
             <div class="col-4"> 
-                @t.GetLevelName()
+                @t.RussianName
             </div>
         </div>
         }
@@ -321,11 +339,15 @@
     string corrRusId = citizenship?.Id.ToString() ?? "";
     string corrRusAddress = citizenship?.LegalAddressId.ToString() ?? "";
 }
+<div id = "id_section">
+    @if (!Model.IsEmpty){
+        <input type="hidden" id="StudentId" value="@Model.Id" />
+        <input type="hidden" id="AddressId" value="@Model.ActualAddressId" />
+        <input type="hidden" id="RussianLegalAddressId" value="@corrRusAddress" />
+        <input type="hidden" id="RussianCitizenshipId" value="@corrRusId" />
+    }
+</div>
 
-<input type="hidden" id="StudentId" value="@Model.Id" />
-<input type="hidden" id="AddressId" value="@Model.ActualAddressId" />
-<input type="hidden" id="RussianLegalAddressId" value="@corrRusAddress" />
-<input type="hidden" id="RussianCitizenshipId" value="@corrRusId" />
 </div>
 
 <script src="~/js/students.js"></script>

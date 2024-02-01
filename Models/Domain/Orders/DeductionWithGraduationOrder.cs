@@ -49,25 +49,15 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
             return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
         }
 
-        foreach (int student in dto.Students)
-        {
-            if (!errors.IsValidRule(
-                await StudentModel.IsIdExists(student, null),
-                message: "Неверно указаны студенты или группы при проведении приказа",
-                propName: nameof(_graduates)
-            ))
-            {
-                return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
-            }
+        var conductionStatus = await found.CheckConductionPossibility(); 
+        if (conductionStatus.IsFailure){
+            errors.AddRange(conductionStatus.Errors);
         }
-        if (errors.IsValidRule(
-            await found.CheckConductionPossibility(),
-            message: "Проведение приказа невозможно",
-            propName: nameof(_graduates)
-        ))
-        {
-            return Result<FreeDeductionWithGraduationOrder>.Success(found);
-        }
+        if (errors.Any()){
+            return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
+        }        
+        return Result<FreeDeductionWithGraduationOrder>.Success(found);
+        
 
         return Result<FreeDeductionWithGraduationOrder>.Failure(errors);
     }
@@ -124,7 +114,7 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
         }
     }
 
-    internal override Task<bool> CheckConductionPossibility()
+    internal override Task<Result<bool>> CheckConductionPossibility()
     {
         throw new NotImplementedException();
     }

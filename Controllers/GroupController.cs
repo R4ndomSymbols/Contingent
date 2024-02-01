@@ -3,6 +3,7 @@ using System.Data.SqlTypes;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
 using StudentTracking.Models.JSON;
@@ -25,7 +26,7 @@ public class GroupController : Controller{
     [Route("groups/modify/{query}")]
     public async Task<IActionResult> ProcessGroup(string query){
         if (query == "new"){
-            return View(@"Views/Modify/GroupModify.cshtml", new GroupModel()); 
+            return View(@"Views/Modify/GroupModify.cshtml", new GroupOutDTO()); 
         }
         else if(int.TryParse(query, out int id)){
             var got = await GroupModel.GetGroupById(id, null);
@@ -40,39 +41,45 @@ public class GroupController : Controller{
     }
 
     [HttpPost]
-    [Route("/groups/add")]
-    public async Task<JsonResult> SaveOrUpdateGroup(){
-        using (var reader = new StreamReader(Request.Body)){
-            var body = await reader.ReadToEndAsync();
-            var deserialized = JsonSerializer.Deserialize<GroupModelJSON>(body);
-            if (deserialized == null){
-                return Json(new object());
-            }
-            else{
-                var processed = await GroupModel.FromJSON(deserialized, null);
-                await processed.SaveAsync(null);
-                if (await processed.GetCurrentState(null) != RelationTypes.Bound){
-                    return Json(processed.GetErrors());
-                }
-                else{
-                    return Json(new {GroupId = processed.Id}); 
-                }
-            }
+    [Route("/groups/addsequence")]
+    public async Task<IActionResult> SaveEntireSequence(){
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync();
+        GroupInDTO? deserialized; 
+        try {
+            deserialized = JsonSerializer.Deserialize<GroupInDTO>(body);
         }
+        catch (Exception e){
+            Console.WriteLine(e.Message);
+            return BadRequest("Неверный формат JSON");
+        }
+        var groupResult = await GroupModel.Build(deserialized);
+        if (groupResult.IsFailure){
+            return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(groupResult.Errors)));
+        }
+        var saved = await GroupModel.SaveAllNextGroups(groupResult.ResultObject);
+        return Json(saved.Select(x => new GroupOutDTO(x)));
+        
     }
     [HttpPost]
     [Route("/groups/getname")]
-    public async Task<JsonResult> GenerateName(){
-        using (var reader = new StreamReader(Request.Body)){
-            string jsonString = await reader.ReadToEndAsync();
-            GroupModelJSON? group = JsonSerializer.Deserialize<GroupModelJSON>(jsonString);
-            string name = "";
-            if (group!=null){
-                var parsed = await GroupModel.FromJSON(group, null);
-                name = parsed.GroupName;
-            }
-            return Json(new {GroupName = name});
+    public async Task<IActionResult> GenerateName(){
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync();
+        GroupInDTO? deserialized; 
+        try {
+            deserialized = JsonSerializer.Deserialize<GroupInDTO>(body);
         }
+        catch (Exception e){
+            Console.WriteLine(e.Message);
+            return BadRequest("Неверный формат JSON");
+        }
+        var groupResult = await GroupModel.Build(deserialized);
+        
+        if (groupResult.IsFailure){
+            return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(groupResult.Errors)));
+        }
+        return Json(new {GroupName = groupResult.ResultObject.GroupName});
     }
 
     [HttpGet]

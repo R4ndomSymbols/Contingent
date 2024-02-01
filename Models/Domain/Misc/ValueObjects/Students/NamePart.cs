@@ -9,7 +9,7 @@ public class NamePart {
 
     private NamePart(string name)
     {
-        
+        NameToken = name;
     } 
 
     public static Result<NamePart?> Create(string? name){

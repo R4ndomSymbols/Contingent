@@ -1,21 +1,41 @@
+using System.Collections.ObjectModel;
+
 namespace StudentTracking.Models.Domain.Misc;
 
-public static class PaidEduAgreement {
+public class PaidEduAgreement {
 
-    public enum Types {
-        NotMentioned = -1,
-        LegalRepresentative = 1, // законный представитель
-        OtherIndividual = 2, // другое физическое лицо
-        Entity = 3, // юридическое лицо
+    public string RussianName {get; private init; }
+    public PaidEducationAgreementTypes AgreementType {get; private init; }
+
+    private PaidEduAgreement(PaidEducationAgreementTypes type, string name){
+        AgreementType = type;
+        RussianName = name;
     }
 
-    public static readonly Dictionary<Types, string> Names = new Dictionary<Types, string>(){
-
-        {Types.NotMentioned, "Не указано"},
-        {Types.LegalRepresentative, "За счет средств студента или его законного представителя"},
-        {Types.OtherIndividual, "За счет средств иного физического лица"},
-        {Types.Entity, "За счет средств юридического лица"},
+    public static IReadOnlyCollection<PaidEduAgreement> ListOfTypes => new List<PaidEduAgreement>(){
+        
+        new (PaidEducationAgreementTypes.NotMentioned, "Не указано"),
+        new (PaidEducationAgreementTypes.LegalRepresentative, "За счет средств студента или его законного представителя"),
+        new (PaidEducationAgreementTypes.OtherIndividual, "За счет средств иного физического лица"),
+        new (PaidEducationAgreementTypes.Entity, "За счет средств юридического лица")
 
     };
 
+    public static PaidEduAgreement GetByTypeCode(int code){
+        Console.WriteLine("CODE RECIEVED: " + code.ToString());
+        return ListOfTypes.Where(x => (int)x.AgreementType == code).First();
+    }
+    public static bool TryGetByTypeCode(int code){
+        return ListOfTypes.Any(x => (int)x.AgreementType == code);
+    }
+
+
+}
+
+
+public enum PaidEducationAgreementTypes {
+    NotMentioned = -1,
+    LegalRepresentative = 1, // законный представитель
+    OtherIndividual = 2, // другое физическое лицо
+    Entity = 3, // юридическое лицо
 }

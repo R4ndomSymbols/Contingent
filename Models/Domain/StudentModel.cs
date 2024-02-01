@@ -27,8 +27,8 @@ public class StudentModel
     private int? _russianCitizenshipId;
     private string _gradeBookNumber;
     private Genders.GenderCodes _gender;
-    private TargetEduAgreement.Types _targetAgreementType;
-    private PaidEduAgreement.Types _paidAgreementType;
+    private TargetEduAgreement _targetAgreementType;
+    private PaidEduAgreement _paidAgreementType;
     private int? _giaMark;
     private int? _giaDemoExamMark;
     public int Id
@@ -57,7 +57,7 @@ public class StudentModel
         get => _gender;
     }
 
-    public TargetEduAgreement.Types TargetAgreementType {
+    public TargetEduAgreement TargetAgreementType {
         get => _targetAgreementType;
     }
     public int? GiaMark {
@@ -66,7 +66,7 @@ public class StudentModel
     public int? GiaDemoExamMark {
         get => _giaDemoExamMark;
     }
-    public PaidEduAgreement.Types PaidAgreementType {
+    public PaidEduAgreement PaidAgreementType {
         get => _paidAgreementType;
     }
 
@@ -89,7 +89,10 @@ public class StudentModel
             return Result<StudentModel>.Failure(new ValidationError(nameof(dto), "Пустая модель студента"));
         }
         var model = new StudentModel();
-        var errors = new List<ValidationError>();
+        var errors = new List<ValidationError?>();
+        if (dto.Id != null){
+            model._id = (int)dto.Id;    
+        }
         // инн и снилс должны быть уникальны в базе
         if (errors.IsValidRule(
             dto.Snils.CheckStringPatternD(ValidatorCollection.Snils),
@@ -145,11 +148,11 @@ public class StudentModel
             model._gender = (Genders.GenderCodes)dto.Gender;
         }
         if (errors.IsValidRule(
-            Enum.TryParse(typeof(TargetEduAgreement.Types), dto.TargetAgreementType.ToString(), out object? t1) ,
+            TargetEduAgreement.TryGetByTypeCode(dto.TargetAgreementType),
             message: "Неверно указан тип договора о целевом обучении",
             propName: nameof(TargetAgreementType)
         )){
-            model._targetAgreementType = (TargetEduAgreement.Types)dto.TargetAgreementType;
+            model._targetAgreementType = TargetEduAgreement.GetByTypeCode(dto.TargetAgreementType);
         }
         if(errors.IsValidRule(
             dto.GiaMark == null || 
@@ -168,11 +171,11 @@ public class StudentModel
             model._giaDemoExamMark = dto.GiaDemoExamMark is null ? null : int.Parse(dto.GiaDemoExamMark);
         }
         if (errors.IsValidRule(
-            Enum.TryParse(typeof(PaidEduAgreement.Types), dto.PaidAgreementType.ToString(), out object? t2),
+            PaidEduAgreement.TryGetByTypeCode(dto.PaidAgreementType),
             message: "Неверно указан тип договора о платном обучении",
             propName: nameof(PaidAgreementType)
         )){
-            model._paidAgreementType = (PaidEduAgreement.Types)dto.PaidAgreementType;
+            model._paidAgreementType = PaidEduAgreement.GetByTypeCode(dto.PaidAgreementType);
         }
         if (errors.Any()){
             return Result<StudentModel>.Failure(errors);
@@ -186,17 +189,42 @@ public class StudentModel
     public static async Task<IReadOnlyCollection<StudentModel>> FindStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<StudentModel>(
-            async (m)=> {
-                var id = m["idstd"];
+            (reader) => {
+                var id = reader["idstd"];
                 if (id.GetType() == typeof(DBNull)){
-                    return QueryResult<StudentModel>.NotFound();
+                    return Task.Run(() => QueryResult<StudentModel>.NotFound());
                 }
-                var result = await GetStudentById((int)id)
-                ?? throw new Exception("Id студента не может быть null в данном запросе");
-                return QueryResult<StudentModel>.Found(result);
+                var result = new StudentModel() {
+                    _id = (int)id,
+                    _snils = (string)reader["snils"],
+                    _inn = (string)reader["inn"],
+                    _actualAddress = (int)reader["actual_address"],
+                    _dateOfBirth = (DateTime)reader["date_of_birth"],
+                    _gender = (Genders.GenderCodes)reader["gender"],
+                    _gradeBookNumber = (string)reader["grade_book_number"],
+                    _targetAgreementType = TargetEduAgreement.GetByTypeCode((int)reader["target_education_agreement"]),
+                    _paidAgreementType = PaidEduAgreement.GetByTypeCode((int)reader["paid_education_agreement"]),
+                    _admissionScore = (decimal)reader["admission_score"],
+                    _russianCitizenshipId = reader["rus_citizenship_id"].GetType() == typeof(DBNull) ? null : (int)reader["rus_citizenship_id"],
+                    _giaDemoExamMark = reader["gia_demo_exam_mark"].GetType() == typeof(DBNull) ? null : (int)reader["gia_demo_exam_mark"],
+                    _giaMark = reader["gia_mark"].GetType() == typeof(DBNull) ? null : (int)reader["gia_mark"],
+                };
+                return Task.Run(() => QueryResult<StudentModel>.Found(result));
             },
             new List<Column>(){
-                new Column("id", "idstd", "students")
+                new Column("id", "idstd", "students"),
+                new Column("snils", "students"),
+                new Column("gender", "students"),
+                new Column("inn", "students"),
+                new Column("actual_address", "students"),
+                new Column("date_of_birth", "students"),
+                new Column("grade_book_number", "students"),
+                new Column("target_education_agreement", "students"),
+                new Column("paid_education_agreement", "students"),
+                new Column("admission_score", "students"),
+                new Column("rus_citizenship_id", "students"),
+                new Column("gia_demo_exam_mark", "students"),
+                new Column("gia_mark", "students"),
             }
         );
         var buildResult = SelectQuery<StudentModel>.Init("students")
@@ -217,62 +245,22 @@ public class StudentModel
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         
-        using NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM students WHERE id = @p1", conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-
-        using var pgreader = await cmd.ExecuteReaderAsync();
-        if (!pgreader.HasRows)
-        {
+        var sParams = new SQLParameterCollection();
+        var p1 = sParams.Add<int>(id);
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("id", "students"),
+                p1,
+                WhereCondition.Relations.Equal
+            )
+        );
+        var found = await FindStudents(new QueryLimits(0,1), additionalConditions: where, addtitionalParameters: sParams);
+        if (found.Any()){
+            return found.First();
+        }
+        else {
             return null;
         }
-
-        var toReturn = new List<StudentModel>();
-        await pgreader.ReadAsync();
-        
-        var built = new StudentModel
-        {
-            _id = id,
-            _snils = (string)pgreader["snils"],
-            _inn = (string)pgreader["inn"],
-            _actualAddress = (int)pgreader["actual_address"],
-            _dateOfBirth = (DateTime)pgreader["date_of_birth"],
-            _gender = (Genders.GenderCodes)pgreader["gender"],
-            _gradeBookNumber = (string)pgreader["grade_book_number"],
-            _targetAgreementType = (TargetEduAgreement.Types)pgreader["target_education_agreement"],
-            _paidAgreementType = (PaidEduAgreement.Types)pgreader["paid_education_agreement"],
-            _admissionScore = (decimal)pgreader["admission_score"]
-        };
-
-        object rus_citizenship = pgreader["rus_citizenship_id"];
-        if (rus_citizenship.GetType() == typeof(DBNull))
-        {
-            built._russianCitizenshipId = null;
-        }
-        else
-        {
-            built._russianCitizenshipId = (int)rus_citizenship;
-        }
-        object gia_mark_result = pgreader["gia_mark"];
-        if (gia_mark_result.GetType() == typeof(DBNull))
-        {
-            built._giaMark = null;
-        }
-        else
-        {
-            built._giaMark = (int)gia_mark_result;
-        }
-        object gia_mark_dem_result = pgreader["gia_demo_exam_mark"];
-        if (gia_mark_dem_result.GetType() == typeof(DBNull))
-        {
-            built._giaDemoExamMark = null;
-        }
-        else
-        {
-            built._giaDemoExamMark = (int)gia_mark_dem_result;
-        }
-        return built;
-            
-        
     }
 
     public static async Task LinkStudentAndCitizenship(Type citizenshipType, int studentId, int citizenshipId){
@@ -319,10 +307,10 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter("p5", _russianCitizenshipId == null? DBNull.Value : (int)_russianCitizenshipId));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter("p9", _giaMark == null ? DBNull.Value : (int)_giaMark));
         cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
 
         await using (cmd){
@@ -405,47 +393,39 @@ public class StudentModel
     public async Task<GroupModel> GetCurrentGroup(){
         return await StudentHistory.GetCurrentStudentGroup(_id);
     }
-    /*
-    public static async Task<List<StudentResponseDTO>?> FilterStudents(SelectQuery<StudentResponseDTO> filter){
 
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        await using (conn)
-        {
-            return await filter.Execute(conn, 50, () => new StudentResponseDTO());
+    public async Task Update(ObservableTransaction? scope = null)
+    {
+        var conn = await Utils.GetAndOpenConnectionFactory(); 
+        var cmdText = "UPDATE public.students " +
+	    " SET snils=@p1, inn=@p2, actual_address=@p3, date_of_birth=@p4, rus_citizenship_id=@p5, " +
+        " gender=@p6, grade_book_number=@p7, target_education_agreement=@p8, gia_mark=@p9, " +
+        " gia_demo_exam_mark=@p10, paid_education_agreement=@p11, admission_score=@p12 " +
+	    " WHERE id = @p13";
+        NpgsqlCommand cmd;
+        if (scope is null){
+            cmd = new NpgsqlCommand(cmdText, conn);
         }
-
-    }*/
-
-
-
-    /*
-    private void Update(){
-        using (var conn = Utils.GetConnectionFactory()){
-        using var updateCommand = new NpgsqlCommand(
-                    "UPDATE students " +
-                    "SET snils=@p1, inn=@p2, actual_address=@p3, date_of_birth=@p4, rus_citizenship_id=@p5, gender=@p6, grade_book_number=@p7, " +
-                    "target_education_agreement=@p8, gia_mark=@p9, gia_demo_exam_mark=@p10, paid_education_agreement=@p11, admission_score=@p12 " +
-                    "WHERE id = @p13", conn)
-                {
-                    Parameters = {
-                             new ("p1", _snils),
-                            new ("p2", _inn),
-                            new ("p3", _actualAddress),
-                            new ("p4", _dateOfBirth),
-                            new ("p5", _russianCitizenshipId == null ? DBNull.Value : (int)RussianCitizenshipId),
-                            new ("p6", (int)_gender),
-                            new ("p7", _gradeBookNumber),
-                            new ("p8", (int)_targetAgreementType),
-                            new ("p9", _giaMark == null ? DBNull.Value : (int)_giaMark),
-                            new ("p10", _giaDemoExamMark == null ? DBNull.Value : (int)_giaDemoExamMark),
-                            new ("p11", (int)_paidAgreementType),
-                            new ("p12", _admissionScore),
-                            new ("p13", _id),
-                        }
-                };
-                updateCommand.ExecuteNonQuery(); 
+        else{
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
-    } */
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _snils));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _inn));
+        cmd.Parameters.Add(new NpgsqlParameter("p3", _actualAddress is null ? DBNull.Value : (int)_actualAddress));
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p4", _dateOfBirth));
+        cmd.Parameters.Add(new NpgsqlParameter("p5", _russianCitizenshipId is null ? DBNull.Value : (int)_russianCitizenshipId));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType.AgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter("p9", _giaMark is null ? DBNull.Value : (int)_giaMark));
+        cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark is null ? DBNull.Value : (int)_giaDemoExamMark));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType.AgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p13", _id));
+        using (cmd){
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
 }
 
 

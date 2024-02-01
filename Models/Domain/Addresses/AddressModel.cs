@@ -293,8 +293,8 @@ public class AddressModel : DbValidatedObject
     {
         List<string> parts = new List<string>();
         if (f != null)
-        {
-            parts.Add(f.LongTypedName);
+        {   
+            parts.Add(f.Code+ " " + f.LongTypedName);
         }
         if (d != null)
         {

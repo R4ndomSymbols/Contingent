@@ -73,7 +73,7 @@ function updateName(){
 $("#save").click(function () {
     $.ajax({
         type: "POST",
-        url: "/groups/add",
+        url: "/groups/addsequence",
         data: JSON.stringify(
         {
             EduProgramId: Number($("#EducationalProgramId").prop("value")),
@@ -85,6 +85,7 @@ $("#save").click(function () {
 
         }),
         dataType: "JSON",
+        contentType: "application/json",
         success: function (response) {
             var groupId = response["groupId"];
 

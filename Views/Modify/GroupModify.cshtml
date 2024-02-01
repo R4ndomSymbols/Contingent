@@ -1,5 +1,5 @@
 @using StudentTracking.Models.Domain.Misc;
-@model StudentTracking.Models.GroupModel
+@model StudentTracking.Controllers.DTO.Out.GroupOutDTO
 @{
     ViewData["Title"] = "Группа";
 }
@@ -35,15 +35,8 @@
     </div>
     <div class="d-flex flex-row">
         <div class="col-8">
-            @{
-                string displayedName = "";
-                var sp = await SpecialityModel.GetById(Model.Id, null);
-                if (sp != null){
-                    displayedName = sp.ToSuggestion().FullName;
-                }
-            }
-            <input class="col-8 data_changer" id = "edu_program_input" value="@displayedName"/>
-            <input type = "hidden" id = "EducationalProgramId" value = "@Model.EducationalProgramId"/>
+            <input class="col-8 data_changer" id = "edu_program_input" value="@Model.Speciality.FullName"/>
+            <input type = "hidden" id = "EducationalProgramId" value = "@Model.Speciality.Id"/>
         </div>
     </div>
     <div class="d-flex flex-row">
@@ -61,25 +54,25 @@
     </div>
     <div class="d-flex flex-row">
          <select id = "SponsorshipType" class="col-5 data_changer">
-            @foreach(var i in GroupSponsorshipType.Names){
-                int asInt = (int)i.Key;  
-                if (asInt == Model.EducationalForm){
-                    <option value="@asInt" selected> @i.Value.name </option>
+            @foreach(var i in GroupSponsorship.ListOfSponsorships){
+                int code = (int)i.TypeOfSponsorship;  
+                if (code == Model.EduFormatCode){
+                    <option value="@code" selected> @i.RussianName </option>
                 }
                 else{
-                    <option value="@asInt">@i.Value.name </option>
+                    <option value="@code">@i.RussianName </option>
                 }
             }
         </select>
         <div class="col-1 mx-0"></div>
         <select id = "EducationalForm" class="col-5 data_changer">
-            @foreach(var i in GroupEducationFormat.Names){
-                int asInt = (int)i.Key;  
-                if (asInt == Model.SponsorshipType){
-                    <option value="@asInt" selected> @i.Value.name </option>
+            @foreach(var i in GroupEducationFormat.ListOfFormats){
+                int code = (int)i.FormatType;  
+                if (code == Model.SponsorshipTypeCode){
+                    <option value="@code" selected> @i.RussianName </option>
                 }
                 else{
-                    <option value="@asInt">@i.Value.name </option>
+                    <option value="@code">@i.RussianName </option>
                 }
             }
         </select>
@@ -89,7 +82,7 @@
     </div>
     <div class="d-flex flex-row">
         <div class="col-3">
-            <input class = "data_changer" id = "CreationYear" value="@Model.CreationYear.ToString()"/>
+            <input class = "data_changer" id = "CreationYear" value="@Model.CreationYear"/>
         </div>
     </div>
     <div class="d-flex flex-row">

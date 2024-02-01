@@ -66,7 +66,9 @@ public class OrderTypeInfo
     public static bool IsAnyEnrollment(OrderTypes type)
     {
         return type == OrderTypes.FreeEnrollment;
-
     }
+    public bool IsAnyDeduction(){
+        return Type == OrderTypes.FreeDeductionWithGraduation;
+    } 
 
 }

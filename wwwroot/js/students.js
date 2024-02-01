@@ -129,6 +129,7 @@ $("#save").click(function () {
                 Address : realAddress,
             },
             Student : {
+                Id: (document.getElementById("StudentId") === null) ? null : Number($("#StudentId").val()),
                 GradeBookNumber: $("#GradeBookNumber").val(),
                 DateOfBirth: $("#DateOfBirth").val(),
                 Gender: Number($("#Gender").val()),
@@ -145,6 +146,7 @@ $("#save").click(function () {
                 Address : legalAddress,
             },
             RusCitizenship:{
+                Id: (document.getElementById("RussianCitizenshipId") === null) ? null : Number($("#RussianCitizenshipId").val()),
                 Name: $("#Name").val(),
                 Surname: $("#Surname").val(),
                 Patronymic: patr == "" ? null : patr,
@@ -163,6 +165,8 @@ $("#save").click(function () {
             var rusId = response["russianCitizenshipId"];
 
             if (realAddressId != undefined && studentId!=undefined && legalAddressId!=undefined && rusId != undefined) {
+                
+                
                 $("#AddressId").val(realAddressId);
                 $("#StudentId").val(studentId);
                 $("#RussianLegalAddressId").val(legalAddressId);

@@ -1,6 +1,6 @@
 @using StudentTracking.Models.Domain;
 @using StudentTracking.Models.Domain.Misc;
-@model StudentTracking.Models.SpecialityModel
+@model StudentTracking.Controllers.DTO.Out.SpecialityOutDTO;
 
 @{
     ViewData["Title"] = "Специальность";
@@ -92,25 +92,25 @@
     </div>
     <div class="d-flex flex-row">
          <select id = "EducationalLevelIn" class="col-5">
-            @foreach(var i in StudentEducationalLevelRecord.GetAllLevels()){
-                var level = (int)i.Level;
+            @foreach(var i in LevelOfEducation.ListOfLevels){
+                var level = (int)i.LevelCode;
                 if (level == Model.EducationalLevelIn){
-                    <option value="@level" selected> @i.GetLevelName() </option>
+                    <option value="@level" selected> @i.RussianName </option>
                 }
                 else{
-                    <option value="@level">@i.GetLevelName() </option>
+                    <option value="@level">@i.RussianName </option>
                 }
             }
         </select>
         <div class="col-1 mx-0"></div>
         <select id = "EducationalLevelOut" class="col-5">
-             @foreach(var i in StudentEducationalLevelRecord.GetAllLevels()){
-                var level = (int)i.Level;
+             @foreach(var i in LevelOfEducation.ListOfLevels){
+                var level = (int)i.LevelCode;
                 if (level == Model.EducationalLevelOut){
-                    <option value="@level" selected> @i.GetLevelName() </option>
+                    <option value="@level" selected> @i.RussianName </option>
                 }
                 else{
-                    <option value="@level">@i.GetLevelName() </option>
+                    <option value="@level">@i.RussianName </option>
                 }
             }
         </select>
@@ -120,13 +120,13 @@
     </div>
     <div class="d-flex flex-row">
          <select id = "TeachingLevel" class="col-5">
-            @foreach(var i in TeachingDepth.LevelNames){
-                int asInt = (int)i.Key; 
-                if (asInt == Model.TeachingLevel){
-                    <option value="@asInt" selected> @i.Value </option>
+            @foreach(var i in TeachingDepth.Levels){
+                int code = (int)i.Level; 
+                if (code == Model.TeachingDepth){
+                    <option value="@code" selected> @i.RussianName </option>
                 }
                 else{
-                    <option value="@asInt">@i.Value </option>
+                    <option value="@code">@i.RussianName </option>
                 }
             }
         </select>

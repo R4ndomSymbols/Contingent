@@ -15,10 +15,20 @@ public class SQLParameterCollection : IEnumerable<SQLParameter>{
     public SQLParameterCollection() {
         _parameters = new List<SQLParameter>();
     }
-    // возвращает имя параметра в запросе
+    // возвращает параметр в запросе
     public SQLParameter Add<T>(T value){
         string name = GetNextName();
         var result = new SQLParameter<T>(new NpgsqlParameter<T>(name, value));
+        _parameters.Add(result);
+        return result;
+    }
+    public SQLParameter Add(object value, NpgsqlDbType type){
+        string name = GetNextName();
+        var par = new NpgsqlParameter();
+        par.NpgsqlDbType = type;
+        par.ParameterName = name;
+        par.Value = value;
+        var result = new BoxedSqlParameter(par);
         _parameters.Add(result);
         return result;
     }
@@ -37,11 +47,11 @@ public class SQLParameterCollection : IEnumerable<SQLParameter>{
         return  "p" + (_parameters.Count + 1).ToString();
     }
 } 
-public abstract class SQLParameter { 
-
+public abstract class SQLParameter {
+    public bool UseBrackets {get; set;} 
     public abstract NpgsqlParameter ToNpgsqlParameter();
-
     public abstract string GetName();
+
 }
 
 public class SQLParameter<T> : SQLParameter {
@@ -53,11 +63,37 @@ public class SQLParameter<T> : SQLParameter {
 
     public override string GetName()
     {
-        return "@" + _value.ParameterName;
+        var n = "@" + _value.ParameterName; 
+        if (UseBrackets){
+            return "(" + n +")";
+        }
+        return n;
     }
 
     public override NpgsqlParameter ToNpgsqlParameter()
     {
         return _value;
     }   
+}
+
+public class BoxedSqlParameter : SQLParameter
+{
+    private NpgsqlParameter _value;
+    public BoxedSqlParameter(NpgsqlParameter value){
+        _value = value;
+    }
+
+    public override string GetName()
+    {
+        var n = "@" + _value.ParameterName; 
+        if (UseBrackets){
+            return "(" + n +")";
+        }
+        return n;
+    }
+
+    public override NpgsqlParameter ToNpgsqlParameter()
+    {
+        return _value;
+    }
 }

@@ -7,24 +7,26 @@ using Utilities;
 
 namespace StudentTracking.Models.Domain.Misc;
 
-public class StudentEducationalLevelRecord : EducationLevel{
+public class StudentEducationalLevelRecord {
 
-    private StudentEducationalLevelRecord(EducationalLevelTypes level) : base(level)
+    private LevelOfEducation _level;
+    public string RussianName => _level.RussianName;
+    public LevelOfEducation Level => _level;
+    public int OwnerId {get; set;}
+    private StudentEducationalLevelRecord(LevelOfEducation lvl, int ownerId)
     {
-       
+       _level = lvl;
+       OwnerId = ownerId;
     }
-
-    public int OwnerId { get; set; }
-    public EducationalLevelTypes Recorded {get; init;} 
 
     public static Result<StudentEducationalLevelRecord?> Create(StudentEducationRecordDTO dto){
         if (dto == null){
             return Result<StudentEducationalLevelRecord>.Failure(new ValidationError("general", "DTO не может быть null"));
         }
-        if (!Enum.TryParse(typeof(EducationalLevelTypes), dto.Level.ToString(), out object? parsed)){
-            return Result<StudentEducationalLevelRecord>.Failure(new ValidationError(nameof(Recorded), "Неверный тип записи об обучении"));
+        if (!LevelOfEducation.TryGetByLevelCode(dto.Level)){
+            return Result<StudentEducationalLevelRecord>.Failure(new ValidationError(nameof(Level), "Неверный тип записи об обучении"));
         }
-        var created = new StudentEducationalLevelRecord((EducationalLevelTypes)dto.Level){OwnerId = dto.StudentId};
+        var created = new StudentEducationalLevelRecord(LevelOfEducation.GetByLevelCode(dto.Level), dto.StudentId);
        
         return Result<StudentEducationalLevelRecord>.Success(created);
     }
@@ -47,7 +49,7 @@ public class StudentEducationalLevelRecord : EducationLevel{
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
         cmd.Parameters.Add(new NpgsqlParameter<int>("p1", OwnerId));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)Recorded));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_level.LevelCode));
 
         await cmd.ExecuteNonQueryAsync();
     }
@@ -62,11 +64,9 @@ public class StudentEducationalLevelRecord : EducationLevel{
             return found;
         }
         while (reader.Read())
-        {
-            found.Add(new StudentEducationalLevelRecord((EducationalLevelTypes)(int)reader["level_code"])
-            {
-                OwnerId = ownerId
-            });
+        {   
+            found.Add(new StudentEducationalLevelRecord(
+                LevelOfEducation.GetByLevelCode((int)reader["level_code"]), ownerId));
         }
         return found;
     }
@@ -76,7 +76,7 @@ public class StudentEducationalLevelRecord : EducationLevel{
             return false;
         }
         else {
-            return left.OwnerId == right.OwnerId && left.Recorded == right.Recorded;
+            return left.OwnerId == right.OwnerId && left._level == right._level;
         }
     }
     public static bool operator != (StudentEducationalLevelRecord left, StudentEducationalLevelRecord right){
@@ -84,35 +84,54 @@ public class StudentEducationalLevelRecord : EducationLevel{
     }
 }
 
-public class EducationLevel {
+public class LevelOfEducation {
 
-    public enum EducationalLevelTypes {
-        NotMentioned = -1,
-        BasicGeneralEducation = 1, // основное общее образование
-        SecondaryGeneralEducation = 2, // среднее общее образование
-        SecondaryVocationalEducation = 3, // среднее профессиональное образование
-    }
-    private static readonly Dictionary<EducationalLevelTypes, string> _names = new Dictionary<EducationalLevelTypes, string>(){
+    public string RussianName {get; protected init;}
+    public LevelsOfEducation LevelCode {get; protected init;}
+    public int Weight {get; protected init; }
 
-        {EducationalLevelTypes.NotMentioned, "Не указан"},
-        {EducationalLevelTypes.BasicGeneralEducation, "Основное общее образование"},
-        {EducationalLevelTypes.SecondaryGeneralEducation, "Среднее общее образование"},
-        {EducationalLevelTypes.SecondaryVocationalEducation, "Среднее профессиональное образование"}
-
+    public static IReadOnlyCollection<LevelOfEducation> ListOfLevels => new List<LevelOfEducation>{
+        new LevelOfEducation(LevelsOfEducation.NotMentioned, "Не указан"){
+            Weight = -1,
+        },
+        new LevelOfEducation(LevelsOfEducation.BasicGeneralEducation, "Основное общее образование"){
+            Weight = 1
+        },
+        new LevelOfEducation(LevelsOfEducation.SecondaryGeneralEducation, "Среднее общее образование")
+        {
+            Weight = 2
+        },
+        new LevelOfEducation(LevelsOfEducation.SecondaryVocationalEducation, "Среднее профессиональное образование"){
+            Weight = 3
+        }
     };
 
-    public EducationalLevelTypes Level {get; init;} 
-
-    protected EducationLevel(EducationalLevelTypes level){
-        Level = level;
+    protected LevelOfEducation(LevelsOfEducation level, string russianName){
+        LevelCode = level;
+        RussianName = russianName;
     }
 
-    public virtual string GetLevelName(){
-        return _names[Level];
+    public static LevelOfEducation GetByLevelCode(int code){
+        return ListOfLevels.Where(x => (int)x.LevelCode == code).First();
+    }
+    public static bool TryGetByLevelCode(int code){
+        return ListOfLevels.Any(x => (int)x.LevelCode == code);
     }
 
-    public static IReadOnlyCollection<EducationLevel> GetAllLevels(){
-        return _names.Select(x => new EducationLevel(x.Key)).ToList().AsReadOnly();  
+    public static bool operator == (LevelOfEducation left, LevelOfEducation rigth){
+        return left.LevelCode == rigth.LevelCode;
+    }
+    public static bool operator != (LevelOfEducation left, LevelOfEducation rigth){
+        return !(left == rigth);
     }
 
+
+}
+
+
+public enum LevelsOfEducation {
+    NotMentioned = -1,
+    BasicGeneralEducation = 1, // основное общее образование
+    SecondaryGeneralEducation = 2, // среднее общее образование
+    SecondaryVocationalEducation = 3, // среднее профессиональное образование
 }

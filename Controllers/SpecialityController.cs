@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
 using Utilities.Validation;
 
@@ -20,7 +22,7 @@ public class SpecialityController : Controller{
     [Route("specialities/modify/{query}")]
     public IActionResult ProcessSpeciality(string query){
         if (query == "new"){
-            return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityModel()); 
+            return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO()); 
         }
         else if(int.TryParse(query, out int id)){
             var got = SpecialityModel.GetById(id, null);
@@ -38,23 +40,30 @@ public class SpecialityController : Controller{
     }
     [HttpPost]
     [Route("specialities/add")]
-    public async Task<JsonResult> AddOrUpdateSpeciality(){
-        using(var reader = new StreamReader(Request.Body)){
-            var body = await reader.ReadToEndAsync();
-            var deserialized = JsonSerializer.Deserialize<SpecialityModel>(body);
-            if (deserialized!=null){
-                await deserialized.Save(null);
-                Console.WriteLine(await deserialized.GetCurrentState(null));
-                if (await deserialized.GetCurrentState(null) == RelationTypes.Bound){
-                    return Json(new { deserialized.Id});
-                }
-                else {
-                    return Json(deserialized.GetErrors());
-                }
+    public async Task<IActionResult> AddOrUpdateSpeciality(){
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync();
+        SpecialityDTO dto;
+        try{
+            dto = JsonSerializer.Deserialize<SpecialityDTO>(body);
+        }
+        catch (Exception){
+            return BadRequest("Неверный формат данных");
+        }
+
+        if (dto!=null){
+            var result = SpecialityModel.Build(dto);
+            if (result.IsFailure){
+                return Json(new ErrorsDTO(result.Errors));
             }
-            return Json(new object());
-        }    
+            else {
+                await result.ResultObject.Save();
+                return Json(new SpecialityOutDTO(result.ResultObject));
+            }
+        }
+        return BadRequest("Неверный формат данных");    
     }
+
     [HttpGet]
     [Route("specialities/suggest/{query?}")]
     public async Task<JsonResult> GetSuggestions(string? query){

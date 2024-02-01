@@ -11,13 +11,13 @@ public class EducationalLevelRecordDTO{
  
     public EducationalLevelRecordDTO(StudentEducationalLevelRecord model){
         StudentId = model.OwnerId;
-        Type = (int)model.Recorded;
-        TypeName = model.GetLevelName();
+        Type = (int)model.Level.LevelCode;
+        TypeName = model.RussianName;
     }
 
-    public EducationalLevelRecordDTO(EducationLevel level){
+    public EducationalLevelRecordDTO(LevelOfEducation level){
         StudentId = null;
-        Type = (int)level.Level;
-        TypeName = level.GetLevelName();
+        Type = (int)level.LevelCode;
+        TypeName = level.RussianName;
     }
 }

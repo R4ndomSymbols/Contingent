@@ -1,14 +1,17 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.JSON;
+using StudentTracking.Models.SQL;
 using Utilities;
 using Utilities.Validation;
 
 namespace StudentTracking.Models;
 
-public class SpecialityModel : DbValidatedObject
+public class SpecialityModel
 {
     public const int MINIMAL_COURSE_COUNT = 1;
     public const int MAXIMUM_COURSE_COUNT = 6;
@@ -16,213 +19,191 @@ public class SpecialityModel : DbValidatedObject
     private string _fgosCode;
     private string _fgosName;
     private string _qualification;
-    private string _fgosPrefix;
-    private string? _qualificationPostfix;
+    private string _groupNameFgosPrefix;
+    private string? _groupNameQualificationPostfix;
     private int _courseCount;
-    private StudentEducationalLevelRecord.EducationalLevelTypes _levelIn;
-    private StudentEducationalLevelRecord.EducationalLevelTypes _levelOut;
-    private TeachingDepth.Levels _educationDepth;
+    private LevelOfEducation _levelIn;
+    private LevelOfEducation _levelOut;
+    private TeachingDepth _teachingDepth;
     public int Id {
         get => _id;
     }
     public string FgosCode
     {
         get => _fgosCode;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.FgosCode),
-                new ValidationError(nameof(FgosCode), "Номер ФГОС не соответствует формату или не указан")))
-            {
-                _fgosCode = value;
-            }
-        }
     }
     public string FgosName
     {
         get => _fgosName;
-        set
-        {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText)
-            , new ValidationError(nameof(FgosName), "Название ФГОС имеет неверный формат или не указано"))
-            )
-            {
-                _fgosName = value;
-            }
-        }
     }
     public string Qualification
     {
         get => _qualification;
-        set
-        {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
-            new ValidationError(nameof(Qualification), "Квалификация указана или указана неверно")))
-            {
-                _qualification = value;
-            }
-        }
     }
     public string FgosPrefix
     {
-        get => _fgosPrefix;
-        set
-        {
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyLetters),
-            new ValidationError(nameof(FgosPrefix), "Префикс специальности не указан или указан неверно")))
-            {
-                _fgosPrefix = value;
-            }
-        }
-
+        get => _groupNameFgosPrefix;
     }
 
     public string QualificationPostfix
     {
-        get => _qualificationPostfix ?? "";
-        set
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                _qualificationPostfix = null;
-                return;
-            }
-            if (PerformValidation(() => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyLetters),
-            new ValidationError(nameof(QualificationPostfix), "Постфикс квалификации имеет неверный формат")))
-            {
-                _qualificationPostfix = value;
-            }
-        }
-    }
-    [JsonIgnore]
-    public int IntCourseCount
-    {
-        get => _courseCount;
+        get => _groupNameQualificationPostfix ?? "";
     }
     public int CourseCount
     {
         get => _courseCount;
-        set
-        {
-            if (PerformValidation(
-                () => ValidatorCollection.CheckRange(value, 1, 6),
-                new ValidationError(nameof(CourseCount), "Указанное число превышает допустимые пределы")
-            ))
-            {
-                _courseCount = value;
-            }
-        }
     }
-    public int EducationalLevelIn
+    public LevelOfEducation EducationalLevelIn
     {
-        get => (int)_levelIn;
-        set
-        {
-            if (PerformValidation(
-                () =>
-                {
-                    try
-                    {
-                        var dummy = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
-                        return true;
-                    }
-                    catch (InvalidCastException)
-                    {
-                        return false;
-                    }
-                }, new ValidationError(nameof(EducationalLevelIn), "Переданное значение не является допустимым")
-            ))
-            {
-                _levelIn = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
-            }
-        }
+        get => _levelIn;
     }
-    public int EducationalLevelOut
+    public LevelOfEducation EducationalLevelOut
     {
-        get => (int)_levelOut;
-        set
-        {
-            if (PerformValidation(
-                () =>
-                {
-                    try
-                    {
-                        var dummy = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
-                        return true;
-                    }
-                    catch (InvalidCastException)
-                    {
-                        return false;
-                    }
-                }, new ValidationError(nameof(EducationalLevelOut), "Переданное значение не является допустимым")
-            ))
-            {
-                _levelOut = (StudentEducationalLevelRecord.EducationalLevelTypes)value;
-            }
-        }
+        get => _levelOut;
     }
-    public int TeachingLevel
+    public TeachingDepth TeachingLevel
     {
-        get => (int)_educationDepth;
-        set
-        {
-            if (PerformValidation(
-                () =>
-                {
-                    try
-                    {
-                        var dummy = (TeachingDepth.Levels)value;
-                        return true;
-                    }
-                    catch (InvalidCastException)
-                    {
-                        return false;
-                    }
-                }, new ValidationError(nameof(TeachingLevel), "Переданное значение уровня изучения не является допустимым")
-            ))
-            {
-                _educationDepth = (TeachingDepth.Levels)value;
-            }
+        get => _teachingDepth;
+    }
+
+    private SpecialityModel()
+    {
+
+    }
+
+    public static Result<SpecialityModel?> Build(SpecialityDTO dto){
+        if (dto is null){
+            return Result<SpecialityModel>.Failure(new ValidationError("dto не может быть null"));
+        }
+        IList<ValidationError?> errors = new List<ValidationError?>();
+        SpecialityModel model = new();
+
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(dto.FgosCode, ValidatorCollection.FgosCode),
+            message: "Номер ФГОС не соответствует формату или не указан",
+            propName: nameof(FgosCode)
+        )){
+            model._fgosCode = dto.FgosCode;
+        }
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(dto.FgosName, ValidatorCollection.OnlyText),
+            message: "Номер ФГОС не соответствует формату или не указан",
+            propName: nameof(FgosName)
+        )){
+            model._fgosName = dto.FgosName;
+        }
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(dto.FgosPrefix, ValidatorCollection.OnlyLetters),
+            message: "Префикс имени группы по ФГОС не указан или указан неверно",
+            propName: nameof(FgosPrefix)
+        )){
+            model._groupNameFgosPrefix = dto.FgosPrefix;
+        }
+        if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(dto.Qualification, ValidatorCollection.OnlyText),
+            message: "Квалификация указана или указана неверно",
+            propName: nameof(Qualification)
+        )){
+            model._qualification = dto.Qualification;
+        }
+
+        if (dto.QualificationPostfix == null){
+            model._groupNameQualificationPostfix = null;
+        }
+        else if (errors.IsValidRule(
+            ValidatorCollection.CheckStringPattern(dto.QualificationPostfix, ValidatorCollection.OnlyLetters),
+            message: "Постфикс квалификации указан неверно",
+            propName: nameof(QualificationPostfix)
+        )){
+            model._groupNameQualificationPostfix = dto.QualificationPostfix;
+        }
+
+        if (errors.IsValidRule(
+            dto.CourseCount >= MINIMAL_COURSE_COUNT && dto.CourseCount <= MAXIMUM_COURSE_COUNT,
+            message: "Количество курсов указано неверно",
+            propName: nameof(CourseCount)
+        )){
+            model._courseCount = dto.CourseCount;
+        }
+
+        if (errors.IsValidRule(
+            LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelIn),
+            message: "Уровень образования (входной) указан неверно",
+            propName: nameof(CourseCount)
+        )){
+            model._levelIn = LevelOfEducation.GetByLevelCode(dto.EducationalLevelIn);
+        }
+
+        if (errors.IsValidRule(
+            LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelOut),
+            message: "Уровень образования (выходной) указан неверно",
+            propName: nameof(CourseCount)
+        )){
+            model._levelOut = LevelOfEducation.GetByLevelCode(dto.EducationalLevelOut);
+        }
+        if (errors.IsValidRule(
+            TeachingDepth.TryGetByTypeCode(dto.TeachingDepth),
+            message: "Уровень образования (выходной) указан неверно",
+            propName: nameof(CourseCount)
+        )){
+            model._teachingDepth = TeachingDepth.GetByTypeCode(dto.TeachingDepth);
+        }
+        if (errors.Any()){
+            return Result<SpecialityModel>.Failure(errors);
+        }
+        else {
+            return Result<SpecialityModel>.Success(model);
         }
     }
 
-    public SpecialityModel() : base()
-    {
-        RegisterProperty(nameof(FgosCode));
-        RegisterProperty(nameof(FgosName));
-        RegisterProperty(nameof(Qualification));
-        RegisterProperty(nameof(QualificationPostfix));
-        RegisterProperty(nameof(FgosPrefix));
-        RegisterProperty(nameof(EducationalLevelIn));
-        RegisterProperty(nameof(EducationalLevelOut));
-        RegisterProperty(nameof(TeachingLevel));
-        RegisterProperty(nameof(CourseCount));
+    public static async Task<IReadOnlyCollection<SpecialityModel>> FindSpecialities(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        var mapper = new Mapper<SpecialityModel>(
+            (reader) => {
+                if (reader["id_spec"].GetType() == typeof(DBNull)){
+                    return Task.Run(() => QueryResult<SpecialityModel>.NotFound());
+                }
+                var mapped = new SpecialityModel();
+                mapped._id = (int)reader["id_spec"];
+                mapped._fgosName = (string)reader["fgos_code"];
+                mapped._fgosCode = (string)reader["fgos_name"];
+                mapped._qualification = (string)reader["qualification"];
+                mapped._groupNameFgosPrefix = (string)reader["group_prefix"];
+                mapped._groupNameQualificationPostfix = reader["group_postfix"].GetType() == typeof(DBNull) ? null : (string)reader["group_postfix"];
+                mapped._courseCount = (int)reader["course_count"];
+                mapped._teachingDepth = TeachingDepth.GetByTypeCode((int)reader["knowledge_depth"]);
+                mapped._levelIn = LevelOfEducation.GetByLevelCode((int)reader["speciality_in_education_level"]);
+                mapped._levelOut = LevelOfEducation.GetByLevelCode((int)reader["speciality_out_education_level"]);
+                return Task.Run(() => QueryResult<SpecialityModel>.Found(mapped));
+            }, new List<Column>(){
+                new Column("id", "id_spec", "educational_program"),
+                new Column("group_prefix", "educational_program"),
+                new Column("fgos_name", "educational_program"),
+                new Column("qualification", "educational_program"),
+                new Column("fgos_code", "educational_program"),
+                new Column("group_postfix", "educational_program"),
+                new Column("course_count", "educational_program"),
+                new Column("knowledge_depth", "educational_program"),
+                new Column("speciality_in_education_level", "educational_program"),
+                new Column("speciality_out_education_level", "educational_program")
+            } 
+        );
+        var selectQuery = SelectQuery<SpecialityModel>.Init("educational_program")
+        .AddMapper(mapper)
+        .AddJoins(additionalJoins)
+        .AddOrderByStatement(addtioinalOrderBy)
+        .AddWhereStatement(addtioinalWhere)
+        .AddParameters(additionalParameters)
+        .Finish();
+        if (selectQuery.IsFailure){
+            throw new Exception("Запрос не может быть составлен");
+        }
+        return await selectQuery.ResultObject.Execute(conn, limits);
 
-        _fgosName = "";
-        _fgosCode = "";
-        _courseCount = 0;
-        _educationDepth = TeachingDepth.Levels.NotMentioned;
-        _fgosPrefix = "";
-        _levelIn = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
-        _levelOut = StudentEducationalLevelRecord.EducationalLevelTypes.NotMentioned;
-        _qualification = "";
-        _qualificationPostfix = "";
     }
 
-    protected SpecialityModel(int id, string code, string name, string qual, string fPref) : base(RelationTypes.Bound)
-    {
-        _id = id;
-        _fgosCode = code;
-        _fgosName = name;
-        _qualification = qual;
-        _fgosPrefix = fPref;
-    }
-    public async Task Save(ObservableTransaction? scope){
+    public async Task Save(ObservableTransaction? scope = null){
         
-        if (await GetCurrentState(scope) != RelationTypes.Pending){
-            Console.WriteLine(string.Join("\n", GetErrors()));
-            return;
-        }
         NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
         string cmdText = "INSERT INTO public.educational_program( " +
 	    " fgos_code, fgos_name, qualification, course_count, " + 
@@ -239,68 +220,38 @@ public class SpecialityModel : DbValidatedObject
         cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _fgosName));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _qualification));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p4", _courseCount));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)_levelOut));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_levelIn));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_educationDepth));
-        cmd.Parameters.Add(new NpgsqlParameter<string>("p8", _fgosPrefix));
-        cmd.Parameters.Add(new NpgsqlParameter<string?>("p9", _qualificationPostfix));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)_levelOut.LevelCode));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_levelIn.LevelCode));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_teachingDepth.Level));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p8", _groupNameFgosPrefix));
+        cmd.Parameters.Add(new NpgsqlParameter<string?>("p9", _groupNameQualificationPostfix));
 
         await using (cmd){
             await using var reader = await cmd.ExecuteReaderAsync();
             await reader.ReadAsync();
             _id = (int)reader["id"];
-            NotifyStateChanged();
         }
         if (conn!=null){
             await conn.DisposeAsync();
         }   
     }
 
-    public static async Task<SpecialityModel?> GetById(int id, ObservableTransaction? scope)
-    {
-        SpecialityModel? result = null;
-        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
-        string cmdText = "SELECT * FROM educational_program WHERE id = @p1";
-        NpgsqlCommand cmd;
-        if (scope != null)
-        {
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+    public static async Task<SpecialityModel?> GetById(int id, ObservableTransaction? scope = null)
+    {   
+        var parameters = new SQLParameterCollection();
+        var p1 = parameters.Add(id);
+        var where = new ComplexWhereCondition(new WhereCondition(
+            new Column("id", "educational_program"),
+            p1,
+            WhereCondition.Relations.Equal
+        ));
+        var found = await FindSpecialities(new QueryLimits(0,1), additionalParameters: parameters, addtioinalWhere: where);
+        if (found.Any()){
+            return found.First();
         }
-        else
-        {
-            cmd = new NpgsqlCommand(cmdText, conn);
-        }
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return result;
-            }
-            else
-            {
-                await reader.ReadAsync();
-                result = new SpecialityModel(id,
-                    (string)reader["fgos_code"],
-                    (string)reader["fgos_name"],
-                    (string)reader["qualification"],
-                    reader["group_prefix"].GetType() == typeof(DBNull) ? "" : (string)reader["group_prefix"])
-                {
-                    _qualificationPostfix = reader["group_postfix"].GetType() == typeof(DBNull) ? null : (string)reader["group_postfix"],
-                    _courseCount = (int)reader["course_count"],
-                    _educationDepth = (TeachingDepth.Levels)(int)reader["knowledge_depth"],
-                    _levelIn = (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["speciality_in_education_level"],
-                    _levelOut = (StudentEducationalLevelRecord.EducationalLevelTypes)(int)reader["speciality_out_education_level"],
-                };
-            }
-        }
-        if (conn != null)
-        {
-            await conn.DisposeAsync();
-        }
-        return result;
+        else {
+            return null;
+        } 
     }
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope){
         NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
@@ -325,6 +276,8 @@ public class SpecialityModel : DbValidatedObject
         return result;
     }
     public static async Task<List<SpecialitySuggestionJSON>> GetSuggestions(string? searchText, ObservableTransaction? scope){
+        
+        
         NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
         string cmdText = "";
         if (searchText!= null){
@@ -372,12 +325,7 @@ public class SpecialityModel : DbValidatedObject
     public SpecialitySuggestionJSON ToSuggestion(){
         return new SpecialitySuggestionJSON(_id, _fgosName, _qualification, _fgosCode);
     } 
-
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? scope)
-    {
-        return await GetById(this._id, scope);
-    }
-    public override bool Equals(IDbObjectValidated? other)
+    public override bool Equals(object? other)
     {
         if (other == null){
             return false;
@@ -389,13 +337,13 @@ public class SpecialityModel : DbValidatedObject
         return 
             _id == unboxed._id &&
             _courseCount == unboxed._courseCount &&
-            _educationDepth == unboxed._educationDepth &&
+            _teachingDepth == unboxed._teachingDepth &&
             _fgosCode == unboxed._fgosCode &&
             _fgosName == unboxed._fgosName &&
             _levelIn == unboxed._levelIn &&
             _levelOut == unboxed._levelOut &&
             _qualification == unboxed._qualification &&
-            _qualificationPostfix == unboxed._qualificationPostfix;
+            _groupNameQualificationPostfix == unboxed._groupNameQualificationPostfix;
     }
 }
 

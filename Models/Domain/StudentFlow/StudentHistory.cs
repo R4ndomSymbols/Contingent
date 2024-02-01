@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Data.SqlTypes;
 using System.Runtime.Versioning;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using StudentTracking.Controllers.DTO.Out;
@@ -10,25 +12,21 @@ using Utilities;
 namespace StudentTracking.Models.Domain.Flow;
 
 
-public class StudentHistory : IEnumerable<StudentFlowRecord>
+public class StudentHistory
 {
     private List<StudentFlowRecord> _history;
+
+    public IReadOnlyCollection<StudentFlowRecord> History => _history;
     private int _studentId;
-    private bool _populated;
-    public IEnumerator GetEnumerator()
+    private StudentHistory()
     {
-        return _history.GetEnumerator();
-    }
-    IEnumerator<StudentFlowRecord> IEnumerable<StudentFlowRecord>.GetEnumerator()
-    {
-        return _history.GetEnumerator();
+
     }
 
-    public StudentHistory(int studentId)
-    {
-        _studentId = studentId;
-        _history = new List<StudentFlowRecord>();
-        _populated = false;
+    public static async Task<StudentHistory> Create(int studentId){
+        var result = new StudentHistory();
+        result._history = await GetHistory(studentId);
+        return result;
     }
 
     public StudentFlowRecord? GetClosestBefore(DateTime anchor)
@@ -37,7 +35,7 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
         int indexOfClosest = -1;
         for (int i = 0; i < _history.Count; i++)
         {
-            var effDate = _history[i].OrderEffectiveDate;
+            var effDate = _history[i].ByOrder.EffectiveDate;
             if (effDate <= anchor)
             {
                 var diff = anchor - effDate;
@@ -62,7 +60,7 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
         int indexOfClosest = -1;
         for (int i = 0; i < _history.Count; i++)
         {
-            var effDate = _history[i].OrderEffectiveDate;
+            var effDate = _history[i].ByOrder.EffectiveDate;
             if (effDate >= anchor)
             {
                 var diff = anchor - effDate;
@@ -84,31 +82,24 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
 
     public StudentFlowRecord? GetLastOrder()
     {
-        if (!_populated)
+        StudentFlowRecord? last = null;
+        DateTime max = DateTime.MinValue;
+        for (int i = 0; i < _history.Count; i++)
         {
-            return null;
-        }
-        else
-        {
-            StudentFlowRecord last = new StudentFlowRecord();
-            DateTime max = DateTime.MinValue;
-            for (int i = 0; i < _history.Count; i++)
+            if (_history[i].ByOrder.EffectiveDate > max)
             {
-                if (_history[i].OrderEffectiveDate > max)
-                {
-                    last = _history[i];
-                    max = last.OrderEffectiveDate;
-                }
+                last = _history[i];
+                max = last.ByOrder.EffectiveDate;
             }
-            return last;
         }
+        return last;
+        
     }
 
     // получает всю историю студента в приказах
     // история отсортирована по дате регистрации приказа
-    public async Task PopulateHistory()
+    private static async Task<List<StudentFlowRecord>> GetHistory(int id)
     {
-        _history.Clear();
         NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT student_flow.id AS sid, student_id, order_id, group_id_to, orders.effective_date AS oed, orders.type AS ot " +
         " FROM student_flow" +
@@ -116,38 +107,72 @@ public class StudentHistory : IEnumerable<StudentFlowRecord>
         " WHERE student_id = @p1 " +
         " ORDER BY oed ASC";
         NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
+
+        var raws = new List<RawStudentFlowRecord>();
+        List<StudentFlowRecord> found = new();
+
         await using (conn)
         await using (cmd)
         {
             await using var reader = await cmd.ExecuteReaderAsync();
             if (!reader.HasRows)
             {
-                return;
+                return found;
             }
             while (reader.Read())
-            {
-                _history.Add(
-                new StudentFlowRecord(
-                    (int)reader["sid"],
-                    (int)reader["order_id"],
-                    (int)reader["student_id"],
-                    reader["group_id_to"].GetType() == typeof(DBNull) ? null : (int)reader["group_id_to"],
-                    (DateTime)reader["oed"],
-                    (OrderTypes)(int)reader["ot"]
-                ));
+            {   
+                var record = new RawStudentFlowRecord();
+                record.Id = (int)reader["sid"];
+                record.OrderId = (int)reader["order_id"];
+                record.StudentId = id;
+                record.GroupToId = reader["group_id_to"].GetType() == typeof(DBNull) ? null : (int)reader["group_id_to"];
+                raws.Add(record);
             }
+        } 
+        var groupParams = new SQLParameterCollection();
+        var gp1 = groupParams.Add(raws.Where(x => x.GroupToId !=null).Select(x => x.GroupToId).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
+        gp1.UseBrackets = true;
+        var groupWhere = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("group_id", "educational_group"),
+                gp1,
+                WhereCondition.Relations.In
+            )
+        );
+        var groupsFound = await GroupModel.FindGroups(new QueryLimits(0, 100), additionalConditions: groupWhere, addtitionalParameters: groupParams);
+
+        var ordersParams = new SQLParameterCollection();
+        var sp1 = ordersParams.Add(raws.Select(x => x.OrderId).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
+        gp1.UseBrackets = true;
+        var orderWhere = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("id", "orders"),
+                sp1,
+                WhereCondition.Relations.In
+            )
+        );
+
+        var student = await StudentModel.GetStudentById(id);
+        var ordersFound = await Order.FindOrders(new QueryLimits(0, 100), additionalParams: ordersParams, filter: orderWhere);
+        foreach(var raw in raws){
+            found.Add(
+                new StudentFlowRecord(
+                    order: ordersFound.Where(x => x.Id == raw.OrderId).First(),
+                    student: student,
+                    group: groupsFound.Where(x => x.Id == raw.GroupToId).FirstOrDefault()
+                )
+            );
         }
+        return found;
     }
-
-
-
 
     public static async Task<GroupModel?> GetCurrentStudentGroup(int studentId)
     {   
         var joins = new JoinSection()
         .AppendJoin(
             JoinSection.JoinType.RightJoin,
-            new Column("id", "educational_group"),
+            new Column("group_id", "educational_group"),
             new Column("group_id_to", "student_flow")
             
         )

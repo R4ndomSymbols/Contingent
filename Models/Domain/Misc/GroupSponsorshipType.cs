@@ -1,7 +1,58 @@
 namespace StudentTracking.Models.Domain.Misc;
 
-public class GroupSponsorshipType {
-    public enum Types {
+public class GroupSponsorship {
+    
+    public string RussianName {get; private init;}
+
+    public string GroupNamePostfix {get; private init;}
+    public GroupSponsorshipTypes TypeOfSponsorship {get; private init;}
+
+    private GroupSponsorship(){
+
+    }
+
+    public static IReadOnlyCollection<GroupSponsorship> ListOfSponsorships => new List<GroupSponsorship> {
+        new() {
+            RussianName = "Не указано",
+            GroupNamePostfix = "",
+            TypeOfSponsorship = GroupSponsorshipTypes.NotMentioned
+        },
+        new() {
+            RussianName = "Бюджетное финансирование",
+            GroupNamePostfix = "",
+            TypeOfSponsorship = GroupSponsorshipTypes.FederalGovernmentSponsorship
+        },
+        new() {
+            RussianName = "Бюджет субъекта",
+            GroupNamePostfix = "",
+            TypeOfSponsorship = GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship
+        },
+        new() {
+            RussianName = "Местный бюджет",
+            GroupNamePostfix = "",
+            TypeOfSponsorship = GroupSponsorshipTypes.LocalGovenmentSponsorship
+        },
+        new() {
+            RussianName = "Внебюджет",
+            GroupNamePostfix = "в",
+            TypeOfSponsorship = GroupSponsorshipTypes.IndividualSponsorship
+        },
+    };
+
+    public bool IsFree(){
+        return TypeOfSponsorship != GroupSponsorshipTypes.IndividualSponsorship;
+    }
+
+    public static GroupSponsorship GetByTypeCode(int code) {
+        return ListOfSponsorships.Where(x => (int)x.TypeOfSponsorship == code).First();
+    } 
+    public static bool TryGetByTypeCode(int code) {
+        return ListOfSponsorships.Any(x => (int)x.TypeOfSponsorship == code);
+    } 
+}
+
+
+public enum GroupSponsorshipTypes {
         NotMentioned = -1,
         FederalGovernmentSponsorship = 1,
         FederalSubjectGovernmentSponsorship = 2,
@@ -9,17 +60,4 @@ public class GroupSponsorshipType {
         IndividualSponsorship = 4 
     }
 
-    public static bool IsFree(Types type){
-        return type == Types.FederalGovernmentSponsorship || 
-        type == Types.FederalSubjectGovernmentSponsorship ||
-        type == Types.LocalGovenmentSponsorship; 
-    }
 
-    public static readonly Dictionary<Types, (string name, string postfix)> Names = new Dictionary<Types, (string name, string postfix)> {
-        {Types.NotMentioned, ("Не указано", "")},
-        {Types.FederalGovernmentSponsorship, ("Бюджетное финансирование", "")},
-        {Types.FederalSubjectGovernmentSponsorship, ("Бюджет субъекта", "")},
-        {Types.LocalGovenmentSponsorship, ("Местный бюджет", "")},
-        {Types.IndividualSponsorship, ("Внебюджет", "в")}
-    };
-}
