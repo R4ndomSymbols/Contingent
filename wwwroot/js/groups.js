@@ -71,6 +71,11 @@ function updateName(){
 }
 
 $("#save").click(function () {
+    if ($("about_group").attr("group_id") !== undefined){
+        alert("Обновление не предусмотрено")
+        return;
+    }
+
     $.ajax({
         type: "POST",
         url: "/groups/addsequence",
@@ -90,7 +95,8 @@ $("#save").click(function () {
             var groupId = response["groupId"];
 
             if (groupId != undefined) {
-                $("#GroupId").val(groupId);
+                $("#about_group").attr("group_id", groupId);
+                alert("Сохранение прошло успешно")
             }
             else {
                 setErrors(response);

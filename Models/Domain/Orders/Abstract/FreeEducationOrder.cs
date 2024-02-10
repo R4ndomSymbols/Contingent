@@ -7,6 +7,7 @@ using Utilities.Validation;
 using StudentTracking.Models.JSON;
 using System.Net.Http.Headers;
 using StudentTracking.Models.Domain.Orders.OrderData;
+using StudentTracking.Controllers.DTO.In;
 
 
 namespace StudentTracking.Models.Domain.Orders;
@@ -18,6 +19,10 @@ public abstract class FreeEducationOrder : Order
     }
     
     protected FreeEducationOrder() : base()
+    {
+
+    }
+    protected FreeEducationOrder(int id) : base(id)
     {
 
     }

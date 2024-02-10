@@ -11,7 +11,7 @@ public sealed class EmptyOrder : Order
         get => _orderNumber.ToString() + "-TEMP";
     }
     private EmptyOrder(){
-        _alreadyConducted = false;
+        _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
         _effectiveDate = DateTime.Today;
         _specifiedDate = DateTime.Today;
         _id = Utils.INVALID_ID;

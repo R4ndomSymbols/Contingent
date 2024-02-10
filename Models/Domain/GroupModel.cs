@@ -47,6 +47,10 @@ public class GroupModel
     {
         get => _groupSponsorsip;
     }
+
+    public int HistoricalSequenceId {
+        get => _historySequenceId;
+    }
     public string GroupName
     {
         get

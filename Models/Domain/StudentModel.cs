@@ -185,8 +185,8 @@ public class StudentModel
         }
     }
 
-
-    public static async Task<IReadOnlyCollection<StudentModel>> FindStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null){
+    // по умолчанию возвращает только уникальных студентов
+    public static async Task<IReadOnlyCollection<StudentModel>> FindUniqueStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<StudentModel>(
             (reader) => {
@@ -227,7 +227,7 @@ public class StudentModel
                 new Column("gia_mark", "students"),
             }
         );
-        var buildResult = SelectQuery<StudentModel>.Init("students")
+        var buildResult = SelectQuery<StudentModel>.Init("students", new Column("id", "students"))
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
         .AddWhereStatement(additionalConditions)
@@ -254,7 +254,7 @@ public class StudentModel
                 WhereCondition.Relations.Equal
             )
         );
-        var found = await FindStudents(new QueryLimits(0,1), additionalConditions: where, addtitionalParameters: sParams);
+        var found = await FindUniqueStudents(new QueryLimits(0,1), additionalConditions: where, addtitionalParameters: sParams);
         if (found.Any()){
             return found.First();
         }
@@ -340,7 +340,7 @@ public class StudentModel
     } 
     public static async Task<bool> IsAllExists(IEnumerable<int> ids){
 
-        var conn = await Utils.GetAndOpenConnectionFactory();
+        using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT COUNT(id) AS c FROM students WHERE " + 
         "id = ANY(@p1)";
         NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
@@ -348,7 +348,6 @@ public class StudentModel
         p.ParameterName = "p1";
         p.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
         p.Value = ids.ToArray();
-        using (conn)
         using (cmd){
             using var reader = cmd.ExecuteReader();
             return (int)reader["c"] == ids.Count();
@@ -396,7 +395,7 @@ public class StudentModel
 
     public async Task Update(ObservableTransaction? scope = null)
     {
-        var conn = await Utils.GetAndOpenConnectionFactory(); 
+        using var conn = await Utils.GetAndOpenConnectionFactory(); 
         var cmdText = "UPDATE public.students " +
 	    " SET snils=@p1, inn=@p2, actual_address=@p3, date_of_birth=@p4, rus_citizenship_id=@p5, " +
         " gender=@p6, grade_book_number=@p7, target_education_agreement=@p8, gia_mark=@p9, " +

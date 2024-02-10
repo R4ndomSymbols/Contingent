@@ -47,17 +47,17 @@ public class StudentController : Controller
 
     }
     [HttpGet]
-    [Route("students/view/{query}")]
-    public async Task<IActionResult> ViewStudent(string query)
+    [Route("students/view/{id?}")]
+    public async Task<IActionResult> ViewStudent(string id)
     {
-        if (int.TryParse(query, out int id))
+        if (int.TryParse(id, out int parsed))
         {
-            StudentModel? student = await StudentModel.GetStudentById(id);
+            StudentModel? student = await StudentModel.GetStudentById(parsed);
             if (student == null)
             {
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
             }
-            return View(@"Views/Observe/Student.cshtml", student);
+            return View(@"Views/Observe/Student.cshtml", new StudentFullDTO(student));
         }
         else
         {

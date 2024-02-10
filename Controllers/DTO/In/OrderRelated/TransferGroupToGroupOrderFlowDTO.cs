@@ -5,12 +5,12 @@ using StudentTracking.Models.Domain.Orders.OrderData;
 namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class TransferGroupToGroupOrderFlowDTO {
+public class StudentGroupChangeOrderFlowDTO {
 
     [JsonRequired]
     public List<StudentMoveDTO> Moves {get; set; }
 
-    public TransferGroupToGroupOrderFlowDTO(){
+    public StudentGroupChangeOrderFlowDTO(){
         Moves = new List<StudentMoveDTO>();
     }
 }

@@ -23,7 +23,7 @@ public class OrderController : Controller{
     
     [HttpGet]
     [Route("/orders/modify/{query}")]
-    public async Task<IActionResult> ProcessSpeciality(string query){
+    public async Task<IActionResult> ProcessOrder(string query){
         if (query == "new"){
             return View(@"Views/Modify/OrderModify.cshtml", EmptyOrder.Empty); 
         }
@@ -31,6 +31,23 @@ public class OrderController : Controller{
             var result = await Order.GetOrderById(id);
             if (result.IsSuccess){
                 return View(@"Views/Modify/OrderModify.cshtml", result.ResultObject);
+            }
+            else{
+                return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
+            }
+            
+        }
+        else{
+            return View(@"Views/Shared/Error.cshtml", "Недопустимый id приказа");
+        }
+    }
+    [HttpGet]
+    [Route("/orders/view/{query}")]
+    public async Task<IActionResult> ViewOrder(string query){
+        if(int.TryParse(query, out int id)){
+            var result = await Order.GetOrderById(id);
+            if (result.IsSuccess){
+                return View(@"Views/Observe/Order.cshtml", new OrderCardResponseDTO(result.ResultObject));
             }
             else{
                 return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
@@ -58,15 +75,14 @@ public class OrderController : Controller{
     }
     [HttpPost]
     [Route("/orders/generateIdentity")]
-    public async Task<JsonResult> GenerateIndentity(){
+    public async Task<IActionResult> GenerateIndentity(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
             var result = await Order.Build(body);
             if (result.IsSuccess){
                 return Json(new {result.ResultObject.OrderOrgId});
             }
-            Console.WriteLine(result.Errors?.ErrorsToString() ?? "");
-            return Json(new object());  
+            return BadRequest(Json(new ErrorsDTO(result.Errors)).Value);  
         }
     }
 
@@ -89,7 +105,17 @@ public class OrderController : Controller{
     }
     [HttpGet]
     [Route("/orders/close/{id?}")]
-    public async Task<IActionResult> CloseOrder(){
-        return BadRequest();
+    public async Task<IActionResult> CloseOrder(string id){
+        
+        if (int.TryParse(id, out int parsed)){
+            var result = await Order.GetOrderById(parsed);
+            if (result.IsFailure){
+                return BadRequest(new ErrorsDTO(result.Errors));
+            }
+            await result.ResultObject.Close();
+            return Ok();
+        }
+        
+        return BadRequest(new ErrorsDTO(new ValidationError("Такого приказа не существует"))); 
     }
 }

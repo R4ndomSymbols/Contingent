@@ -99,7 +99,7 @@ public class Apartment : DbValidatedObject
 
     public async Task Save(ObservableTransaction? scope)
     {
-        var conn = await Utils.GetAndOpenConnectionFactory();
+        using var conn = await Utils.GetAndOpenConnectionFactory();
         if (await GetCurrentState(scope) != RelationTypes.Pending)
         {
             return;
@@ -120,7 +120,6 @@ public class Apartment : DbValidatedObject
         }
         command.Parameters.Add(new NpgsqlParameter<int>("p1", _parentBuildingId));
         command.Parameters.Add(new NpgsqlParameter<string>("p2", _untypedName));
-        await using (conn)
         await using (command)
         {   
             using var reader = await command.ExecuteReaderAsync();

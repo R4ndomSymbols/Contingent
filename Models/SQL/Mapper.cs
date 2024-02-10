@@ -19,6 +19,10 @@ public class Mapper<T> : IQueryPart {
         return _columns;
     }
 
+    public string AsSQLText(Column distinctOn)
+    {
+        return "SELECT "+ "DISTINCT ON (" + distinctOn.AsSQLText() + ") " + string.Join(", ", _columns.Select(x => x.AsSQLText())); 
+    }
     public string AsSQLText()
     {
         return "SELECT " + string.Join(", ", _columns.Select(x => x.AsSQLText())); 

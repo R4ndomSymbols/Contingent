@@ -5,7 +5,7 @@ using Utilities;
 namespace StudentTracking.Controllers.DTO.Out;
 
 public sealed class GroupOutDTO {
-    public int Id {get; set;}
+    public int? Id {get; set;}
     public int EduFormatCode {get; set; }
     public int SponsorshipTypeCode {get; set;}
     public string CreationYear {get; set; }
@@ -22,7 +22,7 @@ public sealed class GroupOutDTO {
         CreationYear = model.CreationYear.ToString();
     }
     public GroupOutDTO(){
-        Id = Utils.INVALID_ID;
+        Id = null;
         EduFormatCode = (int)GroupEducationFormatTypes.NotMentioned;
         SponsorshipTypeCode = (int)GroupSponsorshipTypes.NotMentioned;
         CreationYear = "";

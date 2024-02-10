@@ -20,9 +20,12 @@ function updateIdentity(){
                 OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val() 
             }
         ),
-        dataType: "JSON",
+        contentType: "application/json",
         success: function (response) {
             document.getElementById("OrderOrgId").innerText = response["orderOrgId"];
+        },
+        error: function(xhr, textStatus, errThrown){
+            setErrors(JSON.parse(xhr.responseText));
         }
     });
     

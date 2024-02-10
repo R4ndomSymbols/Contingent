@@ -95,7 +95,12 @@
     <button class="btn btn-primary" id = "save">
         Сохранить
     </button>
-    <input type="hidden" id="GroupId"/>
+    @if(Model.Id is null){
+        <div id="about_group"/>
+    }
+    else{
+        <div id="about_group" group_id = "@Model.Id"/>
+    }
 </div>
 <script src="~/js/site.js"></script>
 <script src="~/js/groups.js"></script>

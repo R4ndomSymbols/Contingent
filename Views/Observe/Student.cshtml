@@ -109,8 +109,25 @@
             </div>
         </div>
     }
+    <div class="col-4">
+        <p>История студента в приказах</p>
+    </div>
+    <div class="col-11">
+        <table class="table">
+            <thead>
+                <th>Тип приказа</th>
+                <th>Номер приказа</th>
+                <th>Дата</th>
+                <th>Группа откуда</th>
+                <th>Группа куда</th>
+            </thead>
+            <tbody id="history">
 
-    <input type="hidden" id="student_id"value="@Model.Id"/>
+            </tbody>
+        </table>
+
+    </div>
+    <div id="about_student" student_id="@Model.Id"/>
 </div>
 
-
+<script src="~/js/studentView.js"></script>

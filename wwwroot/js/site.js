@@ -1,12 +1,13 @@
 ﻿const error_postfix = "_err";
 function setErrors(response){
+    response = response.errors;
     $.each(response, function (index, value) { 
-        var elem = document.getElementById(value.field + error_postfix);
+        var elem = document.getElementById(value.frontendFieldName + error_postfix);
         if (elem != null) {
-            elem.innerHTML = value.err;
-            var parentInput = document.getElementById(value.field);
+            elem.innerHTML = value.messageForUser;
+            var parentInput = document.getElementById(value.frontendFieldName);
             if (parentInput != null) {
-                $("#" + value.field).on("click", function () {
+                $("#" + value.frontendFieldName).on("click", function () {
                     elem.innerHTML = "";
                 })
             }

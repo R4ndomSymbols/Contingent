@@ -16,31 +16,44 @@ public class OrderTypeInfo
     {
         NoChange = 1,
         MustChange = 2,
-        Vipe = 3
+        Vipe = 3,
+        Undefined = 4, 
     }
 
-    public static OrderTypeInfo GetByType(OrderTypes type)
-    {
+    private static IReadOnlyCollection<OrderTypeInfo> _types = new List<OrderTypeInfo>(){
 
-        switch (type)
-        {
-            case OrderTypes.FreeEnrollment:
-                return new OrderTypeInfo(
-                    OrderTypes.FreeEnrollment,
-                    "Зачисление (бюджет)",
-                    GroupDisplayBehaviour.MustChange);
-            case OrderTypes.FreeDeductionWithGraduation:
-                return new OrderTypeInfo(
-                    OrderTypes.FreeDeductionWithGraduation,
-                    "Отчисление (бюджет)",
-                    GroupDisplayBehaviour.Vipe);
-            case OrderTypes.FreeTransferGroupToGroup:
-                return new OrderTypeInfo(
-                    OrderTypes.FreeTransferGroupToGroup,
-                    "Перевод внутри колледжа (бюджет)",
-                    GroupDisplayBehaviour.MustChange);
-            default:
-                throw new Exception("Такой тип приказа не зарегистрирован");
+        new(
+            OrderTypes.FreeEnrollment,
+            "Зачисление на первый курс (бюджет)",
+            GroupDisplayBehaviour.MustChange
+        ),
+        new (
+            OrderTypes.FreeDeductionWithGraduation,
+            "Отчисление в связи с выпуском (бюджет)",
+            GroupDisplayBehaviour.Vipe
+        ),
+        new (
+            OrderTypes.FreeNextCourseTransfer,
+            "Перевод на следующий курс (бюджет)",
+            GroupDisplayBehaviour.MustChange
+        ),
+        new (
+            OrderTypes.NoOrder,
+            "Не указано",
+            GroupDisplayBehaviour.Undefined
+        ),
+    };
+
+
+
+    public static OrderTypeInfo GetByType(OrderTypes type)
+    {   
+        var found = _types.Where(x => x.Type == type); 
+        if (found.Any()){
+            return found.First();
+        }
+        else {
+            throw new ArgumentException("приказ типа " + type.ToString() + " не зарегистрирован");
         }
     }
 

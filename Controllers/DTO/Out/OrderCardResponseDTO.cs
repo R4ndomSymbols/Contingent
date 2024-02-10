@@ -19,6 +19,7 @@ public class OrderCardResponseDTO {
     public string OrderOrgId {get; set; }
     public string OrderGroupChangePolicy{get; init; }
     public bool IsClosed {get; set; }
+    public string OrderDescription {get; set;}
 
     public OrderCardResponseDTO(Order order){
         OrderId = order.Id;
@@ -34,6 +35,7 @@ public class OrderCardResponseDTO {
             OrderModifyLink = null;
             OrderCloseLink = null;
         }
+        OrderDescription = order.OrderDescription;
         OrderViewLink = "/orders/view/" + OrderId.ToString();
         OrderFullName = order.OrderDisplayedName;
         OrderOrgId = order.OrderOrgId;

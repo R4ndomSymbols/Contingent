@@ -3,6 +3,7 @@ using System.Data.SqlTypes;
 using System.Runtime.Versioning;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 using Npgsql;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
@@ -16,7 +17,7 @@ public class StudentHistory
 {
     private List<StudentFlowRecord> _history;
 
-    public IReadOnlyCollection<StudentFlowRecord> History => _history;
+    public IReadOnlyList<StudentFlowRecord> History => _history;
     private int _studentId;
     private StudentHistory()
     {
@@ -29,6 +30,21 @@ public class StudentHistory
         return result;
     }
 
+    public static async Task<StudentHistory> Create(StudentModel student){
+        var result = new StudentHistory();
+        result._history = await GetHistory(student.Id);
+        return result;
+    }
+
+    public StudentFlowRecord? GetByOrder(Order orderBy){
+        foreach (var rec in _history){
+            if (rec.ByOrder.Equals(orderBy)){
+                return rec;
+            }
+        }
+        return null;
+    }
+
     public StudentFlowRecord? GetClosestBefore(DateTime anchor)
     {
         TimeSpan minDiff = TimeSpan.MaxValue;
@@ -36,7 +52,7 @@ public class StudentHistory
         for (int i = 0; i < _history.Count; i++)
         {
             var effDate = _history[i].ByOrder.EffectiveDate;
-            if (effDate <= anchor)
+            if (effDate < anchor)
             {
                 var diff = anchor - effDate;
                 if (diff < minDiff)
@@ -54,6 +70,19 @@ public class StudentHistory
             return _history[indexOfClosest];
         }
     }
+    public StudentFlowRecord? GetClosestAfter(Order order){
+        if (order is null){
+            throw new ArgumentNullException(nameof(order)); 
+        }
+        return GetClosestAfter(order.EffectiveDate);
+    }
+    public StudentFlowRecord? GetClosestBefore(Order order){
+        if (order is null){
+            throw new ArgumentNullException(nameof(order)); 
+        }
+        return GetClosestBefore(order.EffectiveDate);
+    }
+
     public StudentFlowRecord? GetClosestAfter(DateTime anchor)
     {
         TimeSpan minDiff = TimeSpan.MaxValue;
@@ -61,7 +90,7 @@ public class StudentHistory
         for (int i = 0; i < _history.Count; i++)
         {
             var effDate = _history[i].ByOrder.EffectiveDate;
-            if (effDate >= anchor)
+            if (effDate > anchor)
             {
                 var diff = anchor - effDate;
                 if (diff < minDiff)
@@ -80,7 +109,7 @@ public class StudentHistory
         }
     }
 
-    public StudentFlowRecord? GetLastOrder()
+    public StudentFlowRecord? GetLastRecord()
     {
         StudentFlowRecord? last = null;
         DateTime max = DateTime.MinValue;
@@ -137,19 +166,19 @@ public class StudentHistory
             new WhereCondition(
                 new Column("group_id", "educational_group"),
                 gp1,
-                WhereCondition.Relations.In
+                WhereCondition.Relations.InArray
             )
         );
         var groupsFound = await GroupModel.FindGroups(new QueryLimits(0, 100), additionalConditions: groupWhere, addtitionalParameters: groupParams);
 
         var ordersParams = new SQLParameterCollection();
         var sp1 = ordersParams.Add(raws.Select(x => x.OrderId).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
-        gp1.UseBrackets = true;
+        sp1.UseBrackets = true;
         var orderWhere = new ComplexWhereCondition(
             new WhereCondition(
                 new Column("id", "orders"),
                 sp1,
-                WhereCondition.Relations.In
+                WhereCondition.Relations.InArray
             )
         );
 
@@ -200,5 +229,29 @@ public class StudentHistory
             return null;
         }
         return found.First();
+    }
+
+    public static async Task<bool> IsAnyStudentInNotClosedOrder(IEnumerable<StudentModel> students){
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        var cmdText = "SELECT bool_and(orders.is_closed) as all_students_in_closed, COUNT(student_flow.id) AS count_ids FROM student_flow " +
+        " JOIN orders on student_flow.order_id = orders.id" +
+        " WHERE student_flow.student_id = ANY(@p1)";
+        using var cmd = new NpgsqlCommand(cmdText, conn);
+        var parameter = new NpgsqlParameter();
+        parameter.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer; 
+        parameter.Value = students.Select(x => x.Id).ToArray();
+        parameter.ParameterName = "p1";
+        cmd.Parameters.Add(parameter);
+        using var reader = await cmd.ExecuteReaderAsync();
+        reader.Read();
+        if ((long)reader["count_ids"] == 0){
+            return false;
+        }
+        return !(bool)reader["all_students_in_closed"];
+    }
+
+    public GroupModel? GetCurrentGroup(){
+        var last = GetLastRecord();
+        return GetLastRecord()?.GroupTo;
     }
 }

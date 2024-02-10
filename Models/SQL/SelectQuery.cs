@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Npgsql;
@@ -8,7 +9,7 @@ namespace StudentTracking.Models.SQL;
 
 public class SelectQuery<T>
 {
-
+    private Column? _distictOn;
     private SQLParameterCollection? _parameters;
     private Mapper<T> _mapper;
     private JoinSection? _joins;
@@ -20,11 +21,21 @@ public class SelectQuery<T>
     private SelectQuery()
     {
         _finished = false;
+        _distictOn = null;
+    }
+    private SelectQuery(Column distinctOn) : this() {
+        _distictOn = distinctOn; 
     }
 
     public static SelectQuery<T> Init(string sourceTable)
     {
         var tmp = new SelectQuery<T>();
+        tmp._sourceTable = sourceTable;
+        return tmp;
+    }
+    public static SelectQuery<T> Init(string sourceTable, Column distinctOnColumn)
+    {
+        var tmp = new SelectQuery<T>(distinctOnColumn);
         tmp._sourceTable = sourceTable;
         return tmp;
     }
@@ -70,7 +81,13 @@ public class SelectQuery<T>
     private string ToQuery()
     {
         StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.Append(_mapper.AsSQLText() + "\n");
+        if (_distictOn is null){
+            queryBuilder.Append(_mapper.AsSQLText() + "\n");
+        }
+        else {
+            queryBuilder.Append(_mapper.AsSQLText(_distictOn) + "\n");
+        }
+        
         queryBuilder.Append("FROM " + _sourceTable + "\n");
         if (_joins != null)
         {

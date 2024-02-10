@@ -42,6 +42,10 @@ $(document).ready(function () {
             });
         }
     });
+    $("#close_order").on("click", function () {
+        closeOrder();
+    });
+
     groupPolicy = String($("#current_order").attr("group_behaviour"))
 });
 
@@ -146,6 +150,7 @@ function includeStudent(student) {
 }
 
 function excludeStudent(student) {
+    student.pinned = false;
     $("#students_not_in_order").append(
         `
             <tr id="${student["studentId"] + identityExcludedPostfix}"> 
@@ -212,6 +217,9 @@ $("#save_changes").on("click", function () {
         contentType: "application/json",
         success: function (response) {
             alert("Сохранение прошло успешно")
+        },
+        error: function(response){
+            alert("Сохранение провалилось (вероянтно, приказ закрыт)");
         }
     });
 });
@@ -228,6 +236,7 @@ function getOrderJsonData() {
         });
 
     switch (type) {
+        case "FreeNextCourseTransfer":
         case "FreeEnrollment":
             result = 
             {
@@ -239,8 +248,30 @@ function getOrderJsonData() {
                         }
                     }
                 )
-            }       
+            }
+        break;
+        case "FreeDeductionWithGraduation":
+            result = {
+                Students: mainModel.map(
+                    x => x.id
+                )
+            }
+
     }
     return result
 }
+
+function closeOrder(){
+    $.ajax({
+        type: "GET",
+        url: "/orders/close/" + $("#current_order").attr("value"),
+        success: function (response) {
+            alert("Приказ успешно закрыт")
+        }
+    });
+
+
+
+}
+
 

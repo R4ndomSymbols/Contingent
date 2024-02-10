@@ -22,7 +22,6 @@ public class PaidEduAgreement {
     };
 
     public static PaidEduAgreement GetByTypeCode(int code){
-        Console.WriteLine("CODE RECIEVED: " + code.ToString());
         return ListOfTypes.Where(x => (int)x.AgreementType == code).First();
     }
     public static bool TryGetByTypeCode(int code){

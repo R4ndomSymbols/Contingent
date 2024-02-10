@@ -15,6 +15,7 @@ using System.ComponentModel.DataAnnotations;
 using Utilities.Validation;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Flow;
+using System.Runtime.CompilerServices;
 namespace StudentTracking.Controllers;
 public class StudentFlowController : Controller
 {
@@ -71,7 +72,7 @@ public class StudentFlowController : Controller
                 p1,
                 WhereCondition.Relations.Equal));
 
-        var found = await StudentModel.FindStudents(new QueryLimits(0, 30), joins, where, parameters);
+        var found = await StudentModel.FindUniqueStudents(new QueryLimits(0, 30), joins, where, parameters);
         var result = new List<StudentResponseDTO>();
         foreach (var s in found)
         {
@@ -80,6 +81,35 @@ public class StudentFlowController : Controller
         return Json(result);
 
     }
+
+     [HttpGet]
+    [Route("/studentflow/studentsByOrder/{query?}")]
+    public async Task<IActionResult> GetStudentsInOrder(string query)
+    {
+        if (!int.TryParse(query, out int id))
+        {
+            return BadRequest("Неверный id");
+        }
+        int convertedId = int.Parse(query);
+        var orderResult = await Order.GetOrderById(convertedId);
+        if (orderResult.IsFailure)
+        {
+            return BadRequest("Несуществующий id");
+        }
+        var order = orderResult.ResultObject;
+        var found = await order.GetStudentsByOrder();
+        var studentMovesHitoryRecords = new List<StudentHistoryMoveDTO>();
+        foreach (var student in found){
+            var history = await StudentHistory.Create(student);
+            var byAnchor = history.GetByOrder(order);
+            var previous = history.GetClosestBefore(order);
+            studentMovesHitoryRecords.Add(new StudentHistoryMoveDTO(student, byAnchor?.GroupTo, previous?.GroupTo, order));
+        }
+        return Json(studentMovesHitoryRecords);
+
+    }
+
+
     [HttpGet]
     [Route("/studentflow/notinorder/{query?}")]
     public async Task<IActionResult> FilterStudents(string query)
@@ -113,7 +143,7 @@ public class StudentFlowController : Controller
                 WhereCondition.Relations.Is),
             ComplexWhereCondition.ConditionRelation.OR,
             false);
-        var found = await StudentModel.FindStudents(new QueryLimits(0, 30), joins, where, parameters);
+        var found = await StudentModel.FindUniqueStudents(new QueryLimits(0, 30), joins, where, parameters);
         var result = new List<StudentResponseDTO>();
         foreach (var s in found)
         {
@@ -139,12 +169,38 @@ public class StudentFlowController : Controller
             {
                 var order = result.ResultObject;
                 await order.ConductByOrder();
+                
                 return Ok();
             }
             else
             {
                 return BadRequest(result.Errors?.ErrorsToString() ?? "");
             }
+        }
+    }
+    [HttpGet]
+    [Route("/studentflow/history/{id?}")]
+    public async Task<IActionResult> GetHistory(string id){
+        if (int.TryParse(id, out int parsed)){
+            var student = await StudentModel.GetStudentById(parsed);
+            if(student is null){
+                return BadRequest("такого студента не существует");
+            }
+            var history = (await StudentHistory.Create(student)).History;
+            List<StudentHistoryMoveDTO> moves = new();
+
+            for(int i = 0; i < history.Count; i++){
+                moves.Add(new StudentHistoryMoveDTO(
+                    student,
+                    history[i].GroupTo,
+                    (i == 0) ? null : history[i-1].GroupTo,
+                    history[i].ByOrder
+                ));
+            }
+            return Json(moves);
+        }
+        else {
+            return BadRequest("id студента указан неверно");
         }
     }
 }

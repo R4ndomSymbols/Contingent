@@ -30,17 +30,17 @@
                         <div class="row">
                             <a href="@card.OrderViewLink">Детали</a>
                         </div>
-                        @if(card.OrderModifyLink!=null){
+                        @if(card.OrderModifyLink!=null && !card.IsClosed){
                             <div class="row">
                                 <a href="@card.OrderModifyLink">Изменить</a>
                             </div>
                         }
-                        @if(card.OrderFlowLink!=null){
+                        @if(card.OrderFlowLink!=null && !card.IsClosed){
                             <div class="row">
                                 <a href="@card.OrderFlowLink">Движение</a>
                             </div>
                         }
-                        @if(card.OrderCloseLink!=null){
+                        @if(card.OrderCloseLink!=null && !card.IsClosed){
                             <div class="row">
                                 <a href="@card.OrderCloseLink">Закрыть</a>
                             </div>
