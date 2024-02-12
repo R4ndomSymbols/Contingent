@@ -2,8 +2,11 @@ namespace StudentTracking.Models.Domain.Orders;
 
 
 public enum OrderTypes
-{
-    NoOrder = 0,
+{   
+    // пустой приказ
+    EmptyOrder = 0,
+
+    /*
     // зачисление
     Enrollment = 1,
     // отчисление по собственному желанию
@@ -24,9 +27,16 @@ public enum OrderTypes
     ReenrollmentAfterDeduction = 9,
     // перевод с платного на бесплатное
     FromPaidToFreeGroup = 10,
+    */
 
+
+    // зачисление на бюджет
     FreeEnrollment = 11,
+    // отчисление с бюджета
     FreeDeductionWithGraduation = 12,
+    // перевод на следующий курс
     FreeNextCourseTransfer = 13,
+    // перевод между специальностями
+    FreeTransferBetweenSpecialities = 14, 
 
 }

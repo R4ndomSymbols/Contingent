@@ -28,7 +28,7 @@ public sealed class EmptyOrder : Order
     }
 
     protected override OrderTypes GetOrderType(){
-        return OrderTypes.NoOrder;
+        return OrderTypes.EmptyOrder;
     }
 
     public override Task Save(ObservableTransaction? scope)

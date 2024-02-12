@@ -168,7 +168,16 @@ public abstract class Order
     }
 
 
-    internal abstract Task<Result<bool>> CheckConductionPossibility();
+    internal abstract Task<ResultWithoutValue> CheckConductionPossibility();
+
+    internal static async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck){
+        // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
+        // для закрытых приказов проведение невозможно
+        if (await StudentHistory.IsAnyStudentInNotClosedOrder(toCheck)){
+            return ResultWithoutValue.Failure(new ValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
+        }
+        return ResultWithoutValue.Success();
+    }
 
     public OrderTypeInfo GetOrderTypeDetails(){
         return OrderTypeInfo.GetByType(GetOrderType());

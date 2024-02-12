@@ -231,6 +231,11 @@ public class StudentHistory
         return found.First();
     }
 
+    public static async Task<GroupModel?> GetCurrentStudentGroup(StudentModel student){
+        return await GetCurrentStudentGroup(student.Id);
+    }
+
+
     public static async Task<bool> IsAnyStudentInNotClosedOrder(IEnumerable<StudentModel> students){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var cmdText = "SELECT bool_and(orders.is_closed) as all_students_in_closed, COUNT(student_flow.id) AS count_ids FROM student_flow " +

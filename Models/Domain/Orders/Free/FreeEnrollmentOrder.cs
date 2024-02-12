@@ -11,7 +11,7 @@ using StudentTracking.Models.Domain.Orders.OrderData;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public class FreeEnrollmentOrder : FreeEducationOrder
+public class FreeEnrollmentOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _moves; 
 
@@ -87,10 +87,10 @@ public class FreeEnrollmentOrder : FreeEducationOrder
     // нет проверки на совпадение даты, спросить у предст. предметной области
     
      
-    internal override async Task<Result<bool>> CheckConductionPossibility()
+    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
     {
         if (await StudentHistory.IsAnyStudentInNotClosedOrder(_moves.Select(x => x.Student))){
-            return Result<bool>.Failure(new ValidationError(nameof(_moves), "Один или несколько студентов числятся в незакрытых приказах"));
+            return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Один или несколько студентов числятся в незакрытых приказах"));
         }
         
         foreach (var stm in _moves.Moves){
@@ -108,10 +108,10 @@ public class FreeEnrollmentOrder : FreeEducationOrder
                 studentTags.Any(x => x.Level.Weight >= targetGroup.EducationProgram.EducationalLevelIn.Weight) &&
                 targetGroup.SponsorshipType.IsFree(); 
             if (!validMove){
-                return Result<bool>.Failure(new ValidationError(nameof(_moves), "Не соблюдены критерии по одной из позиций зачисления"));
+                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Не соблюдены критерии по одной из позиций зачисления"));
             }
         }
-        return Result<bool>.Success(true);
+        return ResultWithoutValue.Success();
     }
 
     protected override OrderTypes GetOrderType()

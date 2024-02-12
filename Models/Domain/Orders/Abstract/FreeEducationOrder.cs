@@ -12,17 +12,17 @@ using StudentTracking.Controllers.DTO.In;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public abstract class FreeEducationOrder : Order
+public abstract class FreeContingentOrder : Order
 {
     public override string OrderOrgId {
         get => _orderNumber + "-" + "к";
     }
     
-    protected FreeEducationOrder() : base()
+    protected FreeContingentOrder() : base()
     {
 
     }
-    protected FreeEducationOrder(int id) : base(id)
+    protected FreeContingentOrder(int id) : base(id)
     {
 
     }

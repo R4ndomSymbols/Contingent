@@ -38,7 +38,7 @@ public class OrderTypeInfo
             GroupDisplayBehaviour.MustChange
         ),
         new (
-            OrderTypes.NoOrder,
+            OrderTypes.EmptyOrder,
             "Не указано",
             GroupDisplayBehaviour.Undefined
         ),

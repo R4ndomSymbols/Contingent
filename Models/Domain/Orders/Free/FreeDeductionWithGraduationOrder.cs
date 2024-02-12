@@ -8,7 +8,7 @@ using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public class FreeDeductionWithGraduationOrder : FreeEducationOrder
+public class FreeDeductionWithGraduationOrder : FreeContingentOrder
 {
     private StudentGroupNullifyMoveList _graduates;
     protected FreeDeductionWithGraduationOrder() : base()
@@ -77,17 +77,17 @@ public class FreeDeductionWithGraduationOrder : FreeEducationOrder
         await SaveBase(scope);
     }
 
-    internal override async Task<Result<bool>> CheckConductionPossibility()
+    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
     {
         if (await StudentHistory.IsAnyStudentInNotClosedOrder(_graduates.Select(x => x.Student))){
-            return Result<bool>.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов числятся в незакрытых приказах"));
+            return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов числятся в незакрытых приказах"));
         }
         foreach(var i in _graduates){
             var group = await i.Student.GetCurrentGroup(); 
-            if (group.CourseOn != group.EducationProgram.CourseCount || !group.SponsorshipType.IsFree()){
-                return Result<bool>.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
+            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || !group.SponsorshipType.IsFree()){
+                return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
             }
         }
-        return Result<bool>.Success(true);
+        return ResultWithoutValue.Success();
     }
 }

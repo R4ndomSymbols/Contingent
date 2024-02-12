@@ -75,3 +75,63 @@ public sealed class Result<T> : IResult{
     }
 }
 
+public class ResultWithoutValue : IResult
+{
+    private bool _isSuccess;
+
+    private readonly IEnumerable<ValidationError> _errors;
+    public bool IsSuccess => _isSuccess;
+    public bool IsFailure => !_isSuccess;
+
+    public IReadOnlyCollection<ValidationError> Errors {
+        get {
+            if (_isSuccess || _errors is null){
+                throw new Exception("Невозможно получить ошибки из Success запроса"); 
+            }
+            return _errors.ToList().AsReadOnly();
+        }
+    }
+
+    private ResultWithoutValue(IEnumerable<ValidationError> errors){
+        _errors = errors;
+        _isSuccess = false;
+    }
+    private ResultWithoutValue(){
+        _errors = null;
+        _isSuccess = true;
+    }
+
+    public static ResultWithoutValue Success(){
+        return new ResultWithoutValue();
+    }
+    public static ResultWithoutValue Failure(IEnumerable<ValidationError>? errors){
+        if (errors is null){
+            throw new ArgumentNullException(nameof(errors));
+        }
+        if (!errors.Any()){
+            throw new ArgumentException(nameof(errors));
+        }
+        return new ResultWithoutValue(errors);
+    }
+    public static ResultWithoutValue Failure(ValidationError? err){
+        if (err is null){
+            throw new ArgumentNullException(nameof(err));
+        }
+        return new ResultWithoutValue(new List<ValidationError>{err});
+    }
+
+    public object? GetResultObject()
+    {
+        return null;
+    }
+
+    public IReadOnlyCollection<ValidationError>? GetErrors()
+    {
+        return Errors;
+    }
+}
+
+
+
+
+

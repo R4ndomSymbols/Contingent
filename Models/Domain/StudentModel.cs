@@ -389,7 +389,7 @@ public class StudentModel
         return "Не указано";
     }
 
-    public async Task<GroupModel> GetCurrentGroup(){
+    public async Task<GroupModel?> GetCurrentGroup(){
         return await StudentHistory.GetCurrentStudentGroup(_id);
     }
 

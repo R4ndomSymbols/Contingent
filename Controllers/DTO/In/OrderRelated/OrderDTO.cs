@@ -20,7 +20,7 @@ public class OrderDTO {
         SpecifiedDate = "";
         EffectiveDate = "";
         OrderDescription = "";
-        OrderType = (int)OrderTypes.NoOrder;
+        OrderType = (int)OrderTypes.EmptyOrder;
     }
 
 }
