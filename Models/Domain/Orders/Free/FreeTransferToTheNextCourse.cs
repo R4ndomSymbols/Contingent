@@ -35,7 +35,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         }
         return Result<FreeTransferToTheNextCourseOrder>.Success(created);
     }
-    public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(int id, StudentGroupChangeOrderFlowDTO? dto)
+    public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto)
     {
         var order = new FreeTransferToTheNextCourseOrder(id);   
         var result = await order.MapFromDbBaseForConduction(id);

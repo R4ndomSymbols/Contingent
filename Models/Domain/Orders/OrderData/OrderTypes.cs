@@ -37,6 +37,8 @@ public enum OrderTypes
     // перевод на следующий курс
     FreeNextCourseTransfer = 13,
     // перевод между специальностями
-    FreeTransferBetweenSpecialities = 14, 
+    FreeTransferBetweenSpecialities = 14,
+    // отчисление по собственному желанию
+    FreeDeductionWithOwnDesire = 15 
 
 }

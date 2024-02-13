@@ -64,6 +64,29 @@ public sealed class Result<T> : IResult{
         return new Result<T?>(new List<ValidationError>{err});
     }
 
+    public static Result<T?> Failure(IResult errorConatainer)
+    {
+        return Result<T?>.Failure(errorConatainer.GetErrors());
+    }
+
+    public Result<U?> Retrace<U> (U? resultObject){
+        if (this.IsFailure){
+            return Result<U>.Failure(this.Errors);
+        }
+        else {
+            return Result<U>.Success(resultObject);
+        }
+    }
+    public Result<U?> RetraceFailure<U> (){
+        if (this.IsFailure){
+            return Result<U>.Failure(this.Errors);
+        }
+        throw new Exception("Нарушение инварианта результата"); 
+    } 
+
+
+
+
     public object? GetResultObject()
     {
         return ResultObject;

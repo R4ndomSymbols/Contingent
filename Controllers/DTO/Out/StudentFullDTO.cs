@@ -42,7 +42,7 @@ public sealed class StudentFullDTO
         TargetAgreementType = (int)model.TargetAgreementType.AgreementType;
         GiaMark = model.GiaMark;
         GiaDemoExamMark = model.GiaDemoExamMark;
-        PaidAgreementType = (int)model.PaidAgreementType.AgreementType;
+        PaidAgreementType = (int)model.PaidAgreement.AgreementType;
         RussianCitizenshipId = model.RussianCitizenshipId;
         ActualAddressId = model.ActualAddressId;
         GenderName = Genders.Names[model.Gender];

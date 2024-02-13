@@ -28,6 +28,10 @@ public class PaidEduAgreement {
         return ListOfTypes.Any(x => (int)x.AgreementType == code);
     }
 
+    public bool IsConcluded(){
+        return AgreementType == PaidEducationAgreementTypes.LegalRepresentative || AgreementType == PaidEducationAgreementTypes.Entity || AgreementType == PaidEducationAgreementTypes.OtherIndividual;
+    }
+
 
 }
 

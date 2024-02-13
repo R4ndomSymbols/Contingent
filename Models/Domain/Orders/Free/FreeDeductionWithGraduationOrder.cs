@@ -22,14 +22,9 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     {
         var created = new FreeDeductionWithGraduationOrder();
         var valResult = await created.MapBase(order);
-        if (valResult.IsFailure)
-        {
-            return Result<FreeDeductionWithGraduationOrder>.Failure(valResult.Errors);
-        }
-        return Result<FreeDeductionWithGraduationOrder>.Success(created);
-        
+        return valResult.Retrace(created);
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyFlowDTO? dto)
+    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto)
     {   var order = new FreeDeductionWithGraduationOrder(id);
         var result = await order.MapFromDbBaseForConduction(id);
         if (result.IsFailure)

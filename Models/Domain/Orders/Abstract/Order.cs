@@ -78,9 +78,8 @@ public abstract class Order
 
         // добавить проверку на диапазон дат дату, но потом
         var errors = new List<ValidationError?>();
-        var nullErr = (source is not null).CheckRuleViolation("DTO приказа не может быть null"); 
-        if (nullErr is not null){
-            return Result<Order?>.Failure(nullErr);
+        if (source is null){
+            return Result<Order?>.Failure(new OrderValidationError("DTO приказа не может быть пустым"));
         }
 
         if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate), 
@@ -170,11 +169,11 @@ public abstract class Order
 
     internal abstract Task<ResultWithoutValue> CheckConductionPossibility();
 
-    internal static async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck){
+    internal virtual async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck){
         // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
         // для закрытых приказов проведение невозможно
         if (await StudentHistory.IsAnyStudentInNotClosedOrder(toCheck)){
-            return ResultWithoutValue.Failure(new ValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
+            return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
         }
         return ResultWithoutValue.Success();
     }
@@ -383,15 +382,15 @@ public abstract class Order
             switch(type)
             {
                 case OrderTypes.FreeEnrollment:
-                    var data1 = JsonSerializer.Deserialize<StudentGroupChangeOrderFlowDTO>(conductionDataDTO);
+                    var data1 = JsonSerializer.Deserialize<StudentGroupChangeMoveDTO>(conductionDataDTO);
                     result = await FreeEnrollmentOrder.Create(id, data1);
                     break;
                 case OrderTypes.FreeDeductionWithGraduation:
-                    var data2 = JsonSerializer.Deserialize<StudentGroupNullifyFlowDTO>(conductionDataDTO);
+                    var data2 = JsonSerializer.Deserialize<StudentGroupNullifyMoveDTO>(conductionDataDTO);
                     result = await FreeDeductionWithGraduationOrder.Create(id, data2);
                     break;
                 case OrderTypes.FreeNextCourseTransfer:
-                    var data3 = JsonSerializer.Deserialize<StudentGroupChangeOrderFlowDTO>(conductionDataDTO);
+                    var data3 = JsonSerializer.Deserialize<StudentGroupChangeMoveDTO>(conductionDataDTO);
                     result = await FreeTransferToTheNextCourseOrder.Create(id, data3);
                     break;
                 

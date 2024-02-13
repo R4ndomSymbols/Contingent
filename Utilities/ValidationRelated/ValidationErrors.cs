@@ -93,6 +93,15 @@ public class DbIntegrityValidationError : ValidationError
     }
 }
 
+public class OrderValidationError : ValidationError
+{
+    public OrderValidationError(string exceptionMessage, string propName = "order_non_specific") : base(propName, exceptionMessage)
+    {
+
+    }
+}
+
+
 
 
 

@@ -50,6 +50,10 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
         return Result<StudentGroupNullifyMoveList?>.Success(new StudentGroupNullifyMoveList(){Moves = list}); 
     }
 
+    public static async Task<Result<StudentGroupNullifyMoveList?>> Create(StudentGroupNullifyMoveDTO? moves)
+    {
+        return await Create(moves?.Students);
+    }
     public IEnumerable<StudentFlowRecord> ToRecords(Order orderBy){
         var list = new List<StudentFlowRecord>();
         foreach(var i in this){
@@ -62,9 +66,11 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
     {
         return Moves.GetEnumerator();
     }
-
     IEnumerator IEnumerable.GetEnumerator()
     {
         return Moves.GetEnumerator();
     }
+
+
+
 }

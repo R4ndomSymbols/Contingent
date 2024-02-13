@@ -5,12 +5,12 @@ using StudentTracking.Models.Domain.Orders.OrderData;
 namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class StudentGroupNullifyFlowDTO {
+public class StudentGroupNullifyMoveDTO {
 
     [JsonRequired]
     public List<int> Students {get; set; }
 
-    public StudentGroupNullifyFlowDTO(){
+    public StudentGroupNullifyMoveDTO(){
         Students = new List<int>();
     }
 }

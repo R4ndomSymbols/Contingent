@@ -34,7 +34,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         }
         return Result<FreeEnrollmentOrder>.Success(created);  
     }
-    public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeOrderFlowDTO? dto){
+    public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto){
         var order = new FreeEnrollmentOrder(id);
 
         var result = await order.MapFromDbBaseForConduction(id);

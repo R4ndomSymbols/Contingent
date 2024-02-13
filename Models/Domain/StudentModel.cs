@@ -66,7 +66,7 @@ public class StudentModel
     public int? GiaDemoExamMark {
         get => _giaDemoExamMark;
     }
-    public PaidEduAgreement PaidAgreementType {
+    public PaidEduAgreement PaidAgreement {
         get => _paidAgreementType;
     }
 
@@ -173,7 +173,7 @@ public class StudentModel
         if (errors.IsValidRule(
             PaidEduAgreement.TryGetByTypeCode(dto.PaidAgreementType),
             message: "Неверно указан тип договора о платном обучении",
-            propName: nameof(PaidAgreementType)
+            propName: nameof(PaidAgreement)
         )){
             model._paidAgreementType = PaidEduAgreement.GetByTypeCode(dto.PaidAgreementType);
         }

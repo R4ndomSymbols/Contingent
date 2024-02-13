@@ -26,4 +26,21 @@ public abstract class FreeContingentOrder : Order
     {
 
     }
+
+    internal override async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck)
+    {
+        var baseCheck = await base.CheckBaseConductionPossibility(toCheck);
+        if (baseCheck.IsFailure)
+        {
+            return baseCheck;
+        }
+        foreach (var std in toCheck){
+            if (!std.PaidAgreement.IsConcluded()){
+                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, проходящих по приказу К, имеют договор о платном образовании"));
+            }
+        }
+        return ResultWithoutValue.Success();
+    }
+
+
 }
