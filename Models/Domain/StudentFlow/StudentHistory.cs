@@ -259,4 +259,50 @@ public class StudentHistory
         var last = GetLastRecord();
         return GetLastRecord()?.GroupTo;
     }
+
+    private StudentStates GetStudentState(out int cycleCount){
+        // если баланс = 0, студент не зачислен и не отчислен
+        // если баланс %10 == 1 , то студент зачислен, но не отчислен
+        // если баланс /10 != 0, то студент прошел круг зачисления, отчисления (отчислен) 
+        int balance = 0;
+        foreach (var record in _history){
+            var details = record.ByOrder.GetOrderTypeDetails();
+            if (details.IsAnyEnrollment()){
+                balance+=1;
+            }
+            else if (details.IsAnyDeduction()){
+                balance+=9;
+            }
+        }
+        cycleCount = balance / 10;
+        if (balance == 0){
+            return StudentStates.NotRecorded;
+        }
+        if (balance % 10 == 1){
+            return StudentStates.Enlisted;
+        } 
+        if (balance / 10 == 0){
+            return StudentStates.Deducted;
+        }
+        throw new Exception("Ошибка целостности истории приказов");
+    }
+
+    public bool IsStudentEnlisted(){
+        return GetStudentState(out int cc) == StudentStates.Enlisted;
+    }
+    public bool IsStudentNotRecorded(){
+        return GetStudentState(out int cc) == StudentStates.NotRecorded;
+    }
+    public bool IsStudentDeducted(){
+        return GetStudentState(out int cc) == StudentStates.Deducted;
+    }
+    //количество полных кругов отчисления, зачисления
+    public int GetCycleCount(){
+        GetStudentState(out int cc);
+        return cc;
+    }
+
+    public static async Task<bool> IsStudentEnlisted(StudentModel student){
+        return (await StudentHistory.Create(student)).IsStudentEnlisted(); 
+    }
 }

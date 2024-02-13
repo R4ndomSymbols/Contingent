@@ -4,7 +4,7 @@ public enum OrderConductionStatus {
     
     ConductionNotAllowed = -1,
     Conducted = 1,
-    NotConducted = 2,
+    ConductionReady = 2,
     ConductionNotValidated = 3 
 }
 

@@ -27,46 +27,29 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     public static async Task<Result<FreeEnrollmentOrder?>> Create(OrderDTO? order){
         
         var created = new FreeEnrollmentOrder();
-        var valResult = await created.MapBase(order);
-         
-        if (valResult.IsFailure){
-            return Result<FreeEnrollmentOrder>.Failure(valResult.Errors);
-        }
-        return Result<FreeEnrollmentOrder>.Success(created);  
+        var valResult = await MapBase(order,created);
+        return valResult;
     }
     public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto){
-        var order = new FreeEnrollmentOrder(id);
-
-        var result = await order.MapFromDbBaseForConduction(id);
+        var model = new FreeEnrollmentOrder(id);
+        var result = await MapFromDbBaseForConduction(id, model);
         if (result.IsFailure){
-            return Result<FreeEnrollmentOrder?>.Failure(result.Errors);
+            return result.RetraceFailure<FreeEnrollmentOrder>();
         }
-
+        var order = result.ResultObject;
         var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
-        
         if (dtoAsModelResult.IsFailure){
-            return Result<FreeEnrollmentOrder?>.Failure(dtoAsModelResult.Errors);
+            return dtoAsModelResult.RetraceFailure<FreeEnrollmentOrder>();
         }
-
         order._moves = dtoAsModelResult.ResultObject;
-
-        var checkResult = await order.CheckConductionPossibility(); 
-        
-        if (checkResult.IsFailure){
-            return Result<FreeEnrollmentOrder?>.Failure(checkResult.Errors);
-        }
-        order._conductionStatus = OrderConductionStatus.NotConducted;
-
-        return Result<FreeEnrollmentOrder>.Success(order);
+        var checkResult = await order.CheckConductionPossibility();
+        return checkResult.Retrace(order); 
     }
 
     public static async Task<Result<FreeEnrollmentOrder?>> Create (int id){
         var order = new FreeEnrollmentOrder(id);
-        var result = await order.MapFromDbBase(id);
-        if (result.IsFailure){
-            return Result<FreeEnrollmentOrder?>.Failure(result.Errors);
-        }
-        return Result<FreeEnrollmentOrder?>.Success(order);   
+        var result = await MapFromDbBase(id,order);
+        return result.Retrace(order); 
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -89,28 +72,25 @@ public class FreeEnrollmentOrder : FreeContingentOrder
      
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()
     {
-        if (await StudentHistory.IsAnyStudentInNotClosedOrder(_moves.Select(x => x.Student))){
-            return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Один или несколько студентов числятся в незакрытых приказах"));
+        var baseCheck = await base.CheckBaseConductionPossibility(_moves.Select(x => x.Student));
+        if (baseCheck.IsFailure){
+            return baseCheck;
         }
         
         foreach (var stm in _moves.Moves){
+
             var history = await StudentHistory.Create(stm.Student); 
-            bool orderBeforeConditionSatisfied = false;
-            var recordBefore = history.GetClosestBefore(this);
-            orderBeforeConditionSatisfied =
-                recordBefore is null || recordBefore.ByOrder.GetOrderTypeDetails().IsAnyDeduction(); 
-
             var targetGroup = stm.GroupTo;
-
             var studentTags = await StudentEducationalLevelRecord.GetByOwnerId(stm.Student.Id); 
             var validMove =  
-                orderBeforeConditionSatisfied &&
+                history.IsStudentNotRecorded() &&
                 studentTags.Any(x => x.Level.Weight >= targetGroup.EducationProgram.EducationalLevelIn.Weight) &&
                 targetGroup.SponsorshipType.IsFree(); 
             if (!validMove){
-                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Не соблюдены критерии по одной из позиций зачисления"));
+                return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления"));
             }
         }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 

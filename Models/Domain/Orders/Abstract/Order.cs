@@ -74,25 +74,25 @@ public abstract class Order
         _conductionStatus = OrderConductionStatus.ConductionNotValidated;
     }
 
-    protected async Task<Result<Order?>> MapBase(OrderDTO? source){
+    protected static async Task<Result<T?>> MapBase<T>(OrderDTO? source, T model) where T : Order {
 
         // добавить проверку на диапазон дат дату, но потом
         var errors = new List<ValidationError?>();
         if (source is null){
-            return Result<Order?>.Failure(new OrderValidationError("DTO приказа не может быть пустым"));
+            return Result<T>.Failure(new OrderValidationError("DTO приказа не может быть пустым"));
         }
 
         if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate), 
         message: "Дата вступления в силу указана неверно",
         propName: nameof(EffectiveDate))){
-            _effectiveDate = Utils.ParseDate(source.EffectiveDate);
+            model._effectiveDate = Utils.ParseDate(source.EffectiveDate);
         }
         if (errors.IsValidRule(
             Utils.TryParseDate(source.SpecifiedDate),
             message: "Дата приказа указана неверно",
             propName: nameof(SpecifiedDate)
         )){
-            _specifiedDate = Utils.ParseDate(source.SpecifiedDate);
+            model._specifiedDate = Utils.ParseDate(source.SpecifiedDate);
         }
         Console.WriteLine(source.OrderDescription);
         if (errors.IsValidRule(
@@ -100,14 +100,14 @@ public abstract class Order
             message: "Описание приказа указано неверно",
             propName: nameof(OrderDescription))
         ){
-            _orderDescription = source.OrderDescription;
+            model._orderDescription = source.OrderDescription;
         }
         if (errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(source.OrderDisplayedName, ValidatorCollection.OnlyText),
             message: "Имя приказа укзано неверно",
             propName: nameof(OrderDisplayedName))
         ){
-            _orderDisplayedName = source.OrderDisplayedName;
+            model._orderDisplayedName = source.OrderDisplayedName;
         }
         errors.IsValidRule(
             TryParseOrderType(source.OrderType),
@@ -116,14 +116,14 @@ public abstract class Order
         );
 
         if (errors.Any()){
-            return Result<Order?>.Failure(errors);
+            return Result<T>.Failure(errors);
         }
         else {
-            _orderNumber = await RequestNextNumber(this);
-            return Result<Order?>.Success(this);
+            model._orderNumber = await RequestNextNumber(model);
+            return Result<T>.Success(model);
         }
     }
-    protected async Task<Result<Order?>> MapFromDbBase(int id){
+    protected static async Task<Result<T?>> MapFromDbBase<T>(int id, T model) where T : Order{
         using var conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "SELECT * FROM orders WHERE id = @p1";
         var cmd = new NpgsqlCommand(cmdText, conn);
@@ -131,44 +131,45 @@ public abstract class Order
         using (cmd){
             using var reader = await cmd.ExecuteReaderAsync();
             if (!reader.HasRows){
-                return Result<Order?>.Failure(new ValidationError(nameof(_id), "Приказа с таким id не существует"));
+                return Result<T>.Failure(new ValidationError(nameof(_id), "Приказа с таким id не существует"));
             }
             reader.Read();
             OrderTypes typeGot = (OrderTypes)(int)reader["type"]; 
-            if (GetOrderTypeDetails().Type != typeGot){
-                return Result<Order?>.Failure(new ValidationError(nameof(GetOrderTypeDetails), "Тип приказа не совпадает с найденным"));
+            if (model.GetOrderTypeDetails().Type != typeGot){
+                return Result<T>.Failure(new ValidationError(nameof(GetOrderTypeDetails), "Тип приказа не совпадает с найденным"));
             }
-            _id = id;
-            _isClosed = (bool)reader["is_closed"];
-            _effectiveDate = (DateTime)reader["effective_date"];
-            _specifiedDate = (DateTime)reader["specified_date"];
+            model._id = id;
+            model._isClosed = (bool)reader["is_closed"];
+            model._effectiveDate = (DateTime)reader["effective_date"];
+            model._specifiedDate = (DateTime)reader["specified_date"];
             var description = reader["description"];
             if (description.GetType() == typeof(DBNull)){
-                _orderDescription = null;
+                model._orderDescription = null;
             }
             else {
-                _orderDescription = (string)reader["description"];
+                model._orderDescription = (string)reader["description"];
             }
-            _orderDisplayedName = (string)reader["name"];
-            _orderNumber = (int)reader["serial_number"];
-            return Result<Order?>.Success(this);
+            model._orderDisplayedName = (string)reader["name"];
+            model._orderNumber = (int)reader["serial_number"];
+            return Result<T>.Success(model);
         }
     }
 
-    protected async Task<Result<Order?>> MapFromDbBaseForConduction(int id){
-        var got = await MapFromDbBase(id);
+    protected static async Task<Result<T?>> MapFromDbBaseForConduction<T>(int id, T model) where T : Order  
+    {
+        var got = await MapFromDbBase(id, model);
         if (got.IsFailure){
             return got;
         }
         if (got.ResultObject.IsClosed){
-            return Result<Order?>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения"));
+            return Result<T>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения"));
         }
         return got;
     }
 
-
+    // этот метод должен по умолчанию менять статус приказа, без его вызова
+    // приказ не может получить статус готового к проведению
     internal abstract Task<ResultWithoutValue> CheckConductionPossibility();
-
     internal virtual async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck){
         // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
         // для закрытых приказов проведение невозможно
@@ -263,7 +264,7 @@ public abstract class Order
     }
     protected async Task ConductBase(IEnumerable<StudentFlowRecord> records)
     {
-        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.NotConducted || _isClosed){
+        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || _isClosed){
             throw new Exception("Ошибка при записи в таблицу движения: данные приказа или приказ не соотвествуют форме или приказ закрыт");
         }
 

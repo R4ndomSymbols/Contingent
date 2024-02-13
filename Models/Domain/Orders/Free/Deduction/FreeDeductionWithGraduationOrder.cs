@@ -21,39 +21,31 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(OrderDTO? order)
     {
         var created = new FreeDeductionWithGraduationOrder();
-        var valResult = await created.MapBase(order);
-        return valResult.Retrace(created);
+        var valResult = await MapBase(order, created);
+        return valResult;
     }
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto)
-    {   var order = new FreeDeductionWithGraduationOrder(id);
-        var result = await order.MapFromDbBaseForConduction(id);
+    {   var model = new FreeDeductionWithGraduationOrder(id);
+        var result = await MapFromDbBaseForConduction(id, model);
         if (result.IsFailure)
         {
-            return Result<FreeDeductionWithGraduationOrder?>.Failure(result.Errors);
+            return result;
         }
+        var order = result.ResultObject;
         var dtoAsModelResult = await StudentGroupNullifyMoveList.Create(dto?.Students);
         if (dtoAsModelResult.IsFailure){
-            return Result<FreeDeductionWithGraduationOrder>.Failure(dtoAsModelResult.Errors);
+            return dtoAsModelResult.RetraceFailure<FreeDeductionWithGraduationOrder>();
         }
         order._graduates = dtoAsModelResult.ResultObject;
         var conductionCheck = await order.CheckConductionPossibility();
-
-        if (conductionCheck.IsFailure){
-            return Result<FreeDeductionWithGraduationOrder>.Failure(conductionCheck.Errors);
-        }
-        order._conductionStatus = OrderConductionStatus.NotConducted;     
-        return Result<FreeDeductionWithGraduationOrder>.Success(order);
+        return conductionCheck.Retrace(order);
     }
 
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id)
     {
         var order = new FreeDeductionWithGraduationOrder(id);
-        var result = await order.MapFromDbBase(id);
-        if (!result.IsSuccess)
-        {
-            return Result<FreeDeductionWithGraduationOrder?>.Failure(result.Errors);
-        }
-        return Result<FreeDeductionWithGraduationOrder?>.Success(order);
+        var result = await MapFromDbBase(id, order);
+        return result;
     }
 
 
@@ -73,16 +65,18 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     }
 
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()
-    {
-        if (await StudentHistory.IsAnyStudentInNotClosedOrder(_graduates.Select(x => x.Student))){
-            return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов числятся в незакрытых приказах"));
+    {   
+        var check = await base.CheckBaseConductionPossibility(_graduates.ToStudentCollection()); 
+        if (check.IsFailure){
+            return check;
         }
         foreach(var i in _graduates){
             var group = await i.Student.GetCurrentGroup(); 
-            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || !group.SponsorshipType.IsFree()){
+            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid()){
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
             }
         }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

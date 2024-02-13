@@ -20,7 +20,7 @@ public class OrderTypeInfo
         Undefined = 4, 
     }
 
-    private static IReadOnlyCollection<OrderTypeInfo> _types = new List<OrderTypeInfo>(){
+    private static IReadOnlyCollection<OrderTypeInfo> _types = new OrderTypeInfo[]{
 
         new(
             OrderTypes.FreeEnrollment,
@@ -76,12 +76,13 @@ public class OrderTypeInfo
         return result;
     }
 
-    public static bool IsAnyEnrollment(OrderTypes type)
+    public bool IsAnyEnrollment()
     {
-        return type == OrderTypes.FreeEnrollment;
+        return Type == OrderTypes.FreeEnrollment;
     }
     public bool IsAnyDeduction(){
-        return Type == OrderTypes.FreeDeductionWithGraduation;
+        return Type == OrderTypes.FreeDeductionWithGraduation 
+            || Type == OrderTypes.FreeDeductionWithOwnDesire;
     } 
 
 }

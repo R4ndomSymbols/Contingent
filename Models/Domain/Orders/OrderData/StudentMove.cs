@@ -59,6 +59,10 @@ public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>{
         return Result<StudentToGroupMoveList?>.Success(new StudentToGroupMoveList(list));
 
     }
+    public static async Task<Result<StudentToGroupMoveList?>> Create(StudentGroupChangeMoveDTO dto)
+    {
+        return await Create(dto?.Moves);
+    }
 
     public IEnumerable<StudentFlowRecord> ToRecords(Order orderBy){
         var parsed = new List<StudentFlowRecord>();

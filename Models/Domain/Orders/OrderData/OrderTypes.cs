@@ -39,6 +39,10 @@ public enum OrderTypes
     // перевод между специальностями
     FreeTransferBetweenSpecialities = 14,
     // отчисление по собственному желанию
-    FreeDeductionWithOwnDesire = 15 
+    FreeDeductionWithOwnDesire = 15, 
+    // отчисление в связи с академической задолженностью
+    FreeDeductionWithAcademicDebt = 16,
+    // зачисление в связи с переводом
+    FreeEnrollmentWithTransfer = 17
 
 }

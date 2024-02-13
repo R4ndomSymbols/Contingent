@@ -61,6 +61,9 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
         }
         return list;  
     }
+    public IEnumerable<StudentModel> ToStudentCollection(){
+        return Moves.Select(x => x.Student);
+    }
 
     public IEnumerator<StudentGroupNullifyMove> GetEnumerator()
     {

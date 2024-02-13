@@ -42,6 +42,9 @@ public class GroupSponsorship {
     public bool IsFree(){
         return TypeOfSponsorship != GroupSponsorshipTypes.IndividualSponsorship;
     }
+    public bool IsPaid(){
+        return TypeOfSponsorship == GroupSponsorshipTypes.IndividualSponsorship;
+    }
 
     public static GroupSponsorship GetByTypeCode(int code) {
         return ListOfSponsorships.Where(x => (int)x.TypeOfSponsorship == code).First();

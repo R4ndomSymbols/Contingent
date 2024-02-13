@@ -143,6 +143,15 @@ public class ResultWithoutValue : IResult
         return new ResultWithoutValue(new List<ValidationError>{err});
     }
 
+    public Result<U?> Retrace<U> (U? resultObject){
+        if (this.IsFailure){
+            return Result<U>.Failure(this.Errors);
+        }
+        else {
+            return Result<U>.Success(resultObject);
+        }
+    }
+
     public object? GetResultObject()
     {
         return null;

@@ -18,40 +18,36 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
 
     public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(OrderDTO orderDTO){
         var created = new FreeTransferBetweenSpecialitiesOrder();
-        var result = await created.MapBase(orderDTO);
-        if (result.IsFailure){
-            return Result<FreeTransferBetweenSpecialitiesOrder>.Failure(result.Errors);
-        }
-        return Result<FreeTransferBetweenSpecialitiesOrder>.Success(created);
+        var result = await MapBase(orderDTO,created);
+        return result;
     }
     public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id){
         var created = new FreeTransferBetweenSpecialitiesOrder(id);
-        var result = await created.MapFromDbBase(id);
-        if (result.IsFailure){
-            return Result<FreeTransferBetweenSpecialitiesOrder>.Failure(result.Errors);
-        }
-        return Result<FreeTransferBetweenSpecialitiesOrder>.Success(created);
+        var result = await MapFromDbBase(id,created);
+        return result;
     }
 
 
     public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, MoveOrderDataDTO moves){
-        var created = await Create(id);
-        if (created.IsFailure){
-            return created;
-        }
-        var got = created.ResultObject;
-        var result = await StudentToGroupMoveList.Create(moves.Moves);
+        var created = new FreeTransferBetweenSpecialitiesOrder(id); 
+        var result = await MapFromDbBaseForConduction(id, created);
         if (result.IsFailure){
-            return Result<FreeTransferBetweenSpecialitiesOrder>.Failure(result.Errors);
+            return result;
         }
-        got._moves = result.ResultObject;
-        return Result<FreeTransferBetweenSpecialitiesOrder>.Success(got);
+        var got = result.ResultObject;
+        var data = await StudentToGroupMoveList.Create(moves.Moves);
+        if (data.IsFailure){
+            return data.RetraceFailure<FreeTransferBetweenSpecialitiesOrder>();
+        }
+        got._moves = data.ResultObject;
+        var conductionResult = await got.CheckConductionPossibility();
+        return conductionResult.Retrace(got);
 
     }
 
     public override Task ConductByOrder()
     {
-        return ConductBase(_moves.Select(x => new StudentFlowRecord(this, x.Student, x.GroupTo)));
+        return ConductBase(_moves.ToRecords(this));
     }
 
     public override Task Save(ObservableTransaction? scope)
@@ -69,7 +65,7 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
 
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()
     {   
-        var baseCheck = await CheckBaseConductionPossibility(_moves.Select(x => x.Student));
+        var baseCheck = await base.CheckBaseConductionPossibility(_moves.Select(x => x.Student));
         if (baseCheck.IsFailure){
             return baseCheck;
         }
@@ -80,9 +76,10 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn   
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear; 
             if (!conditionsSatisfied){
-                return ResultWithoutValue.Failure(new ValidationError("Один или несколько студентов состоят или переводятся в группы, недопустимые по условиям приказа"));
+                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов состоят или переводятся в группы, недопустимые по условиям приказа"));
             }
         }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }
