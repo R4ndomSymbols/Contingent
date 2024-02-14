@@ -63,7 +63,6 @@ public class StudentController : Controller
         {
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
         }
-
     }
     // сначала идет адрес
     // затем студент,
@@ -140,7 +139,7 @@ public class StudentController : Controller
             else {
                 await student.Save(savingTransaction);
             }
-            var records = await StudentEducationalLevelRecord.GetByOwnerId(student.Id);
+            var records = await StudentEducationalLevelRecord.GetByOwner(student.Id);
             // пропуск имеющийся тегов
             if (records.Any()){
                 tags = tags.Where(x => !records.Any(y => y.Level == x.Level));

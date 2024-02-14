@@ -33,7 +33,7 @@ public class StudentEducationalLevelRecord {
 
     public async Task SaveRecord(ObservableTransaction? scope = null){
 
-        var byStudent = await GetByOwnerId(OwnerId);
+        var byStudent = await GetByOwner(OwnerId);
         // один и тот же тег не может быть записан на студента дважды
         if (byStudent.Any(x => x == this)){
             throw new Exception("Такая запись об образовании уже существует");
@@ -53,7 +53,7 @@ public class StudentEducationalLevelRecord {
 
         await cmd.ExecuteNonQueryAsync();
     }
-    public static async Task<IReadOnlyCollection<StudentEducationalLevelRecord>> GetByOwnerId(int ownerId){
+    public static async Task<IReadOnlyCollection<StudentEducationalLevelRecord>> GetByOwner(int ownerId){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         using var command = new NpgsqlCommand("SELECT * FROM education_tag_history WHERE student_id = @p1", conn);
         command.Parameters.Add(new NpgsqlParameter<int>("p1", ownerId));
@@ -69,6 +69,9 @@ public class StudentEducationalLevelRecord {
                 LevelOfEducation.GetByLevelCode((int)reader["level_code"]), ownerId));
         }
         return found;
+    }
+    public static async Task<IReadOnlyCollection<StudentEducationalLevelRecord>> GetByOwner(StudentModel student){
+        return await GetByOwner(student.Id);
     }
 
     public static bool operator == (StudentEducationalLevelRecord left, StudentEducationalLevelRecord right){

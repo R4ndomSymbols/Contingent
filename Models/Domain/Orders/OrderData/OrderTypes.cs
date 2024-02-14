@@ -43,6 +43,9 @@ public enum OrderTypes
     // отчисление в связи с академической задолженностью
     FreeDeductionWithAcademicDebt = 16,
     // зачисление в связи с переводом
-    FreeEnrollmentWithTransfer = 17
+    FreeEnrollmentWithTransfer = 17,
+    // зачисление в порядке восстановления 
+    FreeReenrollment = 18
+
 
 }

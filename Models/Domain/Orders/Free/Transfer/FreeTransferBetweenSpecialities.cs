@@ -1,8 +1,9 @@
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
+
+namespace StudentTracking.Models.Domain.Orders;
 
 public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
 {
@@ -28,7 +29,7 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     }
 
 
-    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, MoveOrderDataDTO moves){
+    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, StudentGroupChangeMoveDTO moves){
         var created = new FreeTransferBetweenSpecialitiesOrder(id); 
         var result = await MapFromDbBaseForConduction(id, created);
         if (result.IsFailure){

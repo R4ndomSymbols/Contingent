@@ -94,6 +94,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Текущая группа и целевая группа несовместны в рамках данного приказа"));
             }    
         }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

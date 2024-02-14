@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.JSON;
 using StudentTracking.Models.SQL;
@@ -322,9 +323,12 @@ public class SpecialityModel
         }
         return result;
     }
-    public SpecialitySuggestionJSON ToSuggestion(){
-        return new SpecialitySuggestionJSON(_id, _fgosName, _qualification, _fgosCode);
-    } 
+
+    public async Task<bool> IsStudentAllowedByEducationLevel(StudentModel student){
+        var levels = await StudentEducationalLevelRecord.GetByOwner(student);
+        return levels.Any(x => x.Level.Weight >= _levelIn.Weight); 
+    }
+
     public override bool Equals(object? other)
     {
         if (other == null){

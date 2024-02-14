@@ -1,6 +1,7 @@
 
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
 
@@ -66,10 +67,14 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         }
         foreach (var rec in _toEnroll){
             var history = await StudentHistory.Create(rec.Student);
-            if (history.IsStudentEnlisted()){
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов в приказе на зачисление не соответствуют требованиям"))
+            var groupCheck = await rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student);  
+            if (history.IsStudentEnlisted() || !groupCheck){
+                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов в приказе на зачисление не соответствуют требованиям"));
             }
+    
         }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
+        return ResultWithoutValue.Success();
 
     }
 }

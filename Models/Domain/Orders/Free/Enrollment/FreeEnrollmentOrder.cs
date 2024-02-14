@@ -81,10 +81,9 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
             var history = await StudentHistory.Create(stm.Student); 
             var targetGroup = stm.GroupTo;
-            var studentTags = await StudentEducationalLevelRecord.GetByOwnerId(stm.Student.Id); 
             var validMove =  
                 history.IsStudentNotRecorded() &&
-                studentTags.Any(x => x.Level.Weight >= targetGroup.EducationProgram.EducationalLevelIn.Weight) &&
+                await targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student)&&
                 targetGroup.SponsorshipType.IsFree(); 
             if (!validMove){
                 return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления"));
