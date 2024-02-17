@@ -1,7 +1,7 @@
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 public class Mapper<T> : IQueryPart {
 

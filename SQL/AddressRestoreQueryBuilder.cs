@@ -3,7 +3,7 @@ using Npgsql;
 using StudentTracking.Models.Domain.Address;
 using Utilities;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 public class AddressRestoreQueryBuilder {
 

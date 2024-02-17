@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 public class OrderByCondition : IQueryPart
 {

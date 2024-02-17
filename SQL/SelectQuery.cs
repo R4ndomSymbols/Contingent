@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 
 public class SelectQuery<T>

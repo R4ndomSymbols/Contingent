@@ -25,7 +25,7 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         var model = new FreeReenrollmentOrder(orderId);
         return await MapFromDbBase(orderId, model);
     }
-    public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId, StudentGroupChangeMoveDTO dto){
+    public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId, StudentGroupChangeMoveDTO? dto){
         var model = new FreeReenrollmentOrder(orderId);
         var orderResult = await MapFromDbBaseForConduction(orderId, model);
         if (orderResult.IsFailure)

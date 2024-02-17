@@ -46,14 +46,11 @@ $("#save").click(function () {
         }),
         dataType: "JSON",
         success: function (response) {
-            var orderId = response["orderId"];
-
-            if (orderId != undefined) {
-                $("#OrderId").val(orderId);
-            }
-            else {
-                setErrors(response);
-            }
+            $("#OrderId").attr("order_id",  response["orderId"]);
+            alert("Приказ успешно сохранен")
+        },
+        error: function(xhr, textStatus, errThrown){
+            setErrors(JSON.parse(xhr.responseText));
         }
     });
 });

@@ -27,7 +27,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         return await MapFromDbBase(id, created);
     }
 
-    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id, StudentGroupChangeMoveDTO data){
+    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id, StudentGroupChangeMoveDTO? data){
         var created = new FreeEnrollmentWithTransferOrder(id);
         var result = await MapFromDbBaseForConduction(id, created);
         if (result.IsFailure){

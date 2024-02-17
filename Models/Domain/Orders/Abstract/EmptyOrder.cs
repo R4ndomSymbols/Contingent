@@ -36,7 +36,7 @@ public sealed class EmptyOrder : Order
         throw new NotImplementedException("Невозможно сохранить пустой приказ");
     }
 
-    internal override Task<Result<bool>> CheckConductionPossibility()
+    internal override Task<ResultWithoutValue> CheckConductionPossibility()
     {
         throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
     }

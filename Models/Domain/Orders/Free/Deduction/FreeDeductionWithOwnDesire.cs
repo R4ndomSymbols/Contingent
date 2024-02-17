@@ -29,7 +29,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         return result;    
     }
 
-    public static async Task<Result<FreeDeductionWithOwnDesireOrder?>> Create(int id, StudentGroupNullifyMoveDTO dto){
+    public static async Task<Result<FreeDeductionWithOwnDesireOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto){
         var model = new FreeDeductionWithOwnDesireOrder(id);
         var result = await MapFromDbBaseForConduction(id, model);
         if (result.IsFailure){

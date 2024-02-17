@@ -42,6 +42,32 @@ public class OrderTypeInfo
             "Не указано",
             GroupDisplayBehaviour.Undefined
         ),
+        new (
+            OrderTypes.FreeDeductionWithAcademicDebt,
+            "Отчисление в связи с академической задолженностью (бюджет)",
+            GroupDisplayBehaviour.Vipe
+        ),
+        new (
+            OrderTypes.FreeDeductionWithOwnDesire,
+            "Отчисление по собственному желанию (бюджет)",
+            GroupDisplayBehaviour.Vipe
+        ),
+        new (
+            OrderTypes.FreeEnrollmentWithTransfer,
+            "Зачисление в связи с переводом (бюджет)",
+            GroupDisplayBehaviour.MustChange
+        ),
+        new (
+            OrderTypes.FreeReenrollment,
+            "Зачисление в порядке восстановления (бюджет)",
+            GroupDisplayBehaviour.MustChange
+        ),
+        new (
+            OrderTypes.FreeTransferBetweenSpecialities,
+            "Перевод на другую специальность (бюджет)",
+            GroupDisplayBehaviour.MustChange
+        ),
+
     };
 
 
@@ -78,11 +104,13 @@ public class OrderTypeInfo
 
     public bool IsAnyEnrollment()
     {
-        return Type == OrderTypes.FreeEnrollment;
+        return Type == OrderTypes.FreeEnrollment | Type == OrderTypes.FreeReenrollment |
+        Type == OrderTypes.FreeEnrollmentWithTransfer;
     }
     public bool IsAnyDeduction(){
         return Type == OrderTypes.FreeDeductionWithGraduation 
-            || Type == OrderTypes.FreeDeductionWithOwnDesire;
+            | Type == OrderTypes.FreeDeductionWithOwnDesire
+            | Type == OrderTypes.FreeDeductionWithAcademicDebt;
     } 
 
 }

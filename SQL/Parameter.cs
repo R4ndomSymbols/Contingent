@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 
 public class SQLParameterCollection : IEnumerable<SQLParameter>{

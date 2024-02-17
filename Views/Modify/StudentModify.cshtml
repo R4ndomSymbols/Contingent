@@ -311,7 +311,7 @@
         </div>
     </div>
     @{
-        var tags = await StudentEducationalLevelRecord.GetByOwnerId(Model.Id);
+        var tags = await StudentEducationalLevelRecord.GetByOwner(Model.Id);
     }
     <div id="education_levels">
         @foreach(var t in tags){

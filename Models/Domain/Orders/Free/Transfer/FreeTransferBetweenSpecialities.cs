@@ -29,7 +29,7 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     }
 
 
-    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, StudentGroupChangeMoveDTO moves){
+    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, StudentGroupChangeMoveDTO? moves){
         var created = new FreeTransferBetweenSpecialitiesOrder(id); 
         var result = await MapFromDbBaseForConduction(id, created);
         if (result.IsFailure){

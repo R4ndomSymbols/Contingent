@@ -219,7 +219,7 @@ $("#save_changes").on("click", function () {
             alert("Сохранение прошло успешно")
         },
         error: function(response){
-            alert("Сохранение провалилось (вероянтно, приказ закрыт)");
+            alert("Сохранение провалилось (ошибка в данных или закрытый приказ)");
         }
     });
 });
@@ -238,6 +238,9 @@ function getOrderJsonData() {
     switch (type) {
         case "FreeNextCourseTransfer":
         case "FreeEnrollment":
+        case "FreeEnrollmentWithTransfer":
+        case "FreeReenrollment":
+        case "FreeTransferBetweenSpecialities":
             result = 
             {
                 Moves: mainModel.map(
@@ -251,11 +254,15 @@ function getOrderJsonData() {
             }
         break;
         case "FreeDeductionWithGraduation":
+        case "FreeDeductionWithAcademicDebt":
+        case "FreeDeductionWithOwnDesire":    
             result = {
                 Students: mainModel.map(
                     x => x.id
                 )
             }
+        case "EmptyOrder":
+            alert("Проведение по пустому приказу...")
 
     }
     return result

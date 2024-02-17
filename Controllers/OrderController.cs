@@ -61,16 +61,16 @@ public class OrderController : Controller{
     
     [HttpPost]
     [Route("/orders/save")]
-    public async Task<JsonResult> Save(){
+    public async Task<IActionResult> Save(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
             var built = await Order.Build(body);
             if (built.IsSuccess){
                 var order = built.ResultObject; 
                 await order.Save(null);
-                return Json(new {OrderId = order.Id});
+                return Ok(Json(new {OrderId = order.Id}).Value);
             }
-            return Json(new object());  
+            return BadRequest(Json(new ErrorsDTO(built.Errors)).Value);  
         }
     }
     [HttpPost]

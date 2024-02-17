@@ -1,6 +1,6 @@
 using Npgsql.Replication.PgOutput.Messages;
 
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 public class ComplexWhereCondition : IQueryPart{
   

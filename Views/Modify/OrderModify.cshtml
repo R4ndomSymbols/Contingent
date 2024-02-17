@@ -6,7 +6,16 @@
 
 @{
     ViewData["Title"] = "Приказ";
-    IEnumerable<OrderTypeInfo> types = OrderTypeInfo.GetAllTypes(); 
+    List<OrderTypeInfo> types = OrderTypeInfo.GetAllTypes().ToList();
+    types.Sort(
+    (x, y) =>
+    {
+        var t = StringComparer.Create(
+            System.Globalization.CultureInfo.InvariantCulture,
+            false
+        );
+        return t.Compare(x.OrderTypeName, y.OrderTypeName);
+    }); 
 }
 
 
@@ -92,7 +101,7 @@
         }
         </select>
     </div>
-    <input type="hidden" id="OrderId" value="@Model.Id"/>
+    <div id="OrderData" order_id="@Model.Id"></div>
     <button id="save">
         Сохранить
     </button>

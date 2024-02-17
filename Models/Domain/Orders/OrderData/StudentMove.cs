@@ -59,7 +59,7 @@ public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>{
         return Result<StudentToGroupMoveList?>.Success(new StudentToGroupMoveList(list));
 
     }
-    public static async Task<Result<StudentToGroupMoveList?>> Create(StudentGroupChangeMoveDTO dto)
+    public static async Task<Result<StudentToGroupMoveList?>> Create(StudentGroupChangeMoveDTO? dto)
     {
         return await Create(dto?.Moves);
     }

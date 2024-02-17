@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.SQL;
+namespace StudentTracking.SQL;
 
 public class Column : IQueryPart{
 
