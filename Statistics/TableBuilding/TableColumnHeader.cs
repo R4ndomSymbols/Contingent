@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Net;
 
 namespace StudentTracking.Statistics;
 
@@ -24,7 +25,7 @@ public class TableColumnHeader {
         Normalize(_root, cursor);
         // курсор проходит по графу и запоминает предельные значения
         HeaderLength = cursor.MaxXOffser + 1;
-        HeaderHeigth = cursor.MaxDepth;
+        HeaderHeigth = cursor.MaxDepth + 1;
         ExtendToRectange(_root, cursor);
         if (_isNumerationUsed){
             int num = 1;
@@ -81,7 +82,30 @@ public class TableColumnHeader {
             numericColumn.Placement = new CellPlacement(x: root.Placement.X, root.Placement.Y, 1, 1);
             startNumber+=1;
         }
-
+    }
+    // выполняет делегат по дереву (дерево предполагается полностью инициализированным)
+    private void TraceTree(Action<ConstrainedColumnHeaderCell> toPerform, ConstrainedColumnHeaderCell start){
+        if (start.HasAnyChildren){
+            foreach (var cell in start.Children){
+                TraceTree(toPerform, cell);
+            }
+        }
+        else{
+            toPerform.Invoke(start);
+        }
+    }
+    // координата x абсолютная и начинается с самой крайней левой ячейки
+    public IEnumerable<ConstrainedColumnHeaderCell> TraceVertical(int x){
+        var found = new List<ConstrainedColumnHeaderCell>();
+        Action<ConstrainedColumnHeaderCell> cellGetter = 
+        (cell) => {
+            if (cell.Constraint is not null && 
+                cell.Placement.X >= x && cell.Placement.ColumnSpan - 1 + cell.Placement.X <= x){
+                found.Add(cell);
+            }
+        };
+        TraceTree(cellGetter, _root);
+        return found;
 
     }
 

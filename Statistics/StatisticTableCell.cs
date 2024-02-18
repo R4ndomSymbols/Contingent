@@ -4,12 +4,17 @@ public class StatisticTableCell {
 
     public int X {get; set;}
     public int Y {get; set;}
-    private Func<Task<int>> _statsGetter;
-    public StatisticTableCell(Func<Task<int>> statsGetter, int x, int y, ){
-        _statsGetter = statsGetter;
+    public Func<Task<CountResult>> StatsGetter {get; set; }
+    public StatisticTableCell(int x, int y){
+        X = x;
+        Y = y;
+        StatsGetter = null;
     }
-    public async Task<int> GetStats(){
-        return await _statsGetter.Invoke();
+    public async Task<CountResult> GetStats(){
+        if (StatsGetter is null){
+            throw new Exception("Не определен способ получения статистики для клетки");
+        }
+        return await StatsGetter.Invoke();
     }
 
 }

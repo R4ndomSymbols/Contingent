@@ -3,6 +3,8 @@ namespace StudentTracking.SQL;
 public class WhereCondition : IQueryPart{
 
     private Column _columnConstrained;
+
+    public Column RestrictedColumn => _columnConstrained;
     private SQLParameter _value;
     private Relations _relation; 
     public WhereCondition(
@@ -24,6 +26,16 @@ public class WhereCondition : IQueryPart{
         _relation = relation;
         _strategy = () => {
             return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " NULL"; 
+        };
+    }
+    public WhereCondition(
+        Column constrainedColumn, 
+        string parameterValue,
+        Relations relation){
+        _columnConstrained = constrainedColumn;
+        _relation = relation;
+        _strategy = () => {
+            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " " + parameterValue; 
         };
     }
 

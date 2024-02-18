@@ -12,6 +12,8 @@ public class ConstrainedColumnHeaderCell {
     public CellPlacement Placement {get; set;} 
     public IReadOnlyList<ConstrainedColumnHeaderCell> Children => _children;
 
+    public bool HasAnyChildren => _children.Any();
+
     public bool IsRoot => _isRoot; 
     // колонка с фильтром
     public ConstrainedColumnHeaderCell(string name, ConstrainedColumnHeaderCell parent, ComplexWhereCondition constraint){
@@ -41,5 +43,6 @@ public class ConstrainedColumnHeaderCell {
     public void AddChild(ConstrainedColumnHeaderCell child){
         _children.Add(child);
     }
+    
 }
 

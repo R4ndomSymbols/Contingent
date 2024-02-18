@@ -8,7 +8,7 @@ public class ConstrainedRowHeaderCell {
     public ComplexWhereCondition? Constraint {get; set;}
     public string Name {get; set; }
     public int Y;
-    public int X => 1; 
+    public int X => 0; 
     public bool IsOnlyHeader {get; private init;}
     // кусок агрегата
     public ConstrainedRowHeaderCell(string name, ComplexWhereCondition constraint, ConstrainedRowHeaderCell aggregateRoot){
