@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace StudentTracking.Statistics;
 
 /*
@@ -10,22 +12,18 @@ namespace StudentTracking.Statistics;
 */
 
 public class TableRowHeader {
-
-    private List<ConstrainedRowHeaderCell> _rowsHeadersStrictOrder;
-    private List<ConstrainedRowHeaderCell> _numericRows;
-
+    // так же как для колонок, не отрисовывается
+    private ConstrainedRowHeaderCell _root;
     public int HeaderWidth => _numericRows is null ? 1 : 2;
     public int HeaderHeigth => _rowsHeadersStrictOrder.Count + HeaderOffset - 1;
+    // смещение в координатной сетке всей таблицы
+    // заголовок стобца всегда стоит выше заголовка строки 
     public int HeaderOffset {get; private set;} 
-
     private bool _useNumeration;
-    public TableRowHeader(bool useNumeration, TableColumnHeader tableHeader){
+    public TableRowHeader(ConstrainedRowHeaderCell root, TableColumnHeader tableHeader, bool useNumeration){
         _useNumeration = useNumeration;
         HeaderOffset = tableHeader.HeaderHeigth;
-        if (_useNumeration){
-            _numericRows = new List<ConstrainedRowHeaderCell>();
-        }
-        _rowsHeadersStrictOrder = new List<ConstrainedRowHeaderCell>();
+        _root = root;
     }
     // добавить методы быстрого добавления агрегатов и т.д.
     public void AddRow(ConstrainedRowHeaderCell rowHeader){
@@ -35,6 +33,33 @@ public class TableRowHeader {
             _numericRows.Add(new ConstrainedRowHeaderCell(nextNumber.ToString()));
         }
     }
+    private void Normalize(){
+        var cursor = new HeaderBuilderCursor();
+        // начало отсчета - левый нижний угол шапки
+        cursor.Y = HeaderOffset;
+        cursor.X = 0;
+    
+
+        void Normalize(ConstrainedRowHeaderCell start, HeaderBuilderCursor cursor){
+            if (start.HasAnyChildren){
+                var cPlace = start.Placement; 
+                cPlace.X = cursor.X;
+                cPlace.Y = cursor.Y;
+                foreach (var child in start.Children){
+                    cursor.X+=1;
+                    Normalize(child, cursor);
+                    cursor.X-=1;
+                    cPlace.ChangeSize(child.Placement.RowSpan, 1);
+                }
+            }
+            else {
+                start.Placement = new CellPlacement(cursor.X, cursor.Y, 1, 1);
+            }
+        } 
+
+    } 
+
+
 
     public IEnumerable<ConstrainedRowHeaderCell> TraceHorizontal(int y){
         return _rowsHeadersStrictOrder.Where(x => x.Y == y);

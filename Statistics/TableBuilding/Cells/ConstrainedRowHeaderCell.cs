@@ -2,37 +2,45 @@ using StudentTracking.SQL;
 namespace StudentTracking.Statistics;
 
 public class ConstrainedRowHeaderCell {
-
-    private ConstrainedRowHeaderCell _aggregateRoot;
-    private List<ConstrainedRowHeaderCell> _toAggregate;
+    
+    // непосредственный родитель
+    private ConstrainedRowHeaderCell? _parent;
+    // прямые потомки (находнятся на уровень ниже)
+    private List<ConstrainedRowHeaderCell> _children;
     public ComplexWhereCondition? Constraint {get; set;}
     public string Name {get; set; }
-    public int Y;
-    public int X => 0; 
-    public bool IsOnlyHeader {get; private init;}
-    // кусок агрегата
-    public ConstrainedRowHeaderCell(string name, ComplexWhereCondition constraint, ConstrainedRowHeaderCell aggregateRoot){
+    public int Y {get; set; }
+    public int X {get; set; } 
+    public bool IsOnlyHeader {get; private init ;}
+    public bool IsRoot {get; private init; }
+    public bool HasAnyChildren => _children.Any();
+    public CellPlacement Placement {get; set;}
+    public IReadOnlyCollection<ConstrainedRowHeaderCell> Children => _children.AsReadOnly();
+    // действительная клетка
+    public ConstrainedRowHeaderCell(string name, ComplexWhereCondition constraint,  ConstrainedRowHeaderCell? parent = null, IEnumerable<ConstrainedRowHeaderCell>? children = null) :
+    this(parent, children)
+    {
         Constraint = constraint;
         Name = name;
         IsOnlyHeader = false;
-        _aggregateRoot = aggregateRoot;
     }
     // заголовок
-    public ConstrainedRowHeaderCell(string name){
+    public ConstrainedRowHeaderCell(string name, ConstrainedRowHeaderCell? parent = null, IEnumerable<ConstrainedRowHeaderCell>? children = null) 
+    : this(parent, children)
+    {
         Constraint = null;
-        Name = name;
-        _toAggregate = null; 
+        Name = name; 
         IsOnlyHeader = true;
     }
-    // агрегат, не поддерживается на данный момент
-    public ConstrainedRowHeaderCell(string name, IEnumerable<ConstrainedRowHeaderCell> aggregate){
-        Constraint = null;
-        Name = name;
-        IsOnlyHeader = false;
-        _toAggregate = new List<ConstrainedRowHeaderCell>();
-        _toAggregate.AddRange(aggregate);        
+
+    private ConstrainedRowHeaderCell(ConstrainedRowHeaderCell? parent, IEnumerable<ConstrainedRowHeaderCell>? children){
+        _children = new List<ConstrainedRowHeaderCell>();
+        if (children is not null){
+            _children.AddRange(children);
+        }
+        _parent = parent;
     }
-    
+   
 
     public void Link(ConstrainedRowHeaderCell aggregateParticipant){
         _toAggregate.Add(aggregateParticipant);

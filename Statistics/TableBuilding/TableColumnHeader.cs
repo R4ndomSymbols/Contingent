@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Net;
+using System.Text;
 
 namespace StudentTracking.Statistics;
 
@@ -12,6 +13,8 @@ public class TableColumnHeader {
     public int HeaderHeigth {get; private set;}
 
     public TableColumnHeader(ConstrainedColumnHeaderCell root, bool addNumeration){
+        // корневая нода не должна быть видимой, она задает основные условия для всей таблицы
+        // является агрегатом всех остальных
         _root = root;
         _isNumerationUsed = addNumeration;
         Normalize();
@@ -86,6 +89,7 @@ public class TableColumnHeader {
     // выполняет делегат по дереву (дерево предполагается полностью инициализированным)
     private void TraceTree(Action<ConstrainedColumnHeaderCell> toPerform, ConstrainedColumnHeaderCell start){
         if (start.HasAnyChildren){
+            toPerform.Invoke(start);
             foreach (var cell in start.Children){
                 TraceTree(toPerform, cell);
             }
@@ -107,6 +111,35 @@ public class TableColumnHeader {
         TraceTree(cellGetter, _root);
         return found;
 
+    }
+    // метод преобразует граф в разметку HTML
+    // предполагается, что после конструирования и нормализации граф не менялся
+    public string ToTableHead(){
+        var builder = new StringBuilder();
+        // пропуск корневой ноды
+        int currentY = 1;
+        var cellsFound = new List<ConstrainedColumnHeaderCell>(); 
+        Action<ConstrainedColumnHeaderCell> cellGetter = (cell) => {
+            if (cell.Placement.Y == currentY){
+                cellsFound.Add(cell);
+            }
+        };
+        do {
+            cellsFound.Clear();
+            TraceTree(cellGetter,_root);
+            // за раз конструируется один уровень заголовка
+            if (cellsFound.Any()){
+                builder.Append("<tr>" + string.Join(
+                    "", cellsFound.Select(cell =>  $"<th rowspan=\"{cell.Placement.RowSpan}\" columnspan=\"{cell.Placement.ColumnSpan}\">{cell.Name}</th>")
+                ) + "</tr>");
+            }
+            currentY++;
+        } 
+        while (cellsFound.Any());
+        if (currentY == 1){
+            throw new Exception("Граф шапки таблицы имеет недостаточную глубину"); 
+        }
+        return "<thead>" + builder.ToString() +  "</thead>";
     }
 
     
