@@ -27,8 +27,8 @@ public class TableColumnHeader {
         var cursor = new HeaderBuilderCursor();
         Normalize(_root, cursor);
         // курсор проходит по графу и запоминает предельные значения
-        HeaderLength = cursor.MaxXOffser + 1;
-        HeaderHeigth = cursor.MaxDepth + 1;
+        HeaderLength = cursor.MaxX + 1;
+        HeaderHeigth = cursor.MaxY + 1;
         ExtendToRectange(_root, cursor);
         if (_isNumerationUsed){
             int num = 1;
@@ -69,7 +69,7 @@ public class TableColumnHeader {
             }
         }
         else {
-            root.Placement = root.Placement.ChangeSize(rows: root.Placement.RowSpan + (cursor.MaxDepth - cursor.Y));
+            root.Placement = root.Placement.ChangeSize(rows: root.Placement.RowSpan + (cursor.MaxY - cursor.Y));
         }
     }
     // вызывается после всех методов и добавляет нумерацию к столбцам
@@ -99,22 +99,27 @@ public class TableColumnHeader {
         }
     }
     // координата x абсолютная и начинается с самой крайней левой ячейки
-    public IEnumerable<ConstrainedColumnHeaderCell> TraceVertical(int x){
-        var found = new List<ConstrainedColumnHeaderCell>();
+    public ConstrainedColumnHeaderCell TraceVertical(int x){
+        ConstrainedColumnHeaderCell? found = null;
         Action<ConstrainedColumnHeaderCell> cellGetter = 
         (cell) => {
-            if (cell.Constraint is not null && 
-                cell.Placement.X >= x && cell.Placement.ColumnSpan - 1 + cell.Placement.X <= x){
-                found.Add(cell);
+            if (found is not null){
+                return;
+            } 
+            if (cell.Placement.X == x){
+                found = cell;
             }
         };
         TraceTree(cellGetter, _root);
+        if (found is null){
+            throw new Exception("Заголовок стобца не может быть не найден");
+        }
         return found;
 
     }
     // метод преобразует граф в разметку HTML
     // предполагается, что после конструирования и нормализации граф не менялся
-    public string ToTableHead(){
+    public string ToHTMLTableHead(){
         var builder = new StringBuilder();
         // пропуск корневой ноды
         int currentY = 1;
@@ -168,8 +173,8 @@ public class HeaderBuilderCursor{
             _y = value;
         }
     }
-    public int MaxDepth {get => _maxY;}
-    public int MaxXOffser {get => _maxX;}
+    public int MaxY {get => _maxY;}
+    public int MaxX {get => _maxX;}
 
     public HeaderBuilderCursor(){
         _y = 0;

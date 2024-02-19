@@ -17,7 +17,7 @@ public class ConstrainedRowHeaderCell {
     public CellPlacement Placement {get; set;}
     public IReadOnlyCollection<ConstrainedRowHeaderCell> Children => _children.AsReadOnly();
     // действительная клетка
-    public ConstrainedRowHeaderCell(string name, ComplexWhereCondition constraint,  ConstrainedRowHeaderCell? parent = null, IEnumerable<ConstrainedRowHeaderCell>? children = null) :
+    public ConstrainedRowHeaderCell(string name, ComplexWhereCondition? constraint,  ConstrainedRowHeaderCell? parent = null, IEnumerable<ConstrainedRowHeaderCell>? children = null) :
     this(parent, children)
     {
         Constraint = constraint;
@@ -40,10 +40,9 @@ public class ConstrainedRowHeaderCell {
         }
         _parent = parent;
     }
-   
 
-    public void Link(ConstrainedRowHeaderCell aggregateParticipant){
-        _toAggregate.Add(aggregateParticipant);
+    public void AddChild(ConstrainedRowHeaderCell child){
+        _children.Add(child);
     }
 }
 
