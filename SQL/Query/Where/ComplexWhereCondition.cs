@@ -10,17 +10,22 @@ public class ComplexWhereCondition : IQueryPart{
     private ComplexWhereCondition? _right;
     private ConditionRelation _relation;
     private bool _isGroup;
-    private Func<string> _strategy; 
+    private Func<string> _strategy;
+    private bool _isEmpty; 
 
     public enum  ConditionRelation {
         AND = 1,
         OR = 2,
     }
+    public ComplexWhereCondition(WhereCondition single) {
+        _facaded = single;
+        _strategy = () => _facaded.AsSQLText();
+    }
 
     public ComplexWhereCondition(WhereCondition left, WhereCondition right, ConditionRelation relation, bool isGroup = false)
     : this(new ComplexWhereCondition(left), new ComplexWhereCondition(right), relation, isGroup)
     {
-      
+         
     }
 
     public ComplexWhereCondition(ComplexWhereCondition left, ComplexWhereCondition right, ConditionRelation relation, bool isGroup = false){
@@ -70,10 +75,7 @@ public class ComplexWhereCondition : IQueryPart{
 
     } 
 
-    public ComplexWhereCondition(WhereCondition single) {
-        _facaded = single;
-        _strategy = () => _facaded.AsSQLText();
-    }
+
 
     public string AsSQLText()
     {

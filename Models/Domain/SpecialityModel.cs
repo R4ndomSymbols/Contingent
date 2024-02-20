@@ -6,7 +6,7 @@ using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.JSON;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
 

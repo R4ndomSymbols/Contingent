@@ -84,7 +84,7 @@ public class TableRowHeader {
                 if (!cell.HasAnyChildren){
                     // пустые заголовки не отмечаются цифрами и не влияют на счет
                     string cellText = cell.IsOnlyHeader ? " " : numberStore.ToString();
-                    var numberNode = new ConstrainedRowHeaderCell(cellText, null, cell, null);
+                    var numberNode = new ConstrainedRowHeaderCell(cellText, parent: cell);
                     numberNode.Placement = new CellPlacement(cell.Placement.X+1, cell.Placement.Y, 1, 1);
                     // номер - дочерняя нода с пустым условием
                     cell.AddChild(numberNode);

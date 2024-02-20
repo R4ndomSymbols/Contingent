@@ -127,8 +127,6 @@ public class LevelOfEducation {
     public static bool operator != (LevelOfEducation left, LevelOfEducation rigth){
         return !(left == rigth);
     }
-
-
 }
 
 

@@ -80,7 +80,7 @@ public class TableColumnHeader {
             }
         }
         else {
-            var numericColumn = new ConstrainedColumnHeaderCell(startNumber.ToString(), root);
+            var numericColumn = new ConstrainedColumnHeaderCell(startNumber.ToString());
             root.AddChild(numericColumn);
             numericColumn.Placement = new CellPlacement(x: root.Placement.X, root.Placement.Y, 1, 1);
             startNumber+=1;

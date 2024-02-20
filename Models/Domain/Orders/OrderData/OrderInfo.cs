@@ -83,6 +83,11 @@ public class OrderTypeInfo
         }
     }
 
+    public static IEnumerable<OrderTypeInfo> GetAllEnrollment(){
+        return _types.Where(t => t.Type.ToString().Contains("Enrollment"));
+    
+    }
+
     public static IEnumerable<OrderTypeInfo> GetAllTypes()
     {
         var result = new List<OrderTypeInfo>();
