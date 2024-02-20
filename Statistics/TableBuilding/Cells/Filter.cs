@@ -1,14 +1,40 @@
 
+using Microsoft.VisualBasic;
 using Utilities;
 
 namespace StudentTracking.Statistics;
 
 public class Filter<T> {
     
-    private Func<T, T?> filter;
-    public Filter(Func<T, T?> filter){
-    
+    private Func<IEnumerable<T>, IEnumerable<T>> _filter;
+
+    public static Filter<T> Empty => new Filter<T>();
+
+    private Filter(){
+        _filter = (source) => source;
     }
+
+    public Filter(Func<IEnumerable<T>, IEnumerable<T>> filter){
+        _filter = filter;
+    }
+
+    public IEnumerable<T> Execute(IEnumerable<T> source){
+        return _filter.Invoke(source);
+    }
+
+    public Filter<T> Merge(Filter<T> mergeWith){
+        return new Filter<T>(
+            (source) => {
+                var filteredByThis = _filter.Invoke(source);
+                return mergeWith._filter(filteredByThis);
+            }
+        );
+    }
+
+
+    
+
+
 
 }
 

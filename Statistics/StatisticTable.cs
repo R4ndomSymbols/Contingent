@@ -6,18 +6,19 @@ using Utilities;
 
 namespace StudentTracking.Statistics;
 
-public class StatisticTable {
+public class StatisticTable<M> {
     
-    private TableColumnHeader _columnHeaders;
-    private TableRowHeader _rowHeaders;
+    private TableColumnHeader<M> _columnHeaders;
+    private TableRowHeader<M> _rowHeaders;
     // начало (левый верхний угол таблицы)
     private Point _startPoint;
     // конец (правый нижний угол таблицы)
     private Point _endPoint;
-
     private StatisticTableCell[][] _content;
 
-    public StatisticTable(TableColumnHeader tableColumnHeader, TableRowHeader rowHeader){
+    private IEnumerable<M> _tableDataSource;
+
+    public StatisticTable(TableColumnHeader<M> tableColumnHeader, TableRowHeader<M> rowHeader, IEnumerable<M> dataSource){
         _columnHeaders = tableColumnHeader;
         _rowHeaders = rowHeader;
         _startPoint = new Point(
@@ -42,45 +43,20 @@ public class StatisticTable {
             _content[i - _offsetY] = new StatisticTableCell[tableWidth];
             for (int j = _startPoint.X; j < _endPoint.X; j++){
                 var cell = new StatisticTableCell(j, i);
-                var query = BuildQueryForCell(cell);
+                var query = GetFilterForCell(cell);
                 cell.StatsGetter = () => {
-                    using var conn = Utils.GetAndOpenConnectionFactory().Result;
-                    var result = query.Execute(conn, new QueryLimits(0, 1000)).Result; 
-                    return Task.Run(() => result.First());
+                    var result = query.Execute(_tableDataSource);
+                    return Task.Run(() => new CountResult(result.Count()));
                 }; 
                 _content[i - _offsetY][j] = cell;
             }
         }
     }
 
-    private SelectQuery<CountResult> BuildQueryForCell(StatisticTableCell cell){
+    private Filter<M> GetFilterForCell(StatisticTableCell cell){
         var constraintColumnHeader = _columnHeaders.TraceVertical(cell.X);
         var constraintRowHeader = _rowHeaders.TraceHorizontal(cell.Y);
-        var totalWhere = new List<ComplexWhereCondition?>(){constraintColumnHeader.Constraint, constraintRowHeader.Constraint};
-        // слияние всех условий для клеточки таблицы
-        var clause = ComplexWhereCondition.Unite(ComplexWhereCondition.ConditionRelation.AND, totalWhere);
-        // select подразумевает, что первичной таблицей является таблица студентов
-        var mapper = new Mapper<CountResult>(
-            (m) => {
-                var count = (int)m["found_count"];
-                return Task.Run(() => QueryResult<CountResult>.Found(new CountResult(count)));
-            },
-            new List<Column>(){
-                new Column("COUNT", "id", "students","found_count")
-            });
-
-        JoinSection? joins = null;
-        if (clause is not null){
-            joins = JoinSection.FindJoinRoute("students", clause.GetAllRestrictedColumns()); 
-        }
-        var select = SelectQuery<CountResult>.Init("students").
-        AddMapper(mapper).
-        AddJoins(joins).
-        AddWhereStatement(clause).Finish();
-        if (select.IsFailure){
-            throw new Exception("При генерации запроса для клетки таблицы он не может провалиться");
-        }
-        return select.ResultObject;
+        return constraintRowHeader.GetFilterSequence().Merge(constraintRowHeader.GetFilterSequence());
     }
 
     public async Task<string> ToHtmlTable(){
@@ -103,14 +79,5 @@ public class StatisticTable {
         + "<tbody>" + bodyHTML + "</tbody>"
         + "</table>";  
     
-    
     }
-
-
-    
-
-
-
-
-
 }

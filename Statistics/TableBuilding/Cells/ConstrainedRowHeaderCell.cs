@@ -3,96 +3,66 @@ using Microsoft.AspNetCore.Mvc;
 using StudentTracking.SQL;
 namespace StudentTracking.Statistics;
 
-public class ConstrainedRowHeaderCell : IContsraintTree
-{
+public class RowHeaderCell<T> {
 
     // непосредственный родитель
-    private ConstrainedRowHeaderCell? _parent;
+    private RowHeaderCell<T>? _parent;
     // прямые потомки (находнятся на уровень ниже)
-    private List<ConstrainedRowHeaderCell> _children;
-    private ComplexWhereCondition.ConditionRelation _relationToParent;
-    private SQLParameterCollection _parameters; 
-    public ComplexWhereCondition? Constraint { get; private set; }
-    public SQLParameterCollection TreeParameters => _parameters;
-    public string Name { get; set; }
-    public int Y { get; set; }
-    public int X { get; set; }
-    public bool IsOnlyHeader { get; private init; }
-    public bool IsRoot { get; private init; }
+    private List<RowHeaderCell<T>> _children;
+
+    private Filter<T> _nodeFilter;
+    public string Name { get; private set;}
+    public bool IsOnlyStructural { get; private init; }
+    public bool IsRoot => _parent is null;
     public bool HasAnyChildren => _children.Any();
     public CellPlacement Placement { get; set; }
-    public IReadOnlyCollection<ConstrainedRowHeaderCell> Children => _children.AsReadOnly();
-    // действительная клетка
-    public ConstrainedRowHeaderCell(string name, ComplexWhereCondition.ConditionRelation toParent, ConstrainedRowHeaderCell parent) : this(parent)
+    public IReadOnlyCollection<RowHeaderCell<T>> Children => _children.AsReadOnly();
+    // клетка
+    public RowHeaderCell(string name, RowHeaderCell<T> parent, Filter<T>? nodeFilter = null)
     {
-        IsRoot = false;
+        if (parent is null){
+            throw new Exception("Родитель горизонтального заголовка не может быть пустой"); 
+        }
         Name = name;
-        IsOnlyHeader = false;
-    }
-    // заголовок
-    public ConstrainedRowHeaderCell(string name, ConstrainedRowHeaderCell parent) : this(parent)
-    {
-        IsRoot = false;
-        Constraint = null;
-        Name = name;
-        IsOnlyHeader = true;
-    }
-    // корень
-    public ConstrainedRowHeaderCell(){
-        IsRoot = true;
-        _parameters = new SQLParameterCollection();
-        _children = new List<ConstrainedRowHeaderCell>();
-    
-    }
-
-    private ConstrainedRowHeaderCell(ConstrainedRowHeaderCell parent){
         _parent = parent;
         _parent.AddChild(_parent);
-        _children = new List<ConstrainedRowHeaderCell>();
-        _parameters = parent._parameters;
-    } 
+        _children = new List<RowHeaderCell<T>>();
+        if (nodeFilter is null){
+            IsOnlyStructural = true;
+            _nodeFilter = Filter<T>.Empty;
+        }
+        else {
+            IsOnlyStructural = false;
+            _nodeFilter = nodeFilter; 
+        }
+    }
 
+    // корень
+    public RowHeaderCell(){
+        _parent = null;
+        _nodeFilter = Filter<T>.Empty;
+        _children = new List<RowHeaderCell<T>>();
     
-   
-
-    private ConstrainedRowHeaderCell(ConstrainedRowHeaderCell? parent, IEnumerable<ConstrainedRowHeaderCell>? children)
-    {
-        _children = new List<ConstrainedRowHeaderCell>();
-        if (children is not null)
-        {
-            _children.AddRange(children);
-        }
-        _parent = parent;
     }
 
-    private void AddChild(ConstrainedRowHeaderCell child)
+    private void AddChild(RowHeaderCell<T> child)
     {
+        child._parent = child;
         _children.Add(child);
+        
     }
+    public Filter<T> GetFilterSequence(){
+        if (IsRoot){
+            return Filter<T>.Empty;
+        }
+        if (IsOnlyStructural){
+            return _parent.GetFilterSequence();
+        }
+        else{
+            return _parent._nodeFilter.Merge(_nodeFilter);
+        }
 
-    public ComplexWhereCondition? GetTreeCondition()
-    {
-        if (_parent is null)
-        {
-            return Constraint;
-        }
-        var fromParent = GetTreeCondition();
-        if (fromParent is null)
-        {
-            return Constraint;
-        }
-        else
-        {
-            if (Constraint is null)
-            {
-                return fromParent;
-            }
-            else
-            {
-                return new ComplexWhereCondition(Constraint, fromParent, _relationToParent);
-            }
-        }
-    }
+    }    
 }
 
 public interface IContsraintTree {

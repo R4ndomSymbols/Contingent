@@ -2,68 +2,59 @@ using System.Drawing;
 using StudentTracking.SQL;
 namespace StudentTracking.Statistics;
 
-public class ConstrainedColumnHeaderCell<T> : IContsraintTree {
+// параметр нужен для фильтрации
+public class ColumnHeaderCell<T> {
 
-    private ConstrainedColumnHeaderCell<T>? _parent;
-    private List<ConstrainedColumnHeaderCell<T> _children;
+    private ColumnHeaderCell<T>? _parent;
+    private List<ColumnHeaderCell<T>> _children;
+    private Filter<T> _nodeFilter;
     public string Name {get; set; }
     public CellPlacement Placement {get; set;} 
-    public IReadOnlyList<ConstrainedColumnHeaderCell> Children => _children;
+    public IReadOnlyList<ColumnHeaderCell<T>> Children => _children;
     public bool HasAnyChildren => _children.Any();
-    public bool IsRoot {get; private set; } 
+    public bool IsRoot => _parent is null;
+    public bool IsOnlyStructural => _nodeFilter is null; 
     // колонка с фильтром
-    public ConstrainedColumnHeaderCell(string name, ConstrainedColumnHeaderCell parent) : this(name, parent){
-        Constraint = constraint;
-        _relationToParent = relation;
+    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, Filter<T>? nodeFilter = null) : this(name, parent){
+        if (nodeFilter is not null){
+            _nodeFilter = nodeFilter;
+        }
+        _nodeFilter = Filter<T>.Empty;
     }
     // корень
-    public ConstrainedColumnHeaderCell(SQLParameterCollection parameters){
-        Constraint = null;
+    public ColumnHeaderCell(){
         Name = string.Empty;
         _parent = null;
-        IsRoot = true;
-        _children = new List<ConstrainedColumnHeaderCell>();
-        _parameters = parameters;
+        _children = new List<ColumnHeaderCell<T>>();
     }
     // дочернаяя колонка
-    public ConstrainedColumnHeaderCell(string name, ConstrainedColumnHeaderCell parent){
-        IsRoot = false;
+    private ColumnHeaderCell(string name, ColumnHeaderCell<T> parent){
+        if (parent is null){
+            throw new Exception("Родитель дочерней ноды должен быть указан");
+        }
         Name = name;
         _parent = parent;
-        _parameters = parent._parameters;
         _parent.AddChild(this);
-        _children = new List<ConstrainedColumnHeaderCell>();
+        _children = new List<ColumnHeaderCell<T>>();
     }
 
     // конструируется дерево, потом оно будет выравнено до прямоугольника
-    private void AddChild(ConstrainedColumnHeaderCell child){
+    private void AddChild(ColumnHeaderCell<T> child){
         child._parent = this;
         _children.Add(child);
     }
 
-    public ComplexWhereCondition? GetTreeCondition()
-    {
-        if (_parent is null)
-        {
-            return Constraint;
+    public Filter<T> GetFilterSequence(){
+        if (IsRoot){
+            return Filter<T>.Empty;
         }
-        var fromParent = GetTreeCondition();
-        if (fromParent is null)
-        {
-            return Constraint;
+        if (IsOnlyStructural){
+            return _parent.GetFilterSequence();
         }
-        else
-        {
-            if (Constraint is null)
-            {
-                return fromParent;
-            }
-            else
-            {
-                return new ComplexWhereCondition(Constraint, fromParent, _relationToParent);
-            }
+        else{
+            return _parent._nodeFilter.Merge(_nodeFilter);
         }
-    }
-    
+
+    }    
 }
 

@@ -12,16 +12,16 @@ namespace StudentTracking.Statistics;
      4 x
 */
 
-public class TableRowHeader {
+public class TableRowHeader<T> {
     // так же как для колонок, не отрисовывается
-    private ConstrainedRowHeaderCell _root;
+    private RowHeaderCell<T> _root;
     public int HeaderWidth {get; private set;}
     public int HeaderHeigth {get; private set;}
     // смещение в координатной сетке всей таблицы
     // заголовок стобца всегда стоит выше заголовка строки 
     public int HeaderOffset {get; private set;} 
     private bool _useNumeration;
-    public TableRowHeader(ConstrainedRowHeaderCell root, TableColumnHeader tableHeader, bool useNumeration){
+    public TableRowHeader(RowHeaderCell<T> root, TableColumnHeader<T> tableHeader, bool useNumeration){
         _useNumeration = useNumeration;
         HeaderOffset = tableHeader.HeaderHeigth;
         _root = root;
@@ -45,7 +45,7 @@ public class TableRowHeader {
         HeaderHeigth = cursor.MaxY;
         HeaderWidth= cursor.MaxX;
 
-        void Normalize(ConstrainedRowHeaderCell start, HeaderBuilderCursor cursor){
+        void Normalize(RowHeaderCell<T> start, HeaderBuilderCursor cursor){
             if (start.HasAnyChildren){
                 var cPlace = start.Placement; 
                 cPlace.X = cursor.X;
@@ -65,8 +65,8 @@ public class TableRowHeader {
             }
         }
 
-        void ToRectangle(ConstrainedRowHeaderCell start, HeaderBuilderCursor egdeStore){
-            Action<ConstrainedRowHeaderCell> cellExpander = (cell) => {
+        void ToRectangle(RowHeaderCell<T> start, HeaderBuilderCursor egdeStore){
+            Action<RowHeaderCell<T>> cellExpander = (cell) => {
                 if (!cell.HasAnyChildren){
                     var place = cell.Placement;  
                     // корректировка colspan для единой максимальной ширины колонки
@@ -77,21 +77,15 @@ public class TableRowHeader {
         }
     }
     // работает только с прямоугольным представлением заголовка
-    private void AddNumeration(ConstrainedRowHeaderCell root){
+    private void AddNumeration(RowHeaderCell<T> root){
 
         int numberStore = 1;
-        Action<ConstrainedRowHeaderCell> numerationAdder = (cell) => {
+        Action<RowHeaderCell<T>> numerationAdder = (cell) => {
                 if (!cell.HasAnyChildren){
-                    // пустые заголовки не отмечаются цифрами и не влияют на счет
-                    string cellText = cell.IsOnlyHeader ? " " : numberStore.ToString();
-                    var numberNode = new ConstrainedRowHeaderCell(cellText, parent: cell);
+                    var numberNode = new RowHeaderCell<T>(numberStore.ToString(), cell);
                     numberNode.Placement = new CellPlacement(cell.Placement.X+1, cell.Placement.Y, 1, 1);
                     // номер - дочерняя нода с пустым условием
-                    cell.AddChild(numberNode);
-                    if (!cell.IsOnlyHeader){
-                        numberStore++;
-                    }
-                    
+                    numberStore++;
                 }
             };
         TraceTree(numerationAdder, root);
@@ -99,7 +93,7 @@ public class TableRowHeader {
         HeaderWidth +=1;
     } 
 
-    private void TraceTree(Action<ConstrainedRowHeaderCell> toPerform, ConstrainedRowHeaderCell start){
+    private void TraceTree(Action<RowHeaderCell<T>> toPerform, RowHeaderCell<T> start){
         toPerform.Invoke(start);
         if (start.HasAnyChildren){
             foreach (var child in start.Children){
@@ -113,7 +107,7 @@ public class TableRowHeader {
 
         // берутся только те клетки, у которых совпадает Y (а не находится в рамках клетки)
         
-        var found = new List<ConstrainedRowHeaderCell>();
+        var found = new List<RowHeaderCell<T>>();
         for (int i = 0; i < HeaderHeigth; i++){
             found.Clear();
             var realY = HeaderOffset + i;
@@ -125,7 +119,7 @@ public class TableRowHeader {
 
         return result;
 
-        void FindCells(ConstrainedRowHeaderCell current, int yToFind, List<ConstrainedRowHeaderCell> acc){
+        void FindCells(RowHeaderCell<T> current, int yToFind, List<RowHeaderCell<T>> acc){
             if (current.Placement.Y == yToFind  &&  object.ReferenceEquals(current, _root)){
                 acc.Add(current);
             }
@@ -140,11 +134,10 @@ public class TableRowHeader {
 
 
 
-    // попробовать реализовать получение условий из клетки
-    // таким образом, можно инкапсулировать слияние условий
-    public ConstrainedRowHeaderCell TraceHorizontal(int yInTable){
-        ConstrainedRowHeaderCell? outerCell = null;
-        Action<ConstrainedRowHeaderCell> cellGetter = (cell) => {
+    // реализация условий с помощью фильтров
+    public RowHeaderCell<T> TraceHorizontal(int yInTable){
+        RowHeaderCell<T>? outerCell = null;
+        Action<RowHeaderCell<T>> cellGetter = (cell) => {
             if (outerCell is not null){
                 return;
             }
@@ -170,7 +163,7 @@ public class TableRow {
         _content = new StringBuilder();
         _headers = new StringBuilder();
     }
-    public void AppendHeader(ConstrainedRowHeaderCell header){
+    public void AppendHeader<T>(RowHeaderCell<T> header){
         _headers.Append($"<th colspan = \"{header.Placement.ColumnSpan}\" rowspan= \"{header.Placement.RowSpan}\">{header.Name}</th>"); 
     }
 

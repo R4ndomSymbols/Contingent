@@ -4,7 +4,7 @@ using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Misc;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Globalization;
@@ -31,6 +31,36 @@ public class StudentModel
     private PaidEduAgreement _paidAgreementType;
     private int? _giaMark;
     private int? _giaDemoExamMark;
+
+    // небезопасно
+    private bool _isGroupQueried = false;
+    private bool _isHistoryQueried = false;
+    private GroupModel? _currentGroup;
+    private StudentHistory _history;  
+    public GroupModel? CurrentGroup {
+        get {
+            if (_isGroupQueried){
+                return _currentGroup;
+            }
+            else{
+                _isGroupQueried = true;
+                _currentGroup = GetCurrentGroup().Result;
+                return _currentGroup;
+            }
+        }
+    }
+    public StudentHistory History {
+        get {
+            if (!_isHistoryQueried){
+                _isHistoryQueried = true;
+                _history = StudentHistory.Create(this).Result;
+            }
+            return _history;
+        }
+    }
+
+
+    public SpecialityModel? CurrentSpeciality => CurrentGroup?.EducationProgram;
     public int Id
     {
         get => _id;

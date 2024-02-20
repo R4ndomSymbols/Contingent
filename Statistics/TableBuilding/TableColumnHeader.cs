@@ -5,25 +5,25 @@ using System.Text;
 namespace StudentTracking.Statistics;
 
 // добавить нумерацию колонок и столбцов
-public class TableColumnHeader {
+public class TableColumnHeader<T> {
 
-    private ConstrainedColumnHeaderCell _root;
+    private ColumnHeaderCell<T> _root;
     private bool _isNumerationUsed;
     public int HeaderLength {get; private set;}
     public int HeaderHeigth {get; private set;}
 
-    public TableColumnHeader(ConstrainedColumnHeaderCell root, bool addNumeration){
+    public TableColumnHeader(ColumnHeaderCell<T> root, bool addNumeration){
         // корневая нода не должна быть видимой, она задает основные условия для всей таблицы
         // является агрегатом всех остальных
+        if (!root.IsRoot || !root.HasAnyChildren){
+            throw new Exception("Корневая нода не должна быть некорневой или пустой");
+        }
         _root = root;
         _isNumerationUsed = addNumeration;
         Normalize();
     }
 
     private void Normalize(){
-        if (!_root.IsRoot || !_root.Children.Any()){
-            throw new Exception("Нормализация неосуществима вне корневой или пустой ноды");
-        }
         var cursor = new HeaderBuilderCursor();
         Normalize(_root, cursor);
         // курсор проходит по графу и запоминает предельные значения
@@ -38,7 +38,7 @@ public class TableColumnHeader {
         }
     }
     // нормализует таблицу по ширине
-    private void Normalize(ConstrainedColumnHeaderCell root, HeaderBuilderCursor cursor){
+    private void Normalize(ColumnHeaderCell<T> root, HeaderBuilderCursor cursor){
         if (root.Children.Any()){
             var colSpanSummary = 0;
             var xAnchor = cursor.X; 
@@ -60,7 +60,7 @@ public class TableColumnHeader {
     // курсор уже должен быть заполнен после нормализации
     // метод приводит заголовок в прямоугольный вид
     // нормализует таблицу по высоте
-    private void ExtendToRectange(ConstrainedColumnHeaderCell root, HeaderBuilderCursor cursor){
+    private void ExtendToRectange(ColumnHeaderCell<T> root, HeaderBuilderCursor cursor){
         if (root.Children.Any()){
             foreach (var child in root.Children){
                 cursor.Y+=1;
@@ -73,21 +73,20 @@ public class TableColumnHeader {
         }
     }
     // вызывается после всех методов и добавляет нумерацию к столбцам
-    private void AddNumeration(ConstrainedColumnHeaderCell root, ref int startNumber){
-        if (root.Children.Any()){
-            foreach(var child in root.Children){
+    private void AddNumeration(ColumnHeaderCell<T> parent, ref int startNumber){
+        if (parent.Children.Any()){
+            foreach(var child in parent.Children){
                 AddNumeration(child, ref startNumber);
             }
         }
         else {
-            var numericColumn = new ConstrainedColumnHeaderCell(startNumber.ToString());
-            root.AddChild(numericColumn);
-            numericColumn.Placement = new CellPlacement(x: root.Placement.X, root.Placement.Y, 1, 1);
+            var numericColumn = new ColumnHeaderCell<T>(startNumber.ToString(), parent);
+            numericColumn.Placement = new CellPlacement(x: parent.Placement.X, parent.Placement.Y, 1, 1);
             startNumber+=1;
         }
     }
     // выполняет делегат по дереву (дерево предполагается полностью инициализированным)
-    private void TraceTree(Action<ConstrainedColumnHeaderCell> toPerform, ConstrainedColumnHeaderCell start){
+    private void TraceTree(Action<ColumnHeaderCell<T>> toPerform, ColumnHeaderCell<T> start){
         if (start.HasAnyChildren){
             toPerform.Invoke(start);
             foreach (var cell in start.Children){
@@ -99,9 +98,9 @@ public class TableColumnHeader {
         }
     }
     // координата x абсолютная и начинается с самой крайней левой ячейки
-    public ConstrainedColumnHeaderCell TraceVertical(int x){
-        ConstrainedColumnHeaderCell? found = null;
-        Action<ConstrainedColumnHeaderCell> cellGetter = 
+    public ColumnHeaderCell<T> TraceVertical(int x){
+        ColumnHeaderCell<T>? found = null;
+        Action<ColumnHeaderCell<T>> cellGetter = 
         (cell) => {
             if (found is not null){
                 return;
@@ -123,15 +122,15 @@ public class TableColumnHeader {
         var builder = new StringBuilder();
         // пропуск корневой ноды
         int currentY = 1;
-        var cellsFound = new List<ConstrainedColumnHeaderCell>(); 
-        Action<ConstrainedColumnHeaderCell> cellGetter = (cell) => {
+        var cellsFound = new List<ColumnHeaderCell<T>>(); 
+        Action<ColumnHeaderCell<T>> cellGetter = (cell) => {
             if (cell.Placement.Y == currentY){
                 cellsFound.Add(cell);
             }
         };
         do {
             cellsFound.Clear();
-            TraceTree(cellGetter,_root);
+            TraceTree(cellGetter, _root);
             // за раз конструируется один уровень заголовка
             if (cellsFound.Any()){
                 builder.Append("<tr>" + string.Join(

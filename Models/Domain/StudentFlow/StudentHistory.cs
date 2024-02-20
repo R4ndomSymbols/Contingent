@@ -7,7 +7,7 @@ using Microsoft.VisualBasic;
 using Npgsql;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Flow;
@@ -15,8 +15,19 @@ namespace StudentTracking.Models.Domain.Flow;
 
 public class StudentHistory
 {
+    public static DateTime CurrentPeriodStartDate {
+        get {
+            var now = DateTime.Now;         
+            return new DateTime(now.Year-1, 10, 1);
+        }
+    }
+    public static DateTime CurrentPeriodEndDate {
+        get {
+            var now = DateTime.Now;         
+            return new DateTime(now.Year, 9, 30);
+        }
+    }
     private List<StudentFlowRecord> _history;
-
     public IReadOnlyList<StudentFlowRecord> History => _history;
     private int _studentId;
     private StudentHistory()
@@ -300,6 +311,18 @@ public class StudentHistory
     public int GetCycleCount(){
         GetStudentState(out int cc);
         return cc;
+    }
+
+    public bool IsEnlistedInPeriod(DateTime previous, DateTime next){
+        foreach(var order in _history.Select(rec => rec.ByOrder)){
+            if (order.EffectiveDate >= previous && order.EffectiveDate <= next && order.GetOrderTypeDetails().IsAnyEnrollment()){
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool IsEnlistedInStandardPeriod(){
+        return IsEnlistedInPeriod(CurrentPeriodStartDate, CurrentPeriodStartDate);
     }
 
     public static async Task<bool> IsStudentEnlisted(StudentModel student){

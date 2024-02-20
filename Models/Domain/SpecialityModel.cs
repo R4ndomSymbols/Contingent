@@ -26,6 +26,8 @@ public class SpecialityModel
     private LevelOfEducation _levelIn;
     private LevelOfEducation _levelOut;
     private TeachingDepth _teachingDepth;
+    private TrainingProgram _trainingProgram;
+
     public int Id {
         get => _id;
     }
@@ -65,6 +67,9 @@ public class SpecialityModel
     public TeachingDepth TeachingLevel
     {
         get => _teachingDepth;
+    }
+    public TrainingProgram ProgramType{
+        get => _trainingProgram;
     }
 
     private SpecialityModel()
@@ -175,6 +180,7 @@ public class SpecialityModel
                 mapped._teachingDepth = TeachingDepth.GetByTypeCode((int)reader["knowledge_depth"]);
                 mapped._levelIn = LevelOfEducation.GetByLevelCode((int)reader["speciality_in_education_level"]);
                 mapped._levelOut = LevelOfEducation.GetByLevelCode((int)reader["speciality_out_education_level"]);
+                mapped._trainingProgram = TrainingProgram.GetByType((int)reader["training_program_type"]);
                 return Task.Run(() => QueryResult<SpecialityModel>.Found(mapped));
             }, new List<Column>(){
                 new Column("id", "id_spec", "educational_program"),
