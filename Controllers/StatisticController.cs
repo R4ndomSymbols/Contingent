@@ -23,12 +23,7 @@ public class StatisticController : Controller {
     [HttpGet]
     [Route("statistics/age")]
     public IActionResult GetAgeStatistics(){
-        var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add((int)LevelsOfEducation.BasicGeneralEducation);
-        var p2 = parameters.Add((int)LevelsOfEducation.SecondaryGeneralEducation);
-        var p3type = NpgsqlDbType.Array | NpgsqlDbType.Integer;
-        var p3 = parameters.Add(OrderTypeInfo.GetAllEnrollment().Select(x => (int)x.Type).ToArray(), p3type);         
-
+              
         var verticalRoot = new ColumnHeaderCell<StudentModel>();
         /*
         var specialitiesFilter = new ConstrainedColumnHeaderCell("Программы подготовки специалистов среднего звена",
@@ -37,6 +32,14 @@ public class StatisticController : Controller {
             new Column("specialities", "specialities"),  WhereCondition.Relations.Equal,))
         */
         // 1 уровень
+        var parameterNameCell1 = new ColumnHeaderCell<StudentModel>(
+            "Наименование показателей",
+            verticalRoot
+        );
+        var rowNumberCell = new ColumnHeaderCell<StudentModel>(
+            "№ строки",
+            verticalRoot
+        );
         
         var trTypeFilter1 = new Filter<StudentModel>(
             (students) => 
@@ -80,7 +83,7 @@ public class StatisticController : Controller {
                 return result.EducationalLevelIn.LevelCode == LevelsOfEducation.SecondaryGeneralEducation;
             })
         );
-        var midEduCell = new ColumnHeaderCell<StudentModel>(
+        var midEduCell2 = new ColumnHeaderCell<StudentModel>(
             "На базе среднего общего образования",
             trTypeCell1,
             midEduFilter2
@@ -99,7 +102,7 @@ public class StatisticController : Controller {
             {
                 return std.Gender == Genders.GenderCodes.Female;
             })
-        ).Merge(enlistedFilter3);
+        ).Include(enlistedFilter3);
 
         var studyingFilter3 = new Filter<StudentModel>(
             (students) => students.Where(std =>
@@ -112,7 +115,7 @@ public class StatisticController : Controller {
             {
                 return std.Gender == Genders.GenderCodes.Female;
             })
-        ).Merge(studyingFilter3); 
+        ).Include(studyingFilter3); 
         
         var enlistedCell3 = new ColumnHeaderCell<StudentModel>(
             "Принято",
@@ -129,37 +132,87 @@ public class StatisticController : Controller {
             baseEduCell2,
             studyingFilter3
         );
+        // студенты выпускных курсов
+        var graduatesFilter3 = new Filter<StudentModel>(
+            (students) => students.Where(
+                std => std.CurrentGroup.CourseOn == std.CurrentSpeciality.CourseCount
+            )
+        );
+        var graduatesFemaleFilter3 = new Filter<StudentModel>(
+            (students) => students.Where(
+                std => std.IsFemale
+            )
+        ).Include(graduatesFilter3);
 
+        var graduatedCell3 = new ColumnHeaderCell<StudentModel>(
+            "Планируемый выпуск",
+            baseEduCell2,
+            graduatesFilter3
+        );
+        var graduatedFemaleCell3 = new ColumnHeaderCell<StudentModel>(
+            "Из них женщины",
+            baseEduCell2,
+            graduatesFemaleFilter3
+        );
+        
+        // 2 часть 3 уровень
+        var elnistedSecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Принято",
+            midEduCell2,
+            enlistedFilter3
+        );
+        var enlistedWomanSecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Из них женщины",
+            midEduCell2,
+            enlistedWomanFilter3
+        );
+        var studySecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Численность студентов",
+            midEduCell2,
+            studyingFilter3
+        );
+        var studyingFemaleSecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Из них женщины",
+            midEduCell2,
+            graduatesFilter3
+        );
+        var graduatedSecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Планируемый выпуск",
+            midEduCell2,
+            graduatesFilter3
+        );
+        var graduatedFemaleSecondCell3 = new ColumnHeaderCell<StudentModel>(
+            "Из них женщины",
+            midEduCell2,
+            graduatesFemaleFilter3
+        );
 
+        var horizontalRoot = new RowHeaderCell<StudentModel>();
+        var ageDate = new DateTime(DateTime.Now.Year, 1, 1); 
+        var youngerThan13Filter = new Filter<StudentModel>(
+            (students) => students.Where(std => std.GetAgeOnDate(ageDate) < 13)
+        );
+        var youngerThan13Cell = new RowHeaderCell<StudentModel>(
+            "Моложе 13 лет",
+            horizontalRoot,
+            youngerThan13Filter
+        );
+        for (int i = 14; i <= 30; i++){
+            var ageFilter = new Filter<StudentModel>(
+                (students) => students.Where(std => std.GetAgeOnDate(ageDate) == i + 0)
+            );
+            var ageCell = new RowHeaderCell<StudentModel>(
+                (i + 0).ToString() + " лет",
+                horizontalRoot,
+                ageFilter
+            );
+        }
+        var found = StudentModel.FindUniqueStudents(new QueryLimits(0, 2000)).Result;
+        var verticalHeader = new TableColumnHeader<StudentModel>(verticalRoot, true);
+        var horizontalHeader = new TableRowHeader<StudentModel>(horizontalRoot, verticalHeader, true);
+        var table = new StatisticTable<StudentModel>(verticalHeader, horizontalHeader, found);
 
+        return View(@"Views/Statistics/Ages.cshtml", table);
 
-
-
-
-
-
-
-
-
-
-
-        var studyingFirstCourse = new Filter<StudentModel>(
-            (students) => students.Where(std =>
-            {
-                return std.CurrentGroup.CourseOn == 1;
-            })
-        ).Merge(studyingFilter);
-
-
-
-       
-
-
-    
     }
-
-
 }
-
-
-

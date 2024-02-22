@@ -2,7 +2,7 @@ using StudentTracking.Models.Domain.Misc;
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Controllers.DTO.In;
 

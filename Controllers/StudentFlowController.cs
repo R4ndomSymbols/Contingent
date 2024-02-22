@@ -3,7 +3,7 @@ using StudentTracking.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using System.Net.Http.Headers;
 using static Utilities.Utils;
 using StudentTracking.Models.Domain;

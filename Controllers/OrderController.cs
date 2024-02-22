@@ -5,7 +5,7 @@ using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Models.Domain.Orders.OrderData;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
 

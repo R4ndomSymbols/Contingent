@@ -6,8 +6,7 @@ using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
-using StudentTracking.Models.JSON;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
 

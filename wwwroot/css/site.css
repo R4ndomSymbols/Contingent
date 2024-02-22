@@ -36,3 +36,8 @@ body {
 .text_color {
   color: #181617;
 }
+
+.tableStats, .thStats, .tdStats {
+  border: 1px solid black;
+  border-collapse: collapse;
+}

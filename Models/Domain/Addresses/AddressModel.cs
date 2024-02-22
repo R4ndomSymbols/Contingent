@@ -4,17 +4,8 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.JSON;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using System.Data;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Security.Principal;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using Utilities;
 using Utilities.Validation;
 

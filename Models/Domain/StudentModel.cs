@@ -59,8 +59,8 @@ public class StudentModel
         }
     }
 
-
     public SpecialityModel? CurrentSpeciality => CurrentGroup?.EducationProgram;
+    public bool IsFemale => _gender == Genders.GenderCodes.Female;
     public int Id
     {
         get => _id;
@@ -417,6 +417,18 @@ public class StudentModel
             } 
         }
         return "Не указано";
+    }
+
+    public int GetAgeOnDate(DateTime date){
+        int diff = date.Year - _dateOfBirth.Year;
+        if (diff <= 0){
+            return 0;
+        }
+        if (date.Month >= _dateOfBirth.Month && date.Day >= _dateOfBirth.Day){
+            return diff; 
+        }
+        return --diff;
+          
     }
 
     public async Task<GroupModel?> GetCurrentGroup(){

@@ -1,3 +1,4 @@
+using System.Data;
 using System.Drawing;
 using System.Net;
 using System.Text;
@@ -9,7 +10,7 @@ public class TableColumnHeader<T> {
 
     private ColumnHeaderCell<T> _root;
     private bool _isNumerationUsed;
-    public int HeaderLength {get; private set;}
+    public int HeaderWidth {get; private set;}
     public int HeaderHeigth {get; private set;}
 
     public TableColumnHeader(ColumnHeaderCell<T> root, bool addNumeration){
@@ -20,56 +21,87 @@ public class TableColumnHeader<T> {
         }
         _root = root;
         _isNumerationUsed = addNumeration;
-        Normalize();
+        CheckCycle(_root, new List<ColumnHeaderCell<T>>());
+        Normalize(out HeaderBuilderCursor cursor);
+
+        // дебаг
+        
+        Action<ColumnHeaderCell<T>> printCords = (cell) => Console.WriteLine(cell.Placement + " " + cell.Name);
+        TraceTree(printCords, _root);
+        
+    }
+    // не оптимальное решение
+    private void CheckCycle(ColumnHeaderCell<T> current, List<ColumnHeaderCell<T>> log){
+        if (log.Any(node => object.ReferenceEquals(node, current))){
+            throw new Exception("Обнаружен цикл в графе колонок");
+        }
+        log.Add(current);
+        if (current.HasAnyChildren){
+            foreach(var child in current.Children){
+                CheckCycle(child, log);
+            }
+        }
     }
 
-    private void Normalize(){
-        var cursor = new HeaderBuilderCursor();
-        Normalize(_root, cursor);
+    private void Normalize(out HeaderBuilderCursor cursor){
+        cursor = new HeaderBuilderCursor();
+        // корень имеет отрицательный y
+        cursor.Y = -1;
+        cursor.X = 0;
         // курсор проходит по графу и запоминает предельные значения
-        HeaderLength = cursor.MaxX + 1;
-        HeaderHeigth = cursor.MaxY + 1;
-        ExtendToRectange(_root, cursor);
+        Normalize(_root, cursor);
         if (_isNumerationUsed){
             int num = 1;
             AddNumeration(_root, ref num);
-            // корректировка на строку нумерации
-            HeaderHeigth += 1;
         }
+        ExtendToRectange(_root, cursor);
+        HeaderHeigth = cursor.MaxY + 1;
+        // Из-за алгоритма работы normalize 
+        // происходит одно лишнее смещение
+        HeaderWidth = cursor.MaxX;
     }
     // нормализует таблицу по ширине
     private void Normalize(ColumnHeaderCell<T> root, HeaderBuilderCursor cursor){
-        if (root.Children.Any()){
+        if (root.HasAnyChildren){
             var colSpanSummary = 0;
-            var xAnchor = cursor.X; 
+            var xAnchor = cursor.X;
             foreach (var child in root.Children){
                 cursor.Y+=1;
                 Normalize(child, cursor);
                 cursor.Y-=1;
-                cursor.X+=child.Placement.ColumnSpan;
                 colSpanSummary+=child.Placement.ColumnSpan;
             }
             root.Placement = new CellPlacement(xAnchor, cursor.Y, 1, colSpanSummary);
-            cursor.X = xAnchor;
-
         }
         else{
             root.Placement = new CellPlacement(cursor.X, cursor.Y, 1,1);
+            cursor.X++;
         }
     }
     // курсор уже должен быть заполнен после нормализации
     // метод приводит заголовок в прямоугольный вид
     // нормализует таблицу по высоте
-    private void ExtendToRectange(ColumnHeaderCell<T> root, HeaderBuilderCursor cursor){
-        if (root.Children.Any()){
-            foreach (var child in root.Children){
+    private void ExtendToRectange(ColumnHeaderCell<T> startCell, HeaderBuilderCursor cursor){
+        if (startCell.HasAnyChildren){
+            foreach (var child in startCell.Children){
                 cursor.Y+=1;
                 ExtendToRectange(child, cursor);
                 cursor.Y-=1;
+                if (cursor.RowSpanDebt != 0){
+                    startCell.Placement = startCell.Placement.ChangeSize(rows:cursor.RowSpanDebt + 1);
+                    cursor.RowSpanDebt = 0;
+                }
             }
         }
         else {
-            root.Placement = root.Placement.ChangeSize(rows: root.Placement.RowSpan + (cursor.MaxY - cursor.Y));
+            int rowDiff = cursor.MaxY - cursor.Y;
+            if (!startCell.IsFixed){
+                startCell.Placement = startCell.Placement.ChangeSize(rows:rowDiff);
+                cursor.RowSpanDebt = 0;
+            }
+            else{
+                cursor.RowSpanDebt = rowDiff;
+            } 
         }
     }
     // вызывается после всех методов и добавляет нумерацию к столбцам
@@ -80,21 +112,18 @@ public class TableColumnHeader<T> {
             }
         }
         else {
-            var numericColumn = new ColumnHeaderCell<T>(startNumber.ToString(), parent);
-            numericColumn.Placement = new CellPlacement(x: parent.Placement.X, parent.Placement.Y, 1, 1);
+            var numericColumn = new ColumnHeaderCell<T>(startNumber.ToString(), parent, 
+            new CellPlacement(x: parent.Placement.X, parent.Placement.Y + 1, 1, 1));
             startNumber+=1;
         }
     }
     // выполняет делегат по дереву (дерево предполагается полностью инициализированным)
     private void TraceTree(Action<ColumnHeaderCell<T>> toPerform, ColumnHeaderCell<T> start){
-        if (start.HasAnyChildren){
-            toPerform.Invoke(start);
+        toPerform.Invoke(start);
+        if (start.HasAnyChildren){   
             foreach (var cell in start.Children){
                 TraceTree(toPerform, cell);
             }
-        }
-        else{
-            toPerform.Invoke(start);
         }
     }
     // координата x абсолютная и начинается с самой крайней левой ячейки
@@ -119,34 +148,60 @@ public class TableColumnHeader<T> {
     // метод преобразует граф в разметку HTML
     // предполагается, что после конструирования и нормализации граф не менялся
     public string ToHTMLTableHead(){
-        var builder = new StringBuilder();
-        // пропуск корневой ноды
-        int currentY = 1;
-        var cellsFound = new List<ColumnHeaderCell<T>>(); 
+        var builder = new TableHeaderBuilder<T>();
+        int logicalHeight = 1;
+
+        bool found = false;
         Action<ColumnHeaderCell<T>> cellGetter = (cell) => {
-            if (cell.Placement.Y == currentY){
-                cellsFound.Add(cell);
+            // пропуск корня, он не участвует в разметке  
+            if (object.ReferenceEquals(_root, cell)){
+                return;
+            }
+            // добавление всех подходящих заголовков в линию
+            if (logicalHeight - cell.GetTreeGeometricalHeight() == 0 && cell.GetTreeLogicalHeight() != 1 || (cell.GetTreeLogicalHeight() == 1 && logicalHeight == 1)){
+                builder.AddHeader(cell);
+                found = true;
             }
         };
+
         do {
-            cellsFound.Clear();
+            found = false;
             TraceTree(cellGetter, _root);
+            builder.FinishRow();
             // за раз конструируется один уровень заголовка
-            if (cellsFound.Any()){
-                builder.Append("<tr>" + string.Join(
-                    "", cellsFound.Select(cell =>  $"<th rowspan=\"{cell.Placement.RowSpan}\" columnspan=\"{cell.Placement.ColumnSpan}\">{cell.Name}</th>")
-                ) + "</tr>");
-            }
-            currentY++;
+            logicalHeight++;
         } 
-        while (cellsFound.Any());
-        if (currentY == 1){
+        while (found);
+        if (logicalHeight == 0){
             throw new Exception("Граф шапки таблицы имеет недостаточную глубину"); 
         }
-        return "<thead>" + builder.ToString() +  "</thead>";
+        return builder.ToString();
+    }   
+}
+
+public class TableHeaderBuilder<T>{
+
+    private StringBuilder _html;
+    private StringBuilder _currentRow; 
+    public TableHeaderBuilder(){
+        _html = new StringBuilder();
+        _currentRow = new StringBuilder();
+    }
+    public void AddHeader(ColumnHeaderCell<T> cell){
+        _currentRow.Append( $"<th class = \"thStats\" rowspan=\"{cell.Placement.RowSpan}\" colspan=\"{cell.Placement.ColumnSpan}\">{cell.Name}</th>");
+    }
+    public void FinishRow(){
+        if (_currentRow.Length == 0){
+            return;
+        }
+        _html.Append("<tr>" + _currentRow.ToString() + "</tr>" + "\n");
+        _currentRow.Clear();
+    }
+    public override string ToString()
+    {
+        return "<thead>" + _html.ToString() + "</thead>";
     }
 
-    
 }
 
 public class HeaderBuilderCursor{
@@ -172,6 +227,8 @@ public class HeaderBuilderCursor{
             _y = value;
         }
     }
+
+    public int RowSpanDebt {get; set;}
     public int MaxY {get => _maxY;}
     public int MaxX {get => _maxX;}
 

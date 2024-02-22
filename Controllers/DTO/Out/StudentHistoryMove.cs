@@ -1,7 +1,7 @@
 using StudentTracking.Models;
 using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using Utilities;
 
 namespace StudentTracking.Controllers.DTO.Out;

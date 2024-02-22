@@ -192,7 +192,8 @@ public class SpecialityModel
                 new Column("course_count", "educational_program"),
                 new Column("knowledge_depth", "educational_program"),
                 new Column("speciality_in_education_level", "educational_program"),
-                new Column("speciality_out_education_level", "educational_program")
+                new Column("speciality_out_education_level", "educational_program"),
+                new Column("training_program_type", "educational_program")
             } 
         );
         var selectQuery = SelectQuery<SpecialityModel>.Init("educational_program")

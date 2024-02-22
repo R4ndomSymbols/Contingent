@@ -38,4 +38,8 @@ public struct CellPlacement {
             this.ColumnSpan + cols
         );
     }
+    public override string ToString()
+    {
+        return $"x:{X} y:{Y} rowspan:{RowSpan} colspan:{ColumnSpan}";
+    }
 }

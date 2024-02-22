@@ -26,29 +26,32 @@ public class StatisticTable<M> {
             _columnHeaders.HeaderHeigth
         );
         _endPoint = new Point(
-            _columnHeaders.HeaderLength - 1,
+            _columnHeaders.HeaderWidth - 1,
             _rowHeaders.HeaderHeigth - 1
         );
+        _tableDataSource = dataSource;
         Populate();
     }
 
     private void Populate(){
         // [y][x]
-        var tableWidth = _endPoint.X - _startPoint.X;
-        var tableHeigth = _endPoint.Y - _startPoint.Y;
+        var tableWidth = _endPoint.X - _startPoint.X + 1;
+        var tableHeigth = _endPoint.Y - _startPoint.Y + 1;
+        Console.WriteLine(_startPoint);
+        Console.WriteLine(_endPoint);
         _content = new StatisticTableCell[tableHeigth][];
-        var _offsetY = _startPoint.Y;
-        var _offsetX = _startPoint.X;
-        for(int i = _startPoint.Y; i < _endPoint.Y; i++){
-            _content[i - _offsetY] = new StatisticTableCell[tableWidth];
-            for (int j = _startPoint.X; j < _endPoint.X; j++){
-                var cell = new StatisticTableCell(j, i);
+        for(int y = 0; y < tableHeigth; y++){
+            var realY = y + _startPoint.Y; 
+            _content[y] = new StatisticTableCell[tableWidth];
+            for (int x = 0; x < tableWidth; x++)
+            { 
+                var realX = x+_startPoint.X;
+                var cell = new StatisticTableCell(realX, realY);
                 var query = GetFilterForCell(cell);
                 cell.StatsGetter = () => {
-                    var result = query.Execute(_tableDataSource);
-                    return Task.Run(() => new CountResult(result.Count()));
+                    return new CountResult(query.Execute(_tableDataSource).Count());
                 }; 
-                _content[i - _offsetY][j] = cell;
+                _content[y][x] = cell;
             }
         }
     }
@@ -56,17 +59,17 @@ public class StatisticTable<M> {
     private Filter<M> GetFilterForCell(StatisticTableCell cell){
         var constraintColumnHeader = _columnHeaders.TraceVertical(cell.X);
         var constraintRowHeader = _rowHeaders.TraceHorizontal(cell.Y);
-        return constraintRowHeader.GetFilterSequence().Merge(constraintRowHeader.GetFilterSequence());
+        return constraintColumnHeader.NodeFilter.Include(constraintRowHeader.NodeFilter);
     }
 
-    public async Task<string> ToHtmlTable(){
+    public string ToHtmlTable(){
         var thead = _columnHeaders.ToHTMLTableHead();
         var tbody = _rowHeaders.SetHeaders();
         foreach (var row in tbody){
             // [y][x]
             var cellRow = _content[row.Y - _rowHeaders.HeaderOffset];
             foreach (var cell in cellRow){
-                row.AppendCell((await cell.StatsGetter.Invoke()).ToString());
+                row.AppendCell(cell.StatsGetter.Invoke().ToString());
             } 
         }
         var bodyHTML = new StringBuilder();
@@ -74,7 +77,7 @@ public class StatisticTable<M> {
             bodyHTML.Append(row.ToString());
         }
         return 
-        "<table class = \"table\">" 
+        "<table class = \"tableStats\">" 
         + thead
         + "<tbody>" + bodyHTML + "</tbody>"
         + "</table>";  

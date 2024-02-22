@@ -13,20 +13,20 @@ public class Column : IQueryPart{
         Name = name;
         Alias = alias;
         TableName = tableName;
-        _strategy = () => Name + "." + TableName + " AS " + Alias; 
+        _strategy = () => TableName + "." + Name + " AS " + Alias; 
     }
     public Column(string name,  string tableName){
         Name = name;
         Alias = null;
         TableName = tableName;
-        _strategy = () => Name + "." + TableName;
+        _strategy = () => TableName + "." + Name;
     }
     public Column(string funcName, string name, string tableName, string aliasForFunc){
         FuncName = funcName;
         Name = name;
         Alias = aliasForFunc;
         TableName = tableName;
-        _strategy = () => FuncName + "(" + Name + "." + TableName + ")" + " AS " + Alias; 
+        _strategy = () => FuncName + "(" + TableName + "." + Name + ")" + " AS " + Alias; 
     }
     public string AsSQLText()
     {

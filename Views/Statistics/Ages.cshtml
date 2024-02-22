@@ -1,0 +1,12 @@
+@using StudentTracking.Statistics;
+@using StudentTracking.Models.Domain;
+
+@model StatisticTable<StudentModel>;
+
+@{
+    string tableAges = Model.ToHtmlTable();    
+}
+
+<div>
+    @Html.Raw(@tableAges)
+</div>

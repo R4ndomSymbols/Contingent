@@ -1,7 +1,7 @@
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.Models.SQL;
+using StudentTracking.SQL;
 using StudentTracking.Controllers.DTO.In;
 using System.Text.Json;
 using StudentTracking.Models.Domain.Flow;

@@ -15,7 +15,8 @@ public class TrainingProgram {
     } 
     public static IReadOnlyCollection<TrainingProgram> Types = new List<TrainingProgram>() {
         new TrainingProgram("Программа подготовки квалифицированных рабочих, служащих", TrainingProgramTypes.QualifiedWorker),
-        new TrainingProgram("Программы подготовки специалистов среднего звена", TrainingProgramTypes.GenericSpecialist)
+        new TrainingProgram("Программы подготовки специалистов среднего звена", TrainingProgramTypes.GenericSpecialist),
+        new TrainingProgram("Не указано", TrainingProgramTypes.NotMentioned)
     }.AsReadOnly();
 
     public static bool TryGetByType(int type, out TrainingProgram? result){
@@ -44,6 +45,7 @@ public class TrainingProgram {
 
 
 public enum TrainingProgramTypes {
+    NotMentioned = 0,
     QualifiedWorker = 1,
     GenericSpecialist = 2,
 }
