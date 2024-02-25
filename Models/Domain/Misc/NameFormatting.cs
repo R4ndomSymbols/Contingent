@@ -55,6 +55,12 @@ public class NameFormatting {
             return null;
        }   
     }
+    // нормализацию напишу потом, необходимо проверять токен на предмет наличия запрещенных токенов
+    // еще, конечно, было бы прекрасно фильтровать извлеченный токен на наличие запрещенных сокращений
+    // в зависимости от типа
+    private string Normalize(){
+        return "";
+    }
 
 
     public string FormatLong(string toponym){

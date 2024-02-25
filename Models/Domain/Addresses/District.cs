@@ -6,20 +6,20 @@ using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class District : DbValidatedObject
+public class District : IAddressRecord
 {
-
+    private const int _addressLevel = 2;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"округ"),
         new Regex(@"район")
     };
-    public static readonly IReadOnlyDictionary<Types, NameFormatting> Names = new Dictionary<Types, NameFormatting>(){
-        {Types.NotMentioned, new NameFormatting("Нет", "Не указано", NameFormatting.AFTER)},
-        {Types.CityTerritory, new NameFormatting("г.о.", "Городской округ", NameFormatting.AFTER)},
-        {Types.MunicipalDistrict, new NameFormatting("м.р-н", "Муниципальный район", NameFormatting.AFTER)},
-        {Types.MunicipalTerritory, new NameFormatting("м.о.", "Муниципальный округ", NameFormatting.AFTER)},
+    public static readonly IReadOnlyDictionary<DistrictTypes, NameFormatting> Names = new Dictionary<DistrictTypes, NameFormatting>(){
+        {DistrictTypes.NotMentioned, new NameFormatting("Нет", "Не указано", NameFormatting.AFTER)},
+        {DistrictTypes.CityTerritory, new NameFormatting("г.о.", "Городской округ", NameFormatting.AFTER)},
+        {DistrictTypes.MunicipalDistrict, new NameFormatting("м.р-н", "Муниципальный район", NameFormatting.AFTER)},
+        {DistrictTypes.MunicipalTerritory, new NameFormatting("м.о.", "Муниципальный округ", NameFormatting.AFTER)},
     };
-    public enum Types
+    public enum DistrictTypes
     {
         NotMentioned = -1,
         CityTerritory = 1, // городской округ
@@ -29,62 +29,24 @@ public class District : DbValidatedObject
     }
 
     private int _id;
-    private int _federalSubjectCode;
+    private FederalSubject _parentFederalSubject;
     private string _untypedName;
-    private Types _districtType;
+    private DistrictTypes _districtType;
     public int Id
     {
        get => _id;
     }
-
-    public async Task SetSubjectParent(int id, ObservableTransaction? scope){
-        bool exists = await FederalSubject.IsCodeExists(id, scope);
-        if (PerformValidation(() => exists,
-            new DbIntegrityValidationError(nameof(SubjectParentId), "Id субъекта указан неверно"))){
-                _federalSubjectCode = id;
-            }
-    }
-    public int SubjectParentId
+    public FederalSubject SubjectParentId
     {
-        get => _federalSubjectCode;
+        get => _parentFederalSubject;
     }
-    public int DistrictType
+    public DistrictTypes DistrictType
     {
-        get => (int)_districtType;
-        set
-        {
-            if (PerformValidation(
-                () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(nameof(DistrictType), "Неверно указан тип района")
-            ))
-            {
-                _districtType = (Types)value;
-            }
-
-        }
+        get => _districtType;
     }
     public string UntypedName
     {
         get => Utils.FormatToponymName(_untypedName);
-        set
-        {
-            if (PerformValidation(
-                () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
-            {
-                if (PerformValidation(
-                    () => ValidatorCollection.CheckStringLength(value, 2, 200),
-                    new ValidationError(nameof(UntypedName), "Название превышает допустимый лимит символов")))
-                {
-                    if (PerformValidation(
-                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
-                        new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
-                    {
-                        _untypedName = value.ToLower();
-                    }
-                }
-            }
-        }
     }
 
     public string LongTypedName
@@ -93,229 +55,67 @@ public class District : DbValidatedObject
     }
 
 
-    private District(int id) : base(RelationTypes.Bound)
+    private District()
     {
-        _id = id;
-        _untypedName = "";
-    }
-    protected District() : base()
-    {
-        RegisterProperty(nameof(UntypedName));
-        RegisterProperty(nameof(DistrictType));
-        RegisterProperty(nameof(SubjectParentId));
-        _untypedName = "";
-        _districtType = Types.NotMentioned;
         _id = Utils.INVALID_ID;
     }
-    public static District MakeUnsafe(int id, string untypedName, int type)
-    {
-        var dist = new District
-        {
-            _id = id,
-            _untypedName = untypedName,
-            _districtType = (Types)type
-        };
-        return dist;
+    private District(int id){
+        _id = id;
     }
 
-    public async Task Save(ObservableTransaction? scope)
-    {
-        var connWithin = await Utils.GetAndOpenConnectionFactory();
-        if (await GetCurrentState(scope) != RelationTypes.Pending)
-        {
-            return;
+    public static Result<District?> Create(string addressPart, FederalSubject scope){
+        IEnumerable<ValidationError> errors = new List<ValidationError>();
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+            return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня указано неверно"));
         }
-        NpgsqlCommand? command = null;
-        string cmdText =
-        "INSERT INTO districts( " +
-        " federal_subject_code, district_type, full_name) " +
-        " VALUES (@p1, @p2, @p3) RETURNING id";
-        if (scope != null)
-        {
-            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._id = Utils.INVALID_ID));
-        }
-        else
-        {
-            command = new NpgsqlCommand(cmdText, connWithin);
-        }
-        command.Parameters.Add(new NpgsqlParameter<int>("p1", _federalSubjectCode));
-        command.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_districtType));
-        command.Parameters.Add(new NpgsqlParameter<string>("p3", _untypedName));
-        await using (connWithin)
-        await using (command)
-        {
-            using var reader = await command.ExecuteReaderAsync();
-            await reader.ReadAsync();
-            _id = (int)reader["id"];
-            NotifyStateChanged();      
-        }
-    }
-    //public static List<District>? GetAllDistrictsWithin(int federalCode)
-    //{
-    //    return GetAllDistrictsWithin(federalCode, null, null);
-    //}
 
-    // protected static List<District>? GetAllDistrictsWithin(int federalCode, string? untypedName = null, Types? districtType = null)
-    // {
-
-    //     using (var conn = Utils.GetAndOpenConnectionFactory())
-    //     {
-    //         NpgsqlCommand cmd;
-    //         if (untypedName != null && districtType != null)
-    //         {
-    //             cmd = new NpgsqlCommand("SELECT * FROM districts WHERE federal_subject_code = @p1 AND full_name = @p2 AND district_type = @p3", conn)
-    //             {
-    //                 Parameters = {
-    //                     new ("p1", federalCode),
-    //                     new ("p2", untypedName),
-    //                     new ("p1", (int)districtType),
-    //                 }
-    //             };
-    //         }
-    //         else
-    //         {
-    //             cmd = new NpgsqlCommand("SELECT * FROM districts WHERE federal_subject_code = @p1", conn)
-    //             {
-    //                 Parameters = {
-    //                 new ("p1", federalCode)
-    //                 }
-    //             };
-    //         }
-    //         using (cmd)
-    //         {
-    //             var reader = cmd.ExecuteReader();
-    //             if (!reader.HasRows)
-    //             {
-    //                 return null;
-    //             }
-    //             else
-    //             {
-    //                 var result = new List<District>();
-    //                 while (reader.Read())
-    //                 {
-    //                     //result.Add(new District((int)reader["id"], federalCode, (string)reader["full_name"], (Types)(int)reader["district_type"]));
-    //                 }
-    //                 return result;
-    //             }
-    //         }
-    //     }
-    // }
-    public static async Task<District?> GetById(int dId, ObservableTransaction? scope)
-    {
-        NpgsqlConnection conn =  await Utils.GetAndOpenConnectionFactory();
-        string query = "SELECT * FROM districts WHERE id = @p1";
-        NpgsqlCommand cmd;
-        if (scope == null)
-        {
-            cmd = new NpgsqlCommand(query, conn);
-        }
-        else
-        {
-            cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
-        }
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", dId));
-        await using (conn)
-        await using (cmd)
-        {   
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return null;
+        NameToken? foundDistrict = null;
+        DistrictTypes subjectType = DistrictTypes.NotMentioned;  
+        foreach (var pair in Names){
+            foundDistrict = pair.Value.ExtractToken(addressPart); 
+            if (foundDistrict is not null){
+                subjectType = pair.Key;
+                break;
             }
-            await reader.ReadAsync();
-            var d = new District((int)reader["id"])
-            {
-                _federalSubjectCode = (int)reader["federal_subject_code"],
-                _untypedName = (string)reader["full_name"],
-                _districtType = (Types)(int)reader["district_type"]
-            };
-            return d;
         }
+        if (foundDistrict is null){
+            return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
+        }
+        var fromDb = AddressModel.FindRecords(scope.Id, foundDistrict.Name, (int)subjectType, _addressLevel);
         
-    }
-    public static District? BuildByName(string? fullname)
-    {
-        if (fullname == null)
-        {
-            return null;
-        }
-        NameToken? extracted;
-        District toBuild = new District();
-        foreach (var pair in Names)
-        {
-            extracted = pair.Value.ExtractToken(fullname);
-            if (extracted != null)
-            {
-                toBuild.DistrictType = (int)pair.Key;
-                toBuild.UntypedName = extracted.Name;
-                return toBuild;
-            }
-        }
-        return null;
-    }
-    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
-    {
-
-        await using (var conn = await Utils.GetAndOpenConnectionFactory())
-        {   
-            var cmdText = "SELECT EXISTS(SELECT id FROM districts WHERE id = @p1)";
-            NpgsqlCommand cmd;
-            if (scope == null){
-                cmd = new NpgsqlCommand(cmdText, conn);
+        if (fromDb.Any()){
+            if (fromDb.Count() != 1){
+                return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не может быть однозначно распознано"));
             }
             else{
-                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-            }
-
-            await using (cmd)
-            {
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-                using var reader = await cmd.ExecuteReaderAsync();
-                await reader.ReadAsync();
-                return (bool)reader["exists"];
+                var first = fromDb.First();
+                return Result<District?>.Success(new District(first.AddressPartId){
+                    _parentFederalSubject = scope, 
+                    _districtType = (DistrictTypes)first.ToponymType,
+                    _untypedName = first.AddressName
+                });
             }
         }
+        
+        var got = new District(){
+            _parentFederalSubject = scope,
+            _districtType = subjectType,
+            _untypedName = foundDistrict.Name,
+        };
+        return Result<District?>.Success(got);
     }
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? within = null)
+
+    
+
+    public async Task Save(ObservableTransaction? scope = null)
     {
-        District? got = await GetById(_id, within); 
-        if (got == null)
-        {
-            await using (var conn = await Utils.GetAndOpenConnectionFactory())
-            {
-
-                string cmdText = "SELECT id FROM districts WHERE federal_subject_code = @p1 AND district_type = @p2 AND full_name = @p3";
-                NpgsqlCommand? cmd = null;
-                if (within != null){
-                    cmd = new NpgsqlCommand(cmdText, within.Connection, within.Transaction);
-                }
-                else{
-                    cmd = new NpgsqlCommand(cmdText, conn);
-                }
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _federalSubjectCode));
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_districtType));
-                cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _untypedName));
-                await using (cmd)
-                {
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    if (!reader.HasRows)
-                    {
-                        return null;
-                    }
-                    await reader.ReadAsync();
-                    this._id = (int)reader["id"];
-                    return this;
-                }
-            }
-        }
-        else
-        {
-            return got;
+        await _parentFederalSubject.Save(scope);
+        if (_id == Utils.INVALID_ID){
+            _id = await AddressModel.SaveRecord(this, scope); 
         }
     }
 
-    public override bool Equals(IDbObjectValidated? obj)
+    public override bool Equals(object? obj)
     {
         if (obj is null)
         {
@@ -330,11 +130,19 @@ public class District : DbValidatedObject
             else
             {
                 var right = (District)obj;
-                return _districtType == right._districtType &&
-                _untypedName == right._untypedName &&
-                _federalSubjectCode == right._federalSubjectCode &&
-                _id == right._id;
+                return _id == right._id;
             }
         }
+    }
+
+    public AddressRecord ToAddressRecord()
+    {
+        return new AddressRecord(){
+            ParentId = _parentFederalSubject.Id,
+            AddressLevelCode = _addressLevel,
+            AddressName = _untypedName,
+            AddressPartId = _id,
+            ToponymType = (int)_districtType
+        };
     }
 }

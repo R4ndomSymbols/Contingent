@@ -35,7 +35,7 @@ public class AddressController : Controller
     [Route("/addresses/explain/{address?}")]
     public async Task<JsonResult> GetAddressInfo(string? address)
     {
-        var built = AddressModel.BuildFromString(address?.ToLower());
+        var built = AddressModel.Create(address?.ToLower());
         if (built == null)
         {
             return Json(new { AboutAddress = "Введен пустой адрес"});
@@ -58,7 +58,7 @@ public class AddressController : Controller
     public async Task<JsonResult> CreateAddress(string? address)
     {
 
-        var built = AddressModel.BuildFromString(address);
+        var built = AddressModel.Create(address);
         if (built != null)
         {
              await using var connection = await Utils.GetAndOpenConnectionFactory();

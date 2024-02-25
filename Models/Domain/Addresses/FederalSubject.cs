@@ -9,9 +9,9 @@ using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
 
-public class FederalSubject : DbValidatedObject
+public class FederalSubject : IAddressRecord
 {
-
+    private const int _addressLevel = 1;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"республик(а|и)"),
         new Regex(@"(федеральн|город)"),
@@ -20,68 +20,20 @@ public class FederalSubject : DbValidatedObject
         new Regex(@"област(ь|и)")
     };
 
-    private int _code;
+    private int _id;
     private string _subjectUntypedName;
     private Types _federalSubjectType;
-    public string Code
-    {
-        get => _code.ToString();
-        set
-        {
-            if (PerformValidation(
-                () => int.TryParse(value, out int res),
-                new ValidationError(nameof(Code), "Код региона не может содержать буквы")
-            ))
-            {
-                var r = int.Parse(value);
-                if (PerformValidation(
-                    () => ValidatorCollection.CheckRange(r, 0, 300),
-                    new ValidationError(nameof(Code), "Код региона не может быть таким")
-                ))
-                {
-                    _code = r;
-                }
-            }
 
-        }
+    public int Id {
+        get => _id;
     }
     public int SubjectType
     {
         get => (int)_federalSubjectType;
-        set
-        {
-            if (PerformValidation(
-                () => Enum.TryParse(typeof(Types), value.ToString(), out object? res),
-                new ValidationError(nameof(SubjectType), "Неверно указан тип региона")
-            ))
-            {
-                _federalSubjectType = (Types)value;
-            }
-
-        }
     }
     public string UntypedName
     {
         get => Utils.FormatToponymName(_subjectUntypedName);
-        set
-        {
-            if (PerformValidation(
-                () => !ValidatorCollection.CheckStringPatterns(value, Restrictions),
-                new ValidationError(nameof(UntypedName), "Название субъекта содержит недопустимые слова")))
-            {
-                if (PerformValidation(
-                    () => ValidatorCollection.CheckStringLength(value, 2, 100),
-                    new ValidationError(nameof(UntypedName), "Название превышает допустимый лимит символов")))
-                {
-                    if (PerformValidation(
-                        () => ValidatorCollection.CheckStringPattern(value, ValidatorCollection.OnlyText),
-                        new ValidationError(nameof(UntypedName), "Название содержит недопустимые символы")))
-                    {
-                        _subjectUntypedName = value.ToLower();
-                    }
-                }
-            }
-        }
     }
     public string LongTypedName
     {
@@ -90,29 +42,13 @@ public class FederalSubject : DbValidatedObject
             return Names[_federalSubjectType].FormatLong(UntypedName);
         }
     }
-    public string NameWithCode
+
+    private FederalSubject()
     {
-        get
-        {
-            return Code + " " + LongTypedName;
-        }
+        _id = Utils.INVALID_ID;
     }
-
-    protected FederalSubject(int code) : base(RelationTypes.Bound)
-    {
-        _code = code;
-        _subjectUntypedName = "";
-    }
-    public FederalSubject() : base()
-    {
-
-        RegisterProperty(nameof(UntypedName));
-        RegisterProperty(nameof(Code));
-        RegisterProperty(nameof(SubjectType));
-
-        _subjectUntypedName = "";
-        _federalSubjectType = Types.NotMentioned;
-        _code = Utils.INVALID_ID;
+    private FederalSubject(int id){
+        _id = id;
     }
 
     public enum Types
@@ -135,174 +71,56 @@ public class FederalSubject : DbValidatedObject
         {Types.AutomomyDistrict, new NameFormatting("а.окр", "Автономный округ", NameFormatting.BEFORE)},
         {Types.Region, new NameFormatting("обл.", "Область", NameFormatting.BEFORE)},
     };
+    // кода у субъекта не будет
+    // метод одновременно ищет и в базе адресов
+    public static Result<FederalSubject?> Create(string addressPart){
+        IEnumerable<ValidationError> errors = new List<ValidationError>();
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+            return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации указан неверно"));
+        }
 
-    public static FederalSubject MakeUnsafe(int code, string untypedName, int type)
-    {
-        var fed = new FederalSubject
-        {
-            _code = code,
-            _subjectUntypedName = untypedName,
-            _federalSubjectType = (Types)type
+        NameToken? found = null;
+        Types subjectType = Types.NotMentioned;  
+        foreach (var pair in Names){
+            found = pair.Value.ExtractToken(addressPart); 
+            if (found is not null){
+                subjectType = pair.Key;
+                break;
+            }
+        }
+        if (found is null){
+            return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации не распознан"));
+        }
+        var fromDb = AddressModel.FindRecords(found.Name, (int)subjectType, _addressLevel);
+        
+        if (fromDb.Any()){
+            if (fromDb.Count() != 1){
+                return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации не может быть однозначно распознан"));
+            }
+            else{
+                var first = fromDb.First();
+                return Result<FederalSubject?>.Success(new FederalSubject(first.AddressPartId){
+                    _federalSubjectType = (Types)first.ToponymType,
+                    _subjectUntypedName = first.AddressName
+                });
+            }
+        }
+        
+        var got = new FederalSubject(){
+            _federalSubjectType = subjectType,
+            _subjectUntypedName = found.Name,
         };
-        return fed;
+        return Result<FederalSubject?>.Success(got);
     }
 
-    public async Task Save(ObservableTransaction? scope)
-    {   
-        var connWithin = await Utils.GetAndOpenConnectionFactory();
-        if (await GetCurrentState(scope) != RelationTypes.Pending)
-        {
-            return;
+    public async Task Save(ObservableTransaction? transaction = null){
+        if (_id == Utils.INVALID_ID){
+            _id = await AddressModel.SaveRecord(this, transaction);
         }
-        NpgsqlCommand? command = null;
-        string cmdText = "INSERT INTO federal_subjects (code,subject_type, full_name) VALUES (@p1,@p2,@p3)";
-        if (scope != null)
-        {
-            command = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-            scope.OnRollbackSubscribe(new EventHandler((obj, args) => this._code = Utils.INVALID_ID));
-        }
-        else
-        {
-            command = new NpgsqlCommand(cmdText, connWithin);
-        }
-
-        // разобраться с прописными и строчными буквами
-
-        command.Parameters.Add(new NpgsqlParameter<int>("p1", _code));
-        command.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_federalSubjectType));
-        command.Parameters.Add(new NpgsqlParameter<string>("p3", _subjectUntypedName.ToLower()));
-
-        await using (connWithin)
-        await using (command)
-        {
-            var reader = await command.ExecuteNonQueryAsync();
-            NotifyStateChanged();
-        }
+        
     }
 
-
-
-    // public static List<FederalSubject> GetAll()
-    // {
-    //     using (var conn = Utils.GetAndOpenConnectionFactory())
-    //     {
-
-    //         using (var cmd = new NpgsqlCommand($"SELECT * FROM federal_subject", conn))
-    //         {
-    //             var found = new List<FederalSubject>();
-    //             var reader = cmd.ExecuteReader();
-    //             if (!reader.HasRows)
-    //             {
-    //                 return found;
-    //             }
-    //             while (reader.Read())
-    //             {
-    //                 var f = new FederalSubject((int)reader["code"])
-    //                 {
-    //                     _subjectUntypedName = (string)reader["full_name"],
-    //                     _federalSubjectType = (Types)reader["subject_type"]
-    //                 };
-    //                 found.Add(f);
-    //             }
-    //             return found;
-    //         }
-    //     }
-    // }
-    public static async Task<FederalSubject?> GetByCode(int code, ObservableTransaction? scope = null)
-    {
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        string query = "SELECT subject_type, full_name FROM federal_subjects WHERE code = @p1";
-        NpgsqlCommand cmd;
-        if (scope == null)
-        {
-            cmd = new NpgsqlCommand(query, conn);
-        }
-        else
-        {
-            cmd = new NpgsqlCommand(query, scope.Connection, scope.Transaction);
-        }
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", code));
-
-        await using (conn)
-        await using (cmd)
-        {   
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return null;
-            }
-            await reader.ReadAsync();
-            var f = new FederalSubject(code);
-            f._subjectUntypedName = (string)reader["full_name"];
-            f._federalSubjectType = (Types)reader["subject_type"];
-            return f;
-        }
-    }
-
-    public static FederalSubject? BuildByName(string? fullname)
-    {
-        if (fullname == null)
-        {
-            return null;
-        }
-        NameToken? extracted;
-        FederalSubject toBuild = new FederalSubject();
-        string[] parts = fullname.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-
-        if (parts.Length < 2)
-        {
-            return null;
-        }
-        else
-        {
-            toBuild.Code = parts[0];
-        }
-        int codeDelimiter = fullname.IndexOf(' ');
-        if (fullname.Length - 1 == codeDelimiter)
-        {
-            return null;
-        }
-        string fullnameWithoutCode = fullname.Substring(codeDelimiter + 1);
-        foreach (var pair in Names)
-        {
-            extracted = pair.Value.ExtractToken(fullnameWithoutCode);
-            if (extracted != null)
-            {
-                toBuild.SubjectType = (int)pair.Key;
-                toBuild.UntypedName = extracted.Name;
-                return toBuild;
-            }
-        }
-        return null;
-    }
-    public static async Task<bool> IsCodeExists(int id, ObservableTransaction? scope)
-    {
-        var conn = await Utils.GetAndOpenConnectionFactory();
-        NpgsqlCommand? cmd = null;
-        var cmdText = "SELECT EXISTS(SELECT code FROM federal_subjects WHERE code = @p1)";
-        if (scope!=null){
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);    
-        }
-        else {
-            cmd = new NpgsqlCommand(cmdText, conn);
-        }
-        using (conn)
-        using (cmd)
-        {
-            
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            var t = await reader.ReadAsync();
-            return (bool)reader["exists"];
-        }
-    }
-    public override async Task<IDbObjectValidated?> GetDbRepresentation(ObservableTransaction? within = null)
-    {
-        return await GetByCode(_code, within);
-    }
-    public override bool Equals(IDbObjectValidated? obj)
+    public override bool Equals(object? obj)
     {
         if (obj == null)
         {
@@ -314,10 +132,17 @@ public class FederalSubject : DbValidatedObject
         }
         var unboxed = (FederalSubject)obj;
         return 
-        _code == unboxed._code &&
-        _subjectUntypedName == unboxed._subjectUntypedName &&
-        _federalSubjectType == unboxed._federalSubjectType;
+        _id== unboxed._id;
     }
 
-
+    public AddressRecord ToAddressRecord()
+    {
+        return new AddressRecord(){
+            ParentId = null,
+            AddressPartId = _id,
+            AddressLevelCode = _addressLevel,
+            AddressName =  _subjectUntypedName,
+            ToponymType = (int)_federalSubjectType
+        };
+    }
 }

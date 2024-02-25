@@ -52,7 +52,6 @@ public class OrderController : Controller{
             else{
                 return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
             }
-            
         }
         else{
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id приказа");

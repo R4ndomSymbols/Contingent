@@ -15,7 +15,7 @@ public static class Utils {
     private static string? DatabaseConnectionString = null;
 
 
-    public const int INVALID_ID = -1;
+    public const int INVALID_ID = 0;
     public const int ORG_CREATION_YEAR = 1972; 
 
     public static string FormatDateTime(DateTime? date){

@@ -101,21 +101,21 @@ public class AddressRestoreQueryBuilder {
         else if(addressPart is District){
             var converted = (District)addressPart; 
             findClause = $" districts.full_name LIKE {FormatLike(converted.UntypedName)} " 
-            + (converted.DistrictType == (int)District.Types.NotMentioned ? "" 
+            + (converted.DistrictType == (int)District.DistrictTypes.NotMentioned ? "" 
             : (" AND districts.district_type = " + converted.DistrictType.ToString()));
             addressLevel = 2;
         }
         else if(addressPart is SettlementArea){
             var converted = (SettlementArea)addressPart; 
             findClause = $" settlement_areas.full_name LIKE {FormatLike(converted.UntypedName)} " 
-            + (converted.SettlementAreaType == (int)SettlementArea.Types.NotMentioned ? "" 
+            + (converted.SettlementAreaType == (int)SettlementArea.SettlementAreaTypes.NotMentioned ? "" 
             : (" AND settlement_areas.settlement_area_type = " + converted.SettlementAreaType.ToString()));
             addressLevel = 3;
         }
         else if(addressPart is Settlement ){
             var converted = (Settlement)addressPart; 
             findClause = $" settlements.full_name LIKE {FormatLike(converted.UntypedName)} " 
-            + (converted.SettlementType == (int)Settlement.Types.NotMentioned ? "" 
+            + (converted.SettlementType == (int)Settlement.SettlementTypes.NotMentioned ? "" 
             : (" AND settlements.settlement_type = " + converted.SettlementType.ToString()));
             addressLevel = 4;
         }
@@ -123,7 +123,7 @@ public class AddressRestoreQueryBuilder {
         {
             var converted = (Street)addressPart; 
             findClause = $" streets.full_name LIKE {FormatLike(converted.UntypedName)} "
-            + (converted.StreetType == (int)Street.Types.NotMentioned ? ""
+            + (converted.StreetType == (int)Street.StreetTypes.NotMentioned ? ""
             : (" AND streets.street_type = " + converted.StreetType.ToString()));
             addressLevel = 5;
         }
