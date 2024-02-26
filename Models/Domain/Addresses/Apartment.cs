@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Npgsql;
@@ -97,7 +98,10 @@ public class Apartment : IAddressPart
         return Result<Apartment?>.Success(got);
     }
 
-    public static Apartment Create(AddressRecord from, Building parent){
+    public static Apartment? Create(AddressRecord from, Building parent){
+        if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        } 
         return new Apartment(from.AddressPartId){
             _apartmentType = (ApartmentTypes)from.ToponymType,
             _parentBuilding = parent,

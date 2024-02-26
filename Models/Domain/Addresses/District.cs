@@ -8,7 +8,7 @@ namespace StudentTracking.Models.Domain.Address;
 
 public class District : IAddressPart
 {
-    private const int _addressLevel = 2;
+    public const int ADDRESS_LEVEL = 2;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"округ"),
         new Regex(@"район")
@@ -81,7 +81,7 @@ public class District : IAddressPart
         if (foundDistrict is null){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundDistrict.Name, (int)subjectType, _addressLevel);
+        var fromDb = AddressModel.FindRecords(scope.Id, foundDistrict.Name, (int)subjectType, ADDRESS_LEVEL);
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -104,6 +104,20 @@ public class District : IAddressPart
         };
         return Result<District?>.Success(got);
     }
+
+    public static District? Create(AddressRecord source, FederalSubject parent){
+        
+        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        }
+        return new District(source.AddressPartId){
+            _districtType = (DistrictTypes)source.ToponymType,
+            _parentFederalSubject = parent,
+            _untypedName = source.AddressName
+        };
+    }
+
+    
 
     
 
@@ -139,7 +153,7 @@ public class District : IAddressPart
     {
         return new AddressRecord(){
             ParentId = _parentFederalSubject.Id,
-            AddressLevelCode = _addressLevel,
+            AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _untypedName,
             AddressPartId = _id,
             ToponymType = (int)_districtType
@@ -149,7 +163,7 @@ public class District : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var foundUntyped = AddressModel.FindRecords(_id);
-        return foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL).Select(rec => Settlement.Create(rec, this))
-        .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => SettlementArea.Create(rec, this)));
+        return foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL).Select(rec => (IAddressPart)Settlement.Create(rec, this))
+        .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)));
     }
 }

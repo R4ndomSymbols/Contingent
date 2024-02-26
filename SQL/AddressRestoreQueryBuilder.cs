@@ -94,7 +94,7 @@ public class AddressRestoreQueryBuilder {
         if(addressPart is FederalSubject){
             var converted = (FederalSubject)addressPart; 
             findClause = $" federal_subjects.full_name LIKE {FormatLike(converted.UntypedName)} " 
-            + (converted.SubjectType == (int)FederalSubject.Types.NotMentioned ? "" 
+            + (converted.SubjectType == (int)FederalSubject.FederalSubjectTypes.NotMentioned ? "" 
             : (" AND federal_subjects.subject_type = " + converted.SubjectType.ToString()));
             addressLevel = 1;
         }

@@ -105,7 +105,16 @@ public class SettlementArea : IAddressPart
         return Result<SettlementArea?>.Success(got);
     }
 
-    public static SettlementArea Create(AddressRecord source, )
+    public static SettlementArea? Create(AddressRecord source, District parent){
+        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        }
+        return new SettlementArea(source.AddressPartId){
+            _parentDistrict = parent,
+            _settlementAreaType = (SettlementAreaTypes)source.ToponymType,
+            _untypedName = source.AddressName
+        };
+    }
 
     public async Task Save(ObservableTransaction? scope = null)
     {   await _parentDistrict.Save(scope);

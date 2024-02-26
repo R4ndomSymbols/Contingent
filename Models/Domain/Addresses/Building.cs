@@ -102,7 +102,10 @@ public class Building : IAddressPart
         return Result<Building?>.Success(got);
     }
 
-    public static Building Create(AddressRecord source, Street parent){
+    public static Building? Create(AddressRecord source, Street parent){
+        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        }
         return new Building(source.AddressPartId){
             _parentStreet = parent,
             _buildingType = (BuildingTypes)source.ToponymType,

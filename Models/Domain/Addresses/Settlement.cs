@@ -164,7 +164,10 @@ public class Settlement : IAddressPart
         return Result<Settlement?>.Success(got);
     }
 
-    public static Settlement Create(AddressRecord record, District parent){
+    public static Settlement? Create(AddressRecord record, District parent){
+        if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        }
         return new Settlement(record.AddressPartId){
             _parentSettlementArea = null,
             _parentDistrict = parent,
@@ -172,7 +175,10 @@ public class Settlement : IAddressPart
             _untypedName = record.AddressName
         };
     }
-    public static Settlement Create(AddressRecord record, SettlementArea parent){
+    public static Settlement? Create(AddressRecord record, SettlementArea parent){
+        if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+            return null;
+        }
         return new Settlement(record.AddressPartId){
             _parentDistrict = null,
             _parentSettlementArea = parent,
