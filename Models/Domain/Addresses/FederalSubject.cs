@@ -9,7 +9,7 @@ using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
 
-public class FederalSubject : IAddressRecord
+public class FederalSubject : IAddressPart
 {
     private const int _addressLevel = 1;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){

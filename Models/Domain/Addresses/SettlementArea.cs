@@ -6,9 +6,9 @@ using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class SettlementArea : IAddressRecord
+public class SettlementArea : IAddressPart
 {
-    private const int _addressLevel = 3;
+    public const int ADDRESS_LEVEL = 3;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"поселение"),
     };
@@ -81,7 +81,7 @@ public class SettlementArea : IAddressRecord
         if (foundSettlementArea is null){
             return Result<SettlementArea>.Failure(new ValidationError(nameof(SettlementArea), "Поселение не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlementArea.Name, (int)settlementAreaType, _addressLevel);
+        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlementArea.Name, (int)settlementAreaType, ADDRESS_LEVEL);
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -104,6 +104,8 @@ public class SettlementArea : IAddressRecord
         };
         return Result<SettlementArea?>.Success(got);
     }
+
+    public static SettlementArea Create(AddressRecord source, )
 
     public async Task Save(ObservableTransaction? scope = null)
     {   await _parentDistrict.Save(scope);
@@ -130,10 +132,19 @@ public class SettlementArea : IAddressRecord
     {
         return new AddressRecord(){
             AddressPartId = _id,
-            AddressLevelCode = _addressLevel,
+            AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _untypedName,
             ToponymType = (int)_settlementAreaType,
             ParentId = _parentDistrict.Id
         };
+    }
+
+    public IEnumerable<IAddressPart> GetDescendants()
+    {
+        var foundUntyped = AddressModel.FindRecords(_id);
+        return foundUntyped.Select(rec => Settlement.Create(rec, this));
+    }
+    public override string ToString(){
+        return LongTypedName;
     }
 }

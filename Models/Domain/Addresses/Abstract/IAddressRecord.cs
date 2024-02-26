@@ -1,5 +1,7 @@
 namespace StudentTracking.Models.Domain.Address;
 
-public interface IAddressRecord {
+public interface IAddressPart {
     public AddressRecord ToAddressRecord();
+    public IEnumerable<IAddressPart> GetDescendants();
+    public string ToString(); 
 }

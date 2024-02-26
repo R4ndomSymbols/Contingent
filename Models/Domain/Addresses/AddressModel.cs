@@ -415,11 +415,8 @@ public class AddressModel
         AddressModel built = new AddressModel();
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         string[] parts = address.Split(',').Select(x => x.Trim()).ToArray();
-        if (parts.Length < 4){
-            return Result<AddressModel>.Failure(new ValidationError(nameof(AddressModel), "Адрес имеет недостаточное число частей"));
-        }
         try{
-            ProcessSubject(0);
+            ProcessSubject(0, built, parts);
         }
         catch (IndexOutOfRangeException e){
             errors = errors.Append(new ValidationError(nameof(AddressModel), "Адрес содержит не все необходимые части"));
@@ -428,108 +425,6 @@ public class AddressModel
             return Result<AddressModel>.Failure(errors);
         }
         return Result<AddressModel>.Success(built);
-
-        IEnumerable<ValidationError> ProcessSubject(int pointer)
-        {
-            var result = FederalSubject.Create(parts[pointer]);
-            if (result.IsSuccess){
-                built._subjectPart = result.ResultObject;
-                var err = ProcessDistrict(pointer + 1);
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
-
-        IEnumerable<ValidationError> ProcessDistrict(int pointer)
-        {
-            var result = District.Create(parts[pointer], built._subjectPart);
-            if (result.IsSuccess){
-                built._districtPart = result.ResultObject;
-                var err = ProcessSettlementArea(pointer + 1);
-                if (err.Any()){
-                    err = ProcessSettlement(pointer + 1);
-                    return err;
-                }
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
-
-        IEnumerable<ValidationError> ProcessSettlementArea(int pointer)
-        {
-            var result = SettlementArea.Create(parts[pointer], built._districtPart);
-            if (result.IsSuccess){
-                built._settlementAreaPart = result.ResultObject;
-                var err = ProcessSettlement(pointer + 1);
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
-
-        IEnumerable<ValidationError> ProcessSettlement(int pointer)
-        {
-            var result = Settlement.Create(parts[pointer], built._districtPart);
-            if (result.IsSuccess){
-                built._settlementPart = result.ResultObject;
-                var err = ProcessStreet(pointer + 1);
-                return err;
-            }
-            else{
-                result = Settlement.Create(parts[pointer], built._settlementAreaPart);
-                if (result.IsSuccess){
-                    built._settlementPart = result.ResultObject;
-                    var err = ProcessStreet(pointer + 1);
-                    return err;
-                }
-                return result.Errors;
-            }
-        }
-
-        IEnumerable<ValidationError> ProcessStreet(int pointer)
-        {
-            var result = Street.Create(parts[pointer], built._settlementPart);
-            if (result.IsSuccess){
-                built._streetPart = result.ResultObject;
-                var err = ProcessBuilding(pointer + 1);
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
-        IEnumerable<ValidationError> ProcessBuilding(int pointer)
-        {
-            var result = Building.Create(parts[pointer], built._streetPart);
-            if (result.IsSuccess){
-                built._buildingPart = result.ResultObject;
-                var err = ProcessApartment(pointer + 1);
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
-        IEnumerable<ValidationError> ProcessApartment(int pointer)
-        {
-            if (pointer == parts.Length){
-                return new List<ValidationError>();
-            }
-            var result = Apartment.Create(parts[pointer], built._buildingPart);
-            if (result.IsSuccess){
-                built._apartmentPart = result.ResultObject;
-                var err = ProcessBuilding(pointer + 1);
-                return err;
-            }
-            else{
-                return result.Errors;
-            }
-        }
     }
 
     public async Task<ResultWithoutValue> Save(ObservableTransaction scope)
@@ -576,10 +471,14 @@ public class AddressModel
     public static IEnumerable<AddressRecord> FindRecords(int parentId, string name, int type, int level){
         var found = new List<AddressRecord>();
         return found;
-
+    }
+    // получает список всех адресов с указанным родителем
+    public static IEnumerable<AddressRecord> FindRecords(int parentId){
+        var found = new List<AddressRecord>();
+        return found;
     }
 
-    public static async Task<int> SaveRecord(IAddressRecord address, ObservableTransaction? transaction = null){
+    public static async Task<int> SaveRecord(IAddressPart address, ObservableTransaction? transaction = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
         string commandText = "INSERT INTO address_hierarchy (parent_id, address_level, toponym_type, address_name) " +
         "VALUES (@p1,@p2,@p3,@p4) RETURNING address_part_id";
@@ -600,7 +499,112 @@ public class AddressModel
             reader.Read();
             return (int)reader["address_part_id"];
         }
-    } 
+    }
+
+    // функции парсинга адресной строки
+    private static IEnumerable<ValidationError> ProcessSubject(int pointer, AddressModel built, string[] parts)
+    {
+        var result = FederalSubject.Create(parts[pointer]);
+        if (result.IsSuccess){
+            built._subjectPart = result.ResultObject;
+            var err = ProcessDistrict(pointer + 1, built, parts);
+            return err;
+        }
+        else{
+            return result.Errors;
+        }
+    }
+
+    private static IEnumerable<ValidationError> ProcessDistrict(int pointer, AddressModel built, string[] parts)
+    {
+        var result = District.Create(parts[pointer], built._subjectPart);
+        if (result.IsSuccess){
+            built._districtPart = result.ResultObject;
+            var err = ProcessSettlementArea(pointer + 1, built, parts);
+            if (err.Any()){
+                err = err.Concat(ProcessSettlement(pointer + 1, built, parts));
+                return err;
+            }
+            return err;
+        }
+        else{
+            return result.Errors;
+        }
+    }
+
+    private static IEnumerable<ValidationError> ProcessSettlementArea(int pointer, AddressModel built, string[] parts)
+    {
+        var result = SettlementArea.Create(parts[pointer], built._districtPart);
+        if (result.IsSuccess){
+            built._settlementAreaPart = result.ResultObject;
+            var err = ProcessSettlement(pointer + 1, built, parts);
+            return err;
+        }
+        else{
+            return result.Errors;
+        }
+    }
+
+    private static IEnumerable<ValidationError> ProcessSettlement(int pointer, AddressModel built, string[] parts)
+    {
+        var result = Settlement.Create(parts[pointer], built._districtPart);
+        if (result.IsSuccess){
+            built._settlementPart = result.ResultObject;
+            var err = ProcessStreet(pointer + 1, built, parts);
+            return err;
+        }
+        else{
+            result = Settlement.Create(parts[pointer], built._settlementAreaPart);
+            if (result.IsSuccess){
+                built._settlementPart = result.ResultObject;
+                var err = ProcessStreet(pointer + 1, built, parts);
+                return err;
+            }
+            return result.Errors;
+        }
+    }
+
+    private static IEnumerable<ValidationError> ProcessStreet(int pointer, AddressModel built, string[] parts)
+    {
+        var result = Street.Create(parts[pointer], built._settlementPart);
+        if (result.IsSuccess){
+            built._streetPart = result.ResultObject;
+            var err = ProcessBuilding(pointer + 1, built, parts);
+            return err;
+        }
+        else{
+            return result.Errors;
+        }
+    }
+    private static IEnumerable<ValidationError> ProcessBuilding(int pointer, AddressModel built, string[] parts)
+    {
+        var result = Building.Create(parts[pointer], built._streetPart);
+        if (result.IsSuccess){
+            built._buildingPart = result.ResultObject;
+            var err = ProcessApartment(pointer + 1, built, parts);
+            return err;
+        }
+        else{
+            return result.Errors;
+        }
+    }
+    private static IEnumerable<ValidationError> ProcessApartment(int pointer, AddressModel built, string[] parts)
+    {
+        if (pointer == parts.Length){
+            return new List<ValidationError>();
+        }
+        var result = Apartment.Create(parts[pointer], built._buildingPart);
+        if (result.IsSuccess){
+            built._apartmentPart = result.ResultObject;
+            if (pointer + 1 != parts.Length){
+                return new List<ValidationError>(){new ValidationError(nameof(AddressModel), "Адрес содержит слишком много частей")};
+            }
+            return new List<ValidationError>();
+        }
+        else{
+            return result.Errors;
+        }
+    }
 }
 
 

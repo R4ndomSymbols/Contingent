@@ -6,7 +6,7 @@ using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Building : IAddressRecord
+public class Building : IAddressPart
 {
     public const int ADDRESS_LEVEL = 6;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -102,6 +102,14 @@ public class Building : IAddressRecord
         return Result<Building?>.Success(got);
     }
 
+    public static Building Create(AddressRecord source, Street parent){
+        return new Building(source.AddressPartId){
+            _parentStreet = parent,
+            _buildingType = (BuildingTypes)source.ToponymType,
+            _untypedName = source.AddressName
+        };
+    }
+
     public async Task Save(ObservableTransaction? scope = null){
         await _parentStreet.Save(scope);
         if (_id == Utils.INVALID_ID){
@@ -133,5 +141,15 @@ public class Building : IAddressRecord
             ToponymType = (int)_buildingType,
             ParentId = _parentStreet.Id
         };
+    }
+
+    public IEnumerable<IAddressPart> GetDescendants()
+    {
+        var found = AddressModel.FindRecords(_id);
+        return found.Select(d => Apartment.Create(d, this));    
+    }
+
+    public override string ToString(){
+        return LongTypedName;
     }
 }

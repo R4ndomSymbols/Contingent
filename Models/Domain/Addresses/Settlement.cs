@@ -8,9 +8,9 @@ using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class Settlement : IAddressRecord
+public class Settlement : IAddressPart
 {
-    private const int _addressLevel = 4;
+    public const int ADDRESS_LEVEL = 4;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"город"),
         new Regex(@"поселок"),
@@ -98,7 +98,7 @@ public class Settlement : IAddressRecord
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, _addressLevel);
+        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL);
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -140,7 +140,7 @@ public class Settlement : IAddressRecord
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, _addressLevel);
+        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL);
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -163,6 +163,24 @@ public class Settlement : IAddressRecord
         };
         return Result<Settlement?>.Success(got);
     }
+
+    public static Settlement Create(AddressRecord record, District parent){
+        return new Settlement(record.AddressPartId){
+            _parentSettlementArea = null,
+            _parentDistrict = parent,
+            _settlementType = (SettlementTypes)record.ToponymType,
+            _untypedName = record.AddressName
+        };
+    }
+    public static Settlement Create(AddressRecord record, SettlementArea parent){
+        return new Settlement(record.AddressPartId){
+            _parentDistrict = null,
+            _parentSettlementArea = parent,
+            _settlementType = (SettlementTypes)record.ToponymType,
+            _untypedName = record.AddressName
+        };
+    }
+
 
     public async Task Save(ObservableTransaction? scope = null)
     {
@@ -195,10 +213,16 @@ public class Settlement : IAddressRecord
     {
         return new AddressRecord(){
             AddressPartId = _id,
-            AddressLevelCode = _addressLevel,
+            AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _untypedName,
             ParentId = _parentDistrict is null ? _parentSettlementArea.Id : _parentDistrict.Id,
             ToponymType = (int)_settlementType
         };
+    }
+
+    public IEnumerable<IAddressPart> GetDescendants()
+    {
+        var found = AddressModel.FindRecords(_id);
+        return found.Select(rec => Street.Create(rec, this));
     }
 }

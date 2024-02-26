@@ -6,7 +6,7 @@ using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 
-public class District : IAddressRecord
+public class District : IAddressPart
 {
     private const int _addressLevel = 2;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -144,5 +144,12 @@ public class District : IAddressRecord
             AddressPartId = _id,
             ToponymType = (int)_districtType
         };
+    }
+
+    public IEnumerable<IAddressPart> GetDescendants()
+    {
+        var foundUntyped = AddressModel.FindRecords(_id);
+        return foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL).Select(rec => Settlement.Create(rec, this))
+        .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => SettlementArea.Create(rec, this)));
     }
 }
