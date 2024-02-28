@@ -154,7 +154,7 @@
             string RealAddress = "";
             if (Model.ActualAddressId != null)
             {
-                RealAddress = (await AddressModel.GetAddressById((int)Model.ActualAddressId))?.FullAddressString ?? "";
+                RealAddress = (await AddressModel.GetAddressById((int)Model.ActualAddressId))?.ToString() ?? "";
             }
         }
         <input id="ActualAddress" class="col-10" value="@RealAddress" />
@@ -181,7 +181,7 @@
         RussianCitizenship? citizenship = Model.RussianCitizenshipId == null ? null : await
         RussianCitizenship.GetById((int)Model.RussianCitizenshipId, null);
         AddressModel? address = await AddressModel.GetAddressById(citizenship?.LegalAddressId ?? Utils.INVALID_ID);
-        string LegalAddress = address?.FullAddressString ?? "";
+        string LegalAddress = address?.ToString() ?? "";
     }
     <div class="mt-4">
         <h2>Гражданство (РФ)</h2>

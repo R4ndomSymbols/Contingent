@@ -157,24 +157,6 @@ public class RussianCitizenship : ICitizenship
         }
     }
 
-    public override bool Equals(object? other)
-    {
-        if (other == null)
-        {
-            return false;
-        }
-        if (other.GetType() != typeof(RussianCitizenship))
-        {
-            return false;
-        }
-        var rc = (RussianCitizenship)other;
-        return _passportNumber == rc._passportNumber &&
-        _passportSeries == rc._passportSeries &&
-        _id == rc._id;
-
-    }
-
-
     public string GetName()
     {
         return (Surname + " " + Name + " " + Patronymic).TrimEnd();

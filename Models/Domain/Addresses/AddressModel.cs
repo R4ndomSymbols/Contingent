@@ -17,6 +17,30 @@ public class AddressModel
     private Street? _streetPart;
     private Building? _buildingPart;
     private Apartment? _apartmentPart;
+    public int Id
+    {
+        get
+        {
+            IAddressPart?[] parts = {
+                _apartmentPart,
+                _buildingPart,
+                _streetPart,
+                _settlementPart,
+                _settlementAreaPart,
+                _districtPart,
+                _subjectPart
+            };
+            var found = parts.Where(p => p is not null && p.Id != Utils.INVALID_ID);
+            if (found.Any())
+            {
+                return found.First().Id;
+            }
+            else
+            {
+                return Utils.INVALID_ID;
+            }
+        }
+    }
     public string GetAddressInfo()
     {
         List<string> accumulator = new List<string>(){
@@ -26,10 +50,9 @@ public class AddressModel
             FormatTag(_settlementPart, "Населенный пункт: "),
             FormatTag(_streetPart, "Объект дорожной инфраструктуры: "),
             FormatTag(_buildingPart, "Дом: "),
-            FormatTag(_apartmentPart,"Квартира: ") 
+            FormatTag(_apartmentPart,"Квартира: ")
         };
         return string.Join("<br/>", accumulator);
-
         string FormatTag(IAddressPart? part, string prefix)
         {
             string state;
@@ -37,16 +60,17 @@ public class AddressModel
             {
                 state = "Не распознан / Не обнаружен";
             }
-            else if ( part.Id != Utils.INVALID_ID){
+            else if (part.Id != Utils.INVALID_ID)
+            {
                 state = "Обнаружен в базе";
             }
-            else {
+            else
+            {
                 state = "Будет добавлен";
             }
             string partName = prefix + (part is null ? "" : part.ToString());
             state = "[" + state + "]";
-            
-            return state + string.Join("\n", Enumerable.Repeat(" ", 30 - state.Length) + partName);
+            return state + string.Join("\n", string.Join(" ", Enumerable.Repeat(' ', 30 - state.Length)) + partName);
         }
     }
     public override string ToString()
@@ -64,38 +88,40 @@ public class AddressModel
     }
     private AddressModel()
     {
-      
     }
-
     public static async Task<AddressModel?> GetAddressById(int id)
     {
         var address = new AddressModel();
-        var restored = RestoreAddress(id);
+        var restored = await RestoreAddress(id);
         ProcessSubject(restored, address);
         return address;
     }
-    public static async Task<IEnumerable<string>?> GetNextSuggestions(string request)
+    public static IEnumerable<string> GetNextSuggestions(string? request)
     {
-        if (request is null){
-            return null;
+        if (request is null)
+        {
+            return new List<string>();
         }
         var trimmed = request.Trim();
-        if (trimmed == string.Empty){
-            return null;
+        if (trimmed == string.Empty)
+        {
+            return new List<string>();;
         }
         var split = request.Split(',');
         var address = new AddressModel();
         AddressPartPointer found = new AddressPartPointer();
         ProcessSubject(0, address, split, found);
-        if (found.PointTo is null){
-            return null;
+        if (found.PointTo is null)
+        {
+            return new List<string>();
         }
-        else{
+        else
+        {
             var got = ((IAddressPart)found.PointTo).GetDescendants();
             return got.Select(p => p.ToString());
         }
     }
-    public static Result<AddressModel?> Create(AddressDTO? addressDTO)
+    public static Result<AddressModel?> Create(AddressDTO? addressDTO, ObservableTransaction? scope = null)
     {
         if (addressDTO is null)
         {
@@ -111,7 +137,7 @@ public class AddressModel
         string[] parts = address.Split(',').Select(x => x.Trim()).ToArray();
         try
         {
-            errors = ProcessSubject(0, built, parts);
+            errors = ProcessSubject(0, built, parts, new AddressPartPointer(), scope);
         }
         catch (IndexOutOfRangeException e)
         {
@@ -140,50 +166,120 @@ public class AddressModel
             return ResultWithoutValue.Failure(new ValidationError(nameof(AddressModel), "Адрес не может быть сохранен"));
         }
     }
-    public static AddressRecord? GetRecordById(int id)
+    public static async Task<IEnumerable<AddressRecord>> FindRecords(int? parentId, string name, int type, int level, ObservableTransaction? scope = null)
     {
-        // написать рекурсивный запрос поиска 
-        return new AddressRecord();
-    }
-    public static IEnumerable<AddressRecord> FindRecords(string name, int type, int level)
-    {
-        var found = new List<AddressRecord>();
-        return found;
-    }
-    public static IEnumerable<AddressRecord> FindRecords(int parentId, string name, int type, int level)
-    {
-        var found = new List<AddressRecord>();
+        var param = new SQLParameterCollection();
+        var p1 = parentId is null ? param.Add(DBNull.Value) : param.Add<int>((int)parentId);
+        var p2 = param.Add(name);
+        var p3 = param.Add(type);
+        var p4 = param.Add(level);
+        var filter1 = new ComplexWhereCondition(
+            parentId is null ?
+             new WhereCondition(
+                new Column("parent_id", "address_hierarchy"),
+                WhereCondition.Relations.Is) :
+            new WhereCondition(
+                new Column("parent_id", "address_hierarchy"),
+                p1,
+                WhereCondition.Relations.Equal),
+            new WhereCondition(
+                new Column("address_name", "address_hierarchy"),
+                p2,
+                WhereCondition.Relations.Equal
+            ), ComplexWhereCondition.ConditionRelation.AND
+            );
+        var filter2 = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("toponym_type", "address_hierarchy"),
+                p3,
+                WhereCondition.Relations.Equal),
+            new WhereCondition(
+                new Column("address_level", "address_hierarchy"),
+                p4,
+                WhereCondition.Relations.Equal
+            ), ComplexWhereCondition.ConditionRelation.AND
+            );
+        var final = new ComplexWhereCondition(filter1, filter2, ComplexWhereCondition.ConditionRelation.AND);
+        var found = await FindRecords(new QueryLimits(0, 200), final, param, scope);
         return found;
     }
     // получает список всех адресов с указанным родителем
-    public static IEnumerable<AddressRecord> FindRecords(int parentId)
+    public static async Task<IEnumerable<AddressRecord>> FindRecords(int parentId, ObservableTransaction? scope = null)
     {
-        var found = new List<AddressRecord>();
+        var param = new SQLParameterCollection();
+        var p1 = param.Add<int>(parentId);
+        var filter = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("parent_id", "address_hierarchy"),
+                p1,
+                WhereCondition.Relations.Equal));
+        var found = await FindRecords(new QueryLimits(0, 200), filter, param, scope);
         return found;
     }
+    private static async Task<IEnumerable<AddressRecord>> FindRecords(QueryLimits limits, ComplexWhereCondition? condition = null, SQLParameterCollection? parameters = null, ObservableTransaction? scope = null)
+    {
+        var mapper = new Mapper<AddressRecord>(
+            (m) =>
+            {
+                var mapped = new AddressRecord()
+                {
+                    AddressPartId = (int)m["address_part_id"],
+                    AddressLevelCode = (int)m["address_level"],
+                    AddressName = (string)m["address_name"],
+                    ToponymType = (int)m["toponym_type"],
+                    ParentId = m["parent_id"].GetType() == typeof(DBNull) ? null : (int)m["parent_id"] 
+                };
+                return Task.Run(() => QueryResult<AddressRecord>.Found(mapped));
+            },
+            new List<Column>(){
+                new Column("address_part_id", "address_hierarchy"),
+                new Column("address_level", "address_hierarchy"),
+                new Column("address_name", "address_hierarchy"),
+                new Column("toponym_type", "address_hierarchy"),
+                new Column("parent_id", "address_hierarchy")
+            }
+        );
+        var sqlQuery = SelectQuery<AddressRecord>.Init("address_hierarchy")
+        .AddMapper(mapper)
+        .AddWhereStatement(condition)
+        .AddParameters(parameters)
+        .Finish();
+        if (sqlQuery.IsFailure)
+        {
+            throw new Exception("Запрос на поиск адреса не может быть не создан");
+        }
+        var query = sqlQuery.ResultObject;
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        return await query.Execute(conn, limits, scope);
+    }
     // получает все дерево ВВЕРХ от текущего id
-    public static async Task<IEnumerable<AddressRecord>> RestoreAddress(int addressId)
+    private static async Task<IEnumerable<AddressRecord>> RestoreAddress(int addressId)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = 
-        " WITH RECURSIVE address_sequence AS ( " + 
-        " SELECT address_part_id, parent_id, address_level, toponym_type, address_name FROM address_hierarchy" +    
+        string cmdText =
+        " WITH RECURSIVE address_sequence AS ( " +
+        " SELECT address_part_id, parent_id, address_level, toponym_type, address_name FROM address_hierarchy" +
         " WHERE address_part_id = @p1 " +
-        " UNION " + 
+        " UNION " +
         " SELECT source.address_part_id, source.parent_id, source.address_level, source.toponym_type, source.address_name " +
-        " FROM address_sequence AS anchor, address_hierarchy AS source " + 
+        " FROM address_sequence AS anchor, address_hierarchy AS source " +
         " WHERE anchor.parent_id = source.address_part_id) " +
         " SELECT * FROM address_sequence ";
         var cmd = new NpgsqlCommand(cmdText, conn);
-        using (cmd){
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", addressId));
+        using (cmd)
+        {
             using var reader = await cmd.ExecuteReaderAsync();
-            var found = new List<AddressRecord>(); 
-            if (!reader.HasRows){
+            var found = new List<AddressRecord>();
+            if (!reader.HasRows)
+            {
                 return found;
             }
-            while (reader.Read()){
+            while (reader.Read())
+            {
                 found.Add(
-                    new AddressRecord(){
+                    new AddressRecord()
+                    {
                         AddressPartId = (int)reader["address_part_id"],
                         AddressLevelCode = (int)reader["address_level"],
                         AddressName = (string)reader["address_name"],
@@ -194,8 +290,6 @@ public class AddressModel
             }
             return found;
         }
-        
-
     }
     public static async Task<int> SaveRecord(IAddressPart address, ObservableTransaction? transaction = null)
     {
@@ -224,17 +318,18 @@ public class AddressModel
         }
     }
     // функции парсинга адресной строки
-    private static IEnumerable<ValidationError> ProcessSubject(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessSubject(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
-        if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(FederalSubject), "Адрес содержит недостаточное число частей")};
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(FederalSubject), "Адрес содержит недостаточное число частей") };
         }
-        var result = FederalSubject.Create(parts[pointer]);
+        var result = FederalSubject.Create(parts[pointer], scope);
         if (result.IsSuccess)
         {
             built._subjectPart = result.ResultObject;
-            stopPoint.PointTo = built._subjectPart; 
-            var err = ProcessDistrict(pointer + 1, built, parts, stopPoint);
+            stopPoint.PointTo = built._subjectPart;
+            var err = ProcessDistrict(pointer + 1, built, parts, stopPoint, scope);
             return err;
         }
         else
@@ -242,40 +337,45 @@ public class AddressModel
             return result.Errors;
         }
     }
-    private static IEnumerable<ValidationError> ProcessDistrict(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessDistrict(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
-        if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(District), "Адрес содержит недостаточное число частей")};
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(District), "Адрес содержит недостаточное число частей") };
         }
-        var result = District.Create(parts[pointer], built._subjectPart);
+        IEnumerable<ValidationError> err = new List<ValidationError>();
+        var result = District.Create(parts[pointer], built._subjectPart, scope);
         if (result.IsSuccess)
         {
             built._districtPart = result.ResultObject;
-            stopPoint.PointTo = built._districtPart; 
-            var err = ProcessSettlementArea(pointer + 1, built, parts, stopPoint);
-            if (err.Any())
-            {
-                err = err.Concat(ProcessSettlement(pointer + 1, built, parts, stopPoint));
-                return err;
+            stopPoint.PointTo = built._districtPart;  
+            if (built._districtPart.DistrictType == District.DistrictTypes.MunicipalTerritory ||
+                built._districtPart.DistrictType == District.DistrictTypes.CityTerritory){
+                built._settlementAreaPart = null;
+                err = ProcessSettlement(pointer + 1, built, parts, stopPoint, scope);
+            }
+            else{
+                err = ProcessSettlementArea(pointer + 1, built, parts, stopPoint, scope);
             }
             return err;
         }
-        else
-        {
+        else{
             return result.Errors;
         }
+        
     }
-    private static IEnumerable<ValidationError> ProcessSettlementArea(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessSettlementArea(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
-        if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(SettlementArea), "Адрес содержит недостаточное число частей")};
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(SettlementArea), "Адрес содержит недостаточное число частей") };
         }
-        var result = SettlementArea.Create(parts[pointer], built._districtPart);
+        var result = SettlementArea.Create(parts[pointer], built._districtPart, scope);
         if (result.IsSuccess)
         {
             built._settlementAreaPart = result.ResultObject;
-            stopPoint.PointTo = built._settlementAreaPart; 
-            var err = ProcessSettlement(pointer + 1, built, parts, stopPoint);
+            stopPoint.PointTo = built._settlementAreaPart;
+            var err = ProcessSettlement(pointer + 1, built, parts, stopPoint, scope);
             return err;
         }
         else
@@ -283,43 +383,45 @@ public class AddressModel
             return result.Errors;
         }
     }
-    private static IEnumerable<ValidationError> ProcessSettlement(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessSettlement(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
-        if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(Settlement), "Адрес содержит недостаточное число частей")};
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(Settlement), "Адрес содержит недостаточное число частей") };
         }
-        var result = Settlement.Create(parts[pointer], built._districtPart);
+        var result = Settlement.Create(parts[pointer], built._districtPart, scope);
         if (result.IsSuccess)
         {
             built._settlementPart = result.ResultObject;
             stopPoint.PointTo = built._settlementPart;
-            var err = ProcessStreet(pointer + 1, built, parts, stopPoint);
+            var err = ProcessStreet(pointer + 1, built, parts, stopPoint, scope);
             return err;
         }
         else
         {
-            result = Settlement.Create(parts[pointer], built._settlementAreaPart);
+            result = Settlement.Create(parts[pointer], built._settlementAreaPart, scope);
             if (result.IsSuccess)
             {
                 built._settlementPart = result.ResultObject;
-                stopPoint.PointTo = built._settlementPart; 
-                var err = ProcessStreet(pointer + 1, built, parts, stopPoint);
+                stopPoint.PointTo = built._settlementPart;
+                var err = ProcessStreet(pointer + 1, built, parts, stopPoint, scope);
                 return err;
             }
             return result.Errors;
         }
     }
-    private static IEnumerable<ValidationError> ProcessStreet(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessStreet(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
-         if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(Street), "Адрес содержит недостаточное число частей")};
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(Street), "Адрес содержит недостаточное число частей") };
         }
-        var result = Street.Create(parts[pointer], built._settlementPart);
+        var result = Street.Create(parts[pointer], built._settlementPart, scope);
         if (result.IsSuccess)
         {
             built._streetPart = result.ResultObject;
-            stopPoint.PointTo = built._streetPart;  
-            var err = ProcessBuilding(pointer + 1, built, parts, stopPoint);
+            stopPoint.PointTo = built._streetPart;
+            var err = ProcessBuilding(pointer + 1, built, parts, stopPoint, scope);
             return err;
         }
         else
@@ -327,17 +429,18 @@ public class AddressModel
             return result.Errors;
         }
     }
-    private static IEnumerable<ValidationError> ProcessBuilding(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
-    {   
-        if (pointer == parts.Length){
-            return new List<ValidationError>(){new ValidationError(nameof(Building), "Адрес содержит недостаточное число частей")};
+    private static IEnumerable<ValidationError> ProcessBuilding(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
+    {
+        if (pointer == parts.Length)
+        {
+            return new List<ValidationError>() { new ValidationError(nameof(Building), "Адрес содержит недостаточное число частей") };
         }
-        var result = Building.Create(parts[pointer], built._streetPart);
+        var result = Building.Create(parts[pointer], built._streetPart, scope);
         if (result.IsSuccess)
         {
             built._buildingPart = result.ResultObject;
             stopPoint.PointTo = built._buildingPart;
-            var err = ProcessApartment(pointer + 1, built, parts, stopPoint);
+            var err = ProcessApartment(pointer + 1, built, parts, stopPoint, scope);
             return err;
         }
         else
@@ -345,19 +448,19 @@ public class AddressModel
             return result.Errors;
         }
     }
-    private static IEnumerable<ValidationError> ProcessApartment(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint)
+    private static IEnumerable<ValidationError> ProcessApartment(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
         if (pointer == parts.Length)
         {
             return new List<ValidationError>();
         }
-        var result = Apartment.Create(parts[pointer], built._buildingPart);
+        var result = Apartment.Create(parts[pointer], built._buildingPart, scope);
         if (result.IsSuccess)
-        {    
+        {
             built._apartmentPart = result.ResultObject;
             stopPoint.PointTo = built._apartmentPart;
             if (pointer + 1 != parts.Length)
-            {   
+            {
                 return new List<ValidationError>() { new ValidationError(nameof(AddressModel), "Адрес содержит слишком много частей") };
             }
             return new List<ValidationError>();
@@ -444,11 +547,11 @@ public class AddressModel
         }
     }
 }
-
-internal class AddressPartPointer {
-    public IAddressPart? PointTo {get; set;}
-
-    internal AddressPartPointer(){
+internal class AddressPartPointer
+{
+    public IAddressPart? PointTo { get; set; }
+    internal AddressPartPointer()
+    {
         PointTo = null;
     }
 }

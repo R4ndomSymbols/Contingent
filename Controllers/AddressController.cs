@@ -1,7 +1,10 @@
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.JSON;
@@ -20,37 +23,20 @@ public class AddressController : Controller
     }
     [HttpGet]
     [Route("/addresses/suggest/{suggest?}")]
-    public async Task<JsonResult> GetSuggestions(string? suggest)
+    public JsonResult GetSuggestions(string? suggest)
     {
-        if (suggest == null)
-        {
-            return Json(new object());
-        }
-        else
-        {
-            return Json(await AddressModel.GetNextSuggestions(suggest));
-        }
+        return Json(AddressModel.GetNextSuggestions(suggest));
     }
     [HttpGet]
     [Route("/addresses/explain/{address?}")]
-    public async Task<JsonResult> GetAddressInfo(string? address)
+    public JsonResult GetAddressInfo(string? address)
     {
-        var built = AddressModel.Create(address?.ToLower());
-        if (built == null)
+        Result<AddressModel?> result = AddressModel.Create(new AddressDTO(){ Address = address});
+        if (result.IsFailure)
         {
-            return Json(new { AboutAddress = "Введен пустой адрес"});
+            return Json(new ErrorsDTO(result.Errors));
         }
-        var errors = built.GetErrors();
-        if (errors.Any())
-        {
-            return Json(new { AboutAddress = errors.First().ToUserString() });
-        }
-        await using var connection = await Utils.GetAndOpenConnectionFactory();
-        var transaction = await connection.BeginTransactionAsync();
-        await using ObservableTransaction saving = new ObservableTransaction(transaction, connection);
-        await built.Save(saving);
-        await saving.RollbackAsync();
-        return Json(new { AboutAddress = await built.GetAddressInfo()});   
+        return Json(new { AddressState = result.ResultObject?.GetAddressInfo() ?? ""});   
     }
 
     [HttpPost]
@@ -58,18 +44,21 @@ public class AddressController : Controller
     public async Task<JsonResult> CreateAddress(string? address)
     {
 
-        var built = AddressModel.Create(address);
-        if (built != null)
-        {
-             await using var connection = await Utils.GetAndOpenConnectionFactory();
-            var transaction = await connection.BeginTransactionAsync();
-            await using ObservableTransaction saving = new ObservableTransaction(transaction, connection);
-            await built.Save(saving);
-            if (await built.GetCurrentState(null) == RelationTypes.Bound)
-            {
-                return Json(new { AddressId = built.Id });
-            }
+        var result = AddressModel.Create(new AddressDTO(){ Address = address});
+        if (result.IsFailure){
+            return Json(new ErrorsDTO(result.Errors));
         }
-        return Json(new { AddressError = "Не удалось сохранить адрес" });
+        if (result.ResultObject is null){
+            throw new Exception("Suppression");
+        }
+        var built = result.ResultObject;
+        using var connection = await Utils.GetAndOpenConnectionFactory();
+        using var transaction = await connection.BeginTransactionAsync();
+        using ObservableTransaction savingTransaction = new ObservableTransaction(transaction, connection);
+        var savingResult = await built.Save(savingTransaction);
+        if (savingResult.IsFailure){
+            return Json(new ErrorsDTO(savingResult.Errors));
+        }
+        return Json(new { AddressId = built});
     }
 }

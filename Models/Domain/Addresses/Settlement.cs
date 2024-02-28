@@ -7,7 +7,6 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
-
 public class Settlement : IAddressPart
 {
     public const int ADDRESS_LEVEL = 4;
@@ -33,9 +32,7 @@ public class Settlement : IAddressPart
         Village = 3, // село 
         SmallVillage = 4, // деревня
         TinyVillage = 5, // поселок
-
     }
-
     private int _id;
     private SettlementArea? _parentSettlementArea;
     private District? _parentDistrict;
@@ -69,23 +66,20 @@ public class Settlement : IAddressPart
         }
     }
     // валидация не проверяет типы, внутри которых возможно размещение городов, добавить
-
     private Settlement(){
         _id = Utils.INVALID_ID;
     } 
     
-
     protected Settlement(int id)
     {
         _id = id;
     }
     // проверка на тип родителя
-    public static Result<Settlement?> Create(string addressPart, District scope){
+    public static Result<Settlement?> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
-
         NameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
@@ -98,7 +92,7 @@ public class Settlement : IAddressPart
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -107,7 +101,7 @@ public class Settlement : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
-                    _parentDistrict = scope, 
+                    _parentDistrict = parent, 
                     _settlementType = (SettlementTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -115,19 +109,18 @@ public class Settlement : IAddressPart
         }
         
         var got = new Settlement(){
-            _parentDistrict = scope,
+            _parentDistrict = parent,
             _settlementType = settlementType,
             _untypedName = foundSettlement.Name,
         };
         return Result<Settlement?>.Success(got);
     }
     // отличия между ними в валидации иерархии, добавить потом
-    public static Result<Settlement?> Create(string addressPart, SettlementArea scope){
+    public static Result<Settlement?> Create(string addressPart, SettlementArea parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
-
         NameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
@@ -140,7 +133,7 @@ public class Settlement : IAddressPart
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -149,7 +142,7 @@ public class Settlement : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
-                    _parentSettlementArea = scope, 
+                    _parentSettlementArea = parent, 
                     _settlementType = (SettlementTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -157,13 +150,12 @@ public class Settlement : IAddressPart
         }
         
         var got = new Settlement(){
-            _parentSettlementArea = scope,
+            _parentSettlementArea = parent,
             _settlementType = settlementType,
             _untypedName = foundSettlement.Name,
         };
         return Result<Settlement?>.Success(got);
     }
-
     public static Settlement? Create(AddressRecord record, District parent){
         if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
@@ -186,8 +178,6 @@ public class Settlement : IAddressPart
             _untypedName = record.AddressName
         };
     }
-
-
     public async Task Save(ObservableTransaction? scope = null)
     {
         if (_parentSettlementArea is not null){
@@ -200,21 +190,6 @@ public class Settlement : IAddressPart
             _id = await AddressModel.SaveRecord(this, scope);
         }
     }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj == null)
-        {
-            return false;
-        }
-        if (obj.GetType() != typeof(Settlement))
-        {
-            return false;
-        }
-        var unboxed = (Settlement)obj;
-        return _id == unboxed._id;
-    }
-
     public AddressRecord ToAddressRecord()
     {
         return new AddressRecord(){
@@ -225,10 +200,14 @@ public class Settlement : IAddressPart
             ToponymType = (int)_settlementType
         };
     }
-
     public IEnumerable<IAddressPart> GetDescendants()
     {
-        var found = AddressModel.FindRecords(_id);
+        var found = AddressModel.FindRecords(_id).Result;
         return found.Select(rec => Street.Create(rec, this));
+    }
+
+    public override string ToString()
+    {
+        return LongTypedName;
     }
 }

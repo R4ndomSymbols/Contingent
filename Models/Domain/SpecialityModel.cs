@@ -335,27 +335,6 @@ public class SpecialityModel
         var levels = await StudentEducationalLevelRecord.GetByOwner(student);
         return levels.Any(x => x.Level.Weight >= _levelIn.Weight); 
     }
-
-    public override bool Equals(object? other)
-    {
-        if (other == null){
-            return false;
-        }
-        if (other.GetType() != this.GetType()){
-            return false;
-        }
-        var unboxed = (SpecialityModel)other;
-        return 
-            _id == unboxed._id &&
-            _courseCount == unboxed._courseCount &&
-            _teachingDepth == unboxed._teachingDepth &&
-            _fgosCode == unboxed._fgosCode &&
-            _fgosName == unboxed._fgosName &&
-            _levelIn == unboxed._levelIn &&
-            _levelOut == unboxed._levelOut &&
-            _qualification == unboxed._qualification &&
-            _groupNameQualificationPostfix == unboxed._groupNameQualificationPostfix;
-    }
 }
 
 

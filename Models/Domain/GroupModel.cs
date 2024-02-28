@@ -425,26 +425,7 @@ public class GroupModel
         }
         return await buildResult.ResultObject.Execute(conn, limits);
     }
-    public override bool Equals(object? other)
-    {
-        if (other == null)
-        {
-            return false;
-        }
-        if (other.GetType() != typeof(GroupModel))
-        {
-            return false;
-        }
-        GroupModel unboxed = (GroupModel)other;
-        return _id == unboxed._id &&
-               _courseOn == unboxed._courseOn &&
-               _creationYear == unboxed._creationYear &&
-               _formatOfEducation == unboxed._formatOfEducation &&
-               _educationProgram == unboxed._educationProgram &&
-               _groupName == unboxed._groupName &&
-               _groupSponsorsip == unboxed._groupSponsorsip &&
-               (_sequenceLetter == unboxed._sequenceLetter || (_sequenceLetter == null && unboxed._sequenceLetter == null));
-    }
+    
     public GroupModel Copy(){
         var newGroup = new GroupModel
         {

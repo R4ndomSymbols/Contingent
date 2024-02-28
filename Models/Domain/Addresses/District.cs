@@ -5,7 +5,6 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
-
 public class District : IAddressPart
 {
     public const int ADDRESS_LEVEL = 2;
@@ -25,9 +24,7 @@ public class District : IAddressPart
         CityTerritory = 1, // городской округ
         MunicipalDistrict = 2, // муниципальный район
         MunicipalTerritory = 3, // муниципальный округ 
-
     }
-
     private int _id;
     private FederalSubject _parentFederalSubject;
     private string _untypedName;
@@ -48,13 +45,10 @@ public class District : IAddressPart
     {
         get => Utils.FormatToponymName(_untypedName);
     }
-
     public string LongTypedName
     {
         get => Names[_districtType].FormatLong(UntypedName);
     }
-
-
     private District()
     {
         _id = Utils.INVALID_ID;
@@ -62,13 +56,11 @@ public class District : IAddressPart
     private District(int id){
         _id = id;
     }
-
-    public static Result<District?> Create(string addressPart, FederalSubject scope){
+    public static Result<District?> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня указано неверно"));
         }
-
         NameToken? foundDistrict = null;
         DistrictTypes subjectType = DistrictTypes.NotMentioned;  
         foreach (var pair in Names){
@@ -81,7 +73,7 @@ public class District : IAddressPart
         if (foundDistrict is null){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundDistrict.Name, (int)subjectType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict.Name, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -90,7 +82,7 @@ public class District : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<District?>.Success(new District(first.AddressPartId){
-                    _parentFederalSubject = scope, 
+                    _parentFederalSubject = parent, 
                     _districtType = (DistrictTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -98,13 +90,12 @@ public class District : IAddressPart
         }
         
         var got = new District(){
-            _parentFederalSubject = scope,
+            _parentFederalSubject = parent,
             _districtType = subjectType,
             _untypedName = foundDistrict.Name,
         };
         return Result<District?>.Success(got);
     }
-
     public static District? Create(AddressRecord source, FederalSubject parent){
         
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
@@ -116,11 +107,8 @@ public class District : IAddressPart
             _untypedName = source.AddressName
         };
     }
-
     
-
     
-
     public async Task Save(ObservableTransaction? scope = null)
     {
         await _parentFederalSubject.Save(scope);
@@ -128,27 +116,6 @@ public class District : IAddressPart
             _id = await AddressModel.SaveRecord(this, scope); 
         }
     }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj is null)
-        {
-            return false;
-        }
-        else
-        {
-            if (obj.GetType() != typeof(District))
-            {
-                return false;
-            }
-            else
-            {
-                var right = (District)obj;
-                return _id == right._id;
-            }
-        }
-    }
-
     public AddressRecord ToAddressRecord()
     {
         return new AddressRecord(){
@@ -159,11 +126,15 @@ public class District : IAddressPart
             ToponymType = (int)_districtType
         };
     }
-
     public IEnumerable<IAddressPart> GetDescendants()
     {
-        var foundUntyped = AddressModel.FindRecords(_id);
+        var foundUntyped = AddressModel.FindRecords(_id).Result;
         return foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL).Select(rec => (IAddressPart)Settlement.Create(rec, this))
         .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)));
+    }
+
+    public override string ToString()
+    {
+        return LongTypedName;
     }
 }

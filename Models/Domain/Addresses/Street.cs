@@ -5,7 +5,6 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities.Validation;
 using StudentTracking.Models.JSON;
 namespace StudentTracking.Models.Domain.Address;
-
 public class Street : IAddressPart
 {
     public const int ADDRESS_LEVEL = 5;  
@@ -42,7 +41,6 @@ public class Street : IAddressPart
         Passage = 7, // проезд 
         Highway = 8, // шоссе 
     }
-
     private int _id;
     private Settlement _parentSettlement;
     private string _untypedName;
@@ -55,7 +53,6 @@ public class Street : IAddressPart
     {
         get => _parentSettlement;
     }
-
     public string UntypedName
     {
         get => Utils.FormatToponymName(_untypedName);
@@ -67,8 +64,6 @@ public class Street : IAddressPart
             return Names[_streetType].FormatLong(UntypedName);
         }
     }
-
-
     protected Street(int id)
     {
         _id = id;
@@ -77,13 +72,11 @@ public class Street : IAddressPart
     {
         _id = Utils.INVALID_ID;
     }
-
-    public static Result<Street?> Create(string addressPart, Settlement scope){
+    public static Result<Street?> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не указан или указан неверно"));
         }
-
         NameToken? foundStreet = null;
         StreetTypes streetType = StreetTypes.NotMentioned;  
         foreach (var pair in Names){
@@ -96,7 +89,7 @@ public class Street : IAddressPart
         if (foundStreet is null){
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundStreet.Name, (int)streetType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundStreet.Name, (int)streetType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -105,7 +98,7 @@ public class Street : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<Street?>.Success(new Street(first.AddressPartId){
-                    _parentSettlement = scope, 
+                    _parentSettlement = parent, 
                     _streetType = (StreetTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -113,7 +106,7 @@ public class Street : IAddressPart
         }
         
         var got = new Street(){
-            _parentSettlement = scope,
+            _parentSettlement = parent,
             _streetType = streetType,
             _untypedName = foundStreet.Name,
         };
@@ -133,21 +126,6 @@ public class Street : IAddressPart
             _id = await AddressModel.SaveRecord(this, scope); 
         }
     }
-
-    public override bool Equals(object? other)
-    {
-        if (other == null)
-        {
-            return false;
-        }
-        if (other.GetType() != typeof(Street))
-        {
-            return false;
-        }
-        var parsed = (Street)other;
-        return parsed._id == _id;
-    }
-
     public AddressRecord ToAddressRecord()
     {
         return new AddressRecord(){
@@ -158,13 +136,11 @@ public class Street : IAddressPart
             ParentId = _parentSettlement.Id
         };
     }
-
     public IEnumerable<IAddressPart> GetDescendants()
     {
-        var found = AddressModel.FindRecords(_id);
+        var found = AddressModel.FindRecords(_id).Result;
         return found.Select(rec => Building.Create(rec, this));
     }
-
     public override string ToString()
     {
         return LongTypedName;

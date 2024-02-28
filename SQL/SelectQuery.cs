@@ -104,7 +104,7 @@ public class SelectQuery<T>
         return queryBuilder.ToString();
     }
 
-    public async Task<IReadOnlyCollection<T>> Execute(NpgsqlConnection conn, QueryLimits limits)
+    public async Task<IReadOnlyCollection<T>> Execute(NpgsqlConnection conn, QueryLimits limits, ObservableTransaction? scope = null)
     {
         if (!_finished)
         {
@@ -114,7 +114,13 @@ public class SelectQuery<T>
         cmdText += "LIMIT " + limits.PageLength;
         // логирование
         Console.WriteLine(cmdText);
-        var cmd = new NpgsqlCommand(cmdText, conn);
+        NpgsqlCommand cmd;
+        if (scope is null){
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        else {
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
         if (_parameters != null)
         {
             foreach (var c in _parameters)

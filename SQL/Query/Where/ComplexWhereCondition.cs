@@ -11,7 +11,7 @@ public class ComplexWhereCondition : IQueryPart{
     private ConditionRelation _relation;
     private bool _isGroup;
     private Func<string> _strategy;
-    private bool _isEmpty; 
+    private bool _isTreeHead;
 
     public enum  ConditionRelation {
         AND = 1,
@@ -20,6 +20,7 @@ public class ComplexWhereCondition : IQueryPart{
     public ComplexWhereCondition(WhereCondition single) {
         _facaded = single;
         _strategy = () => _facaded.AsSQLText();
+        _isTreeHead = true;
     }
 
     public ComplexWhereCondition(WhereCondition left, WhereCondition right, ConditionRelation relation, bool isGroup = false)
@@ -29,9 +30,12 @@ public class ComplexWhereCondition : IQueryPart{
     }
 
     public ComplexWhereCondition(ComplexWhereCondition left, ComplexWhereCondition right, ConditionRelation relation, bool isGroup = false){
+        _isGroup = isGroup;
         _left = left;
         _right = right;
         _relation = relation;
+        _isTreeHead = true;
+        SuppressChildWhere();
         _strategy = () => {
             var result = " " + _left.AsSQLText() + " "  + _relation.ToString() + " " + _right.AsSQLText() + " ";
             if (_isGroup){
@@ -74,12 +78,22 @@ public class ComplexWhereCondition : IQueryPart{
         }
 
     } 
-
+    private void SuppressChildWhere(){
+        if (_left is not null){
+            _left._isTreeHead = false;
+            _left.SuppressChildWhere();
+        }
+        if (_right is not null){
+            _right._isTreeHead = false;
+            _right.SuppressChildWhere();
+        }
+    }
 
 
     public string AsSQLText()
     {
-        return "WHERE " + _strategy.Invoke();
+        return  (_isTreeHead ? "WHERE " : " ") + _strategy.Invoke();
     }
+
 }
 

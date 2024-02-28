@@ -47,8 +47,8 @@
      <div class="d-flex flex-row">
         <h5 class="col-4">Балл ГИА</h5>
         @{
-            string giaMark = Model.GiaMark is null ? "Не указан" : Model.GiaMark.ToString();
-            string giaMarkDem = Model.GiaDemoExamMark is null ? "Не указан" : Model.GiaDemoExamMark.ToString(); 
+            string giaMark = Model.GiaMark?.ToString() ?? "Не указан";
+            string giaMarkDem = Model.GiaDemoExamMark?.ToString() ?? "Не указан"; 
         }
         <p class="col-4">@giaMark</p>
     </div>
@@ -64,7 +64,7 @@
             if (Model.ActualAddressId!= null){
                  var address = await AddressModel.GetAddressById((int)Model.ActualAddressId);
                  if (address != null){
-                    factAddress = address.FullAddressString; 
+                    factAddress = address.ToString(); 
                  }
             }
         }
@@ -103,7 +103,7 @@
             <div class="d-flex flex-row">
                 <h5 class="col-4">Прописка</h5>
                 @{
-                   string fullAddress = (await AddressModel.GetAddressById(citizenship.LegalAddressId))?.FullAddressString ?? "";
+                   string fullAddress = (await AddressModel.GetAddressById(citizenship.LegalAddressId))?.ToString() ?? "";
                 }
                 <p class="col-8">@fullAddress</p>
             </div>

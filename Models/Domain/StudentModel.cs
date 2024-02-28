@@ -384,30 +384,6 @@ public class StudentModel
         }
     }  
 
-
-    public override bool Equals(object? other)
-    {
-        if (other == null){
-            return false;
-        }
-        if (other.GetType() != this.GetType()){
-            return false;
-        }
-        var p = (StudentModel)other;
-        return 
-            _id == p._id &&
-            _actualAddress == p._actualAddress &&
-            _dateOfBirth == p._dateOfBirth &&
-            ((_giaMark == null && p._giaMark == null) || _giaMark == p._giaMark) &&
-            ((_giaDemoExamMark == null && p._giaDemoExamMark == null) || _giaDemoExamMark == p._giaDemoExamMark) &&
-            _gender == p._gender &&
-            _paidAgreementType == p._paidAgreementType &&
-            _targetAgreementType == p._targetAgreementType &&
-            _snils == p._snils &&
-            _inn == p._inn &&
-            _gradeBookNumber == p._gradeBookNumber;
-    }
-
     public async Task<string> GetName(){
         
         if (_russianCitizenshipId != null){

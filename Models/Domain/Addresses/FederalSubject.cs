@@ -73,7 +73,7 @@ public class FederalSubject : IAddressPart
     };
     // кода у субъекта не будет
     // метод одновременно ищет и в базе адресов
-    public static Result<FederalSubject?> Create(string addressPart){
+    public static Result<FederalSubject?> Create(string addressPart, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации указан неверно"));
@@ -91,7 +91,7 @@ public class FederalSubject : IAddressPart
         if (found is null){
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(found.Name, (int)subjectType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(null, found.Name, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -158,7 +158,7 @@ public class FederalSubject : IAddressPart
 
     public IEnumerable<IAddressPart> GetDescendants()
     {
-        var found = AddressModel.FindRecords(_id);
+        var found = AddressModel.FindRecords(_id).Result;
         return found.Select(rec => District.Create(rec, this));
     }
 

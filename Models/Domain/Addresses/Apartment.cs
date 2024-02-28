@@ -6,7 +6,6 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
-
 public class Apartment : IAddressPart
 {
     public const int ADDRESS_LEVEL = 7;
@@ -23,7 +22,6 @@ public class Apartment : IAddressPart
         NotMentioned = -1,
         Apartment = 1
     }
-
     private int _id;
     private Building _parentBuilding;
     private ApartmentTypes _apartmentType;
@@ -48,7 +46,6 @@ public class Apartment : IAddressPart
     {
         get => Names[_apartmentType].FormatLong(_untypedName);
     }
-
     private Apartment(int id)
     {
         _id = id;
@@ -57,7 +54,7 @@ public class Apartment : IAddressPart
     {
         _id = Utils.INVALID_ID;
     }
-    public static Result<Apartment?> Create(string addressPart, Building scope){
+    public static Result<Apartment?> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира указана неверно или не указана"));
@@ -74,7 +71,7 @@ public class Apartment : IAddressPart
         if (foundApartment is null){
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира не распознана"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundApartment.Name, (int)apartmentType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundApartment.Name, (int)apartmentType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -83,7 +80,7 @@ public class Apartment : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<Apartment?>.Success(new Apartment(first.AddressPartId){
-                    _parentBuilding = scope, 
+                    _parentBuilding = parent, 
                     _apartmentType = (ApartmentTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -91,13 +88,12 @@ public class Apartment : IAddressPart
         }
         
         var got = new Apartment(){
-            _parentBuilding = scope,
+            _parentBuilding = parent,
             _apartmentType = apartmentType,
             _untypedName = foundApartment.Name,
         };
         return Result<Apartment?>.Success(got);
     }
-
     public static Apartment? Create(AddressRecord from, Building parent){
         if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
@@ -108,7 +104,6 @@ public class Apartment : IAddressPart
             _untypedName = from.AddressName
         };
     }
-
     public async Task Save(ObservableTransaction? scope = null)
     {
         // итеративное сохрание всего дерева, чтобы не писать кучу ерунды
@@ -117,7 +112,6 @@ public class Apartment : IAddressPart
             _id = await AddressModel.SaveRecord(this, scope);
         }
     }
-
     public override bool Equals(object? other)
     {
         if (other == null)
@@ -131,7 +125,6 @@ public class Apartment : IAddressPart
         var parsed = (Apartment)other;
         return parsed._id == _id;
     }
-
     public AddressRecord ToAddressRecord()
     {
         return new AddressRecord(){
@@ -142,12 +135,10 @@ public class Apartment : IAddressPart
             ParentId = _parentBuilding.Id
         };
     }
-
     public IEnumerable<IAddressPart> GetDescendants()
     {
         return new List<IAddressPart>();
     }
-
     public override string ToString()
     {
         return LongTypedName;

@@ -6,10 +6,10 @@ namespace StudentTracking.Controllers.DTO.In;
 public class AddressDTO {
     public AddressDTO()
     {
-        
+        Address = null;
     }
 
     [JsonRequired]
-    public string Address {get; set; }
+    public string? Address {get; set; }
 
 }

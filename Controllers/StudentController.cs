@@ -92,36 +92,53 @@ public class StudentController : Controller
 
         using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
         using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
-        // реальный адрес проживания
-        var actualAddressResult = AddressModel.Build(dto.ActualAddress);
-        // прописка
-        var factAddressResult = AddressModel.Build(dto.FactAddress);
         var rusCitizenshipResult = RussianCitizenship.Build(dto.RusCitizenship);
         var studentResult = StudentModel.Build(dto.Student);
         var studentTagsResults = dto.Education.Select(x => StudentEducationalLevelRecord.Create(x));
 
         
-        if (ResultHelper.AnyFailure(actualAddressResult, factAddressResult, rusCitizenshipResult, studentResult) || studentTagsResults.Any(x => x.IsFailure))
+        if (ResultHelper.AnyFailure(rusCitizenshipResult, studentResult) || studentTagsResults.Any(x => x.IsFailure))
         {   
-            var errors = ResultHelper.MergeErrors(actualAddressResult, factAddressResult, rusCitizenshipResult, studentResult).ToList();
+            var errors = ResultHelper.MergeErrors(rusCitizenshipResult, studentResult).ToList();
             if (studentTagsResults.Any(x => x.IsFailure)){
                 errors.AddRange(studentTagsResults.Where(x => x.IsFailure).First().Errors);
             }
             var err = new ErrorsDTO(errors);
             return Json(err);
         }
-        var actualAddress = actualAddressResult.ResultObject;
-        var factAddress = factAddressResult.ResultObject;
+        
         var rusCitizenship = rusCitizenshipResult.ResultObject;
         var student = studentResult.ResultObject;
         var tags = studentTagsResults.Select(x => x.ResultObject);
 
         try
         {
+            // инициализация адреса в таком порядке, чтобы не создавались копии
+             // реальный адрес проживания
+            var actualAddressResult = AddressModel.Create(dto.ActualAddress, savingTransaction);
+            if (actualAddressResult.IsFailure){
+                return Json(new ErrorsDTO(actualAddressResult.Errors));
+            }
+            var actualAddress = actualAddressResult.ResultObject;
+            await actualAddress.Save(savingTransaction);
+            // прописка
+            var factAddressResult = AddressModel.Create(dto.FactAddress, savingTransaction);
+            if (factAddressResult.IsFailure){
+                return Json(new ErrorsDTO(factAddressResult.Errors));
+            }
+            var factAddress = factAddressResult.ResultObject;
+            await factAddress.Save(savingTransaction);
+
             // проверка адресации не проходит, адрес каждый раз новый
             // дописать потом
-            await actualAddress.Save(savingTransaction);
-            await factAddress.Save(savingTransaction);
+            var result = await actualAddress.Save(savingTransaction);
+            if (result.IsFailure){
+                return Json(new ErrorsDTO(result.Errors));
+            }
+            result = await factAddress.Save(savingTransaction);
+            if (result.IsFailure){
+                return Json(new ErrorsDTO(result.Errors));
+            }
 
             rusCitizenship.LegalAddressId = factAddress.Id;
             if (await RussianCitizenship.IsIdExists(rusCitizenship.Id, savingTransaction)){
@@ -157,9 +174,9 @@ public class StudentController : Controller
         await savingTransaction.CommitAsync();
         return Json(new
         {
-            ActualAddressId = actualAddress.Id,
+            ActualAddressId = student.ActualAddressId,
             StudentId = student.Id,
-            LegalAddressId = factAddress.Id,
+            LegalAddressId = rusCitizenship.LegalAddressId,
             RussianCitizenshipId = rusCitizenship.Id
 
         });

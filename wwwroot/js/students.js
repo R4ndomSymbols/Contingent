@@ -24,13 +24,7 @@ $(document).ready(function () {
     });
 });
 
-function setAutocompleteCountryRegions() {
-    $("#country_region").autocomplete({
-        source: countryRegions.map((x) => x.name)
-    });
-};
-
-$("#ActualAddress").on("change", function () {
+$("#ActualAddress").on("keyup", function () {
     var address = $("#ActualAddress").val();
     if (address.length > 3) {
         $.ajax({
@@ -38,8 +32,8 @@ $("#ActualAddress").on("change", function () {
             url: "/addresses/suggest/" + address,
             dataType: "JSON",
             success: function (response) {
-                $("#country_region").autocomplete({
-                    source: response
+                $("#ActualAddress").autocomplete({
+                    source: response.map(x => address + " " + x)
                 });
             }
         });
@@ -54,8 +48,15 @@ $("#about").click(function () {
         dataType: "JSON",
         success: function (response) {
             var about = document.getElementById("AboutAddress");
-            if (about != null) {
-                about.innerHTML = response["aboutAddress"];
+            about.innerHTML = "";
+            if (response["addressState"] == undefined){
+                errors = response["errors"]
+                $.each(errors, function (indexInArray, valueOfElement) { 
+                     about.innerHTML += "<br>" + valueOfElement["messageForUser"] + "</br>";
+                });
+            }
+            else{
+                about.innerHTML = response["addressState"];
             }
         }
     });
@@ -67,12 +68,18 @@ $("#about_legal_address").click(function () {
         url: "/addresses/explain/" + address,
         dataType: "JSON",
         success: function (response) {
-            var about = document.getElementById("legal_address_info");
-            if (about != null) {
-                about.innerHTML = response["aboutAddress"];
-            }
+        var about = document.getElementById("legal_address_info");
+            about.innerHTML = "";
+        if (response["addressState"] == undefined){
+            errors = response["errors"]
+            $.each(errors, function (indexInArray, valueOfElement) { 
+                    about.innerHTML += "<br>" + valueOfElement["messageForUser"] + "</br>";
+            });
         }
-    });
+        else{
+            about.innerHTML = response["addressState"];
+        }
+    }});
 });
 $("#add_education_level").click(function () 
 {  

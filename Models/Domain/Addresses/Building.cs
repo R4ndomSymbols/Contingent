@@ -5,7 +5,6 @@ using StudentTracking.Models.Domain.Misc;
 using Utilities;
 using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
-
 public class Building : IAddressPart
 {
     public const int ADDRESS_LEVEL = 6;
@@ -22,7 +21,6 @@ public class Building : IAddressPart
         NotMentioned = -1,
         Building = 1
     }
-
     private int _id;
     private Street _parentStreet;
     private BuildingTypes _buildingType;
@@ -31,7 +29,6 @@ public class Building : IAddressPart
     {
         get => _id;
     }
-
     public Street StreetParentId
     {
         get => _parentStreet;
@@ -51,7 +48,6 @@ public class Building : IAddressPart
             return Names[_buildingType].FormatLong(_untypedName);
         }
     }
-
     private Building(int id)
     {
         _id = id;
@@ -60,12 +56,11 @@ public class Building : IAddressPart
     {
        _id = Utils.INVALID_ID;
     }
-    public static Result<Building?> Create(string addressPart, Street scope){
+    public static Result<Building?> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание указано неверно или не указано"));
         }
-
         NameToken? foundBuilding = null;
         BuildingTypes buildingType = BuildingTypes.NotMentioned;  
         foreach (var pair in Names){
@@ -78,7 +73,7 @@ public class Building : IAddressPart
         if (foundBuilding is null){
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(scope.Id, foundBuilding.Name, (int)buildingType, ADDRESS_LEVEL);
+        var fromDb = AddressModel.FindRecords(parent.Id, foundBuilding.Name, (int)buildingType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -87,7 +82,7 @@ public class Building : IAddressPart
             else{
                 var first = fromDb.First();
                 return Result<Building?>.Success(new Building(first.AddressPartId){
-                    _parentStreet = scope, 
+                    _parentStreet = parent, 
                     _buildingType = (BuildingTypes)first.ToponymType,
                     _untypedName = first.AddressName
                 });
@@ -95,13 +90,12 @@ public class Building : IAddressPart
         }
         
         var got = new Building(){
-            _parentStreet = scope,
+            _parentStreet = parent,
             _buildingType = buildingType,
             _untypedName = foundBuilding.Name,
         };
         return Result<Building?>.Success(got);
     }
-
     public static Building? Create(AddressRecord source, Street parent){
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
@@ -112,7 +106,6 @@ public class Building : IAddressPart
             _untypedName = source.AddressName
         };
     }
-
     public async Task Save(ObservableTransaction? scope = null){
         await _parentStreet.Save(scope);
         if (_id == Utils.INVALID_ID){
@@ -120,21 +113,6 @@ public class Building : IAddressPart
         }
     }
     
-    public override bool Equals(object? other)
-    {
-        if (other == null)
-        {
-            return false;
-        }
-        if (other.GetType() != typeof(Building))
-        {
-            return false;
-        }
-        var parsed = (Building)other;
-        return parsed._id == _id;
-
-    }
-
     public AddressRecord ToAddressRecord()
     {
         return new AddressRecord(){
@@ -145,13 +123,11 @@ public class Building : IAddressPart
             ParentId = _parentStreet.Id
         };
     }
-
     public IEnumerable<IAddressPart> GetDescendants()
     {
-        var found = AddressModel.FindRecords(_id);
+        var found = AddressModel.FindRecords(_id).Result;
         return found.Select(d => Apartment.Create(d, this));    
     }
-
     public override string ToString(){
         return LongTypedName;
     }

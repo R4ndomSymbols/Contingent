@@ -6,7 +6,13 @@ public class RussianCitizenshipDTO {
 
     public RussianCitizenshipDTO()
     {
-        Id = null;   
+        Id = null;
+        Name = "";
+        Surname = "";
+        Patronymic = null;
+        PassportNumber = "";
+        PassportSeries = "";
+           
     }
     public int? Id {get; set; }
     [JsonRequired]
