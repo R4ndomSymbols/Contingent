@@ -1,9 +1,5 @@
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Npgsql;
-using StudentTracking.Models.Domain.Misc;
 using Utilities;
-using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 public class District : IAddressPart
 {
@@ -12,11 +8,11 @@ public class District : IAddressPart
         new Regex(@"округ"),
         new Regex(@"район")
     };
-    public static readonly IReadOnlyDictionary<DistrictTypes, NameFormatting> Names = new Dictionary<DistrictTypes, NameFormatting>(){
-        {DistrictTypes.NotMentioned, new NameFormatting("Нет", "Не указано", NameFormatting.AFTER)},
-        {DistrictTypes.CityTerritory, new NameFormatting("г.о.", "Городской округ", NameFormatting.AFTER)},
-        {DistrictTypes.MunicipalDistrict, new NameFormatting("м.р-н", "Муниципальный район", NameFormatting.AFTER)},
-        {DistrictTypes.MunicipalTerritory, new NameFormatting("м.о.", "Муниципальный округ", NameFormatting.AFTER)},
+    public static readonly IReadOnlyDictionary<DistrictTypes, AddressNameFormatting> Names = new Dictionary<DistrictTypes, AddressNameFormatting>(){
+        {DistrictTypes.NotMentioned, new AddressNameFormatting("Нет", "Не указано", AddressNameFormatting.AFTER)},
+        {DistrictTypes.CityTerritory, new AddressNameFormatting("г.о.", "Городской округ", AddressNameFormatting.AFTER)},
+        {DistrictTypes.MunicipalDistrict, new AddressNameFormatting("м.р-н", "Муниципальный район", AddressNameFormatting.AFTER)},
+        {DistrictTypes.MunicipalTerritory, new AddressNameFormatting("м.о.", "Муниципальный округ", AddressNameFormatting.AFTER)},
     };
     public enum DistrictTypes
     {
@@ -27,7 +23,7 @@ public class District : IAddressPart
     }
     private int _id;
     private FederalSubject _parentFederalSubject;
-    private string _untypedName;
+    private AddressNameToken _districtName;
     private DistrictTypes _districtType;
     public int Id
     {
@@ -41,14 +37,6 @@ public class District : IAddressPart
     {
         get => _districtType;
     }
-    public string UntypedName
-    {
-        get => Utils.FormatToponymName(_untypedName);
-    }
-    public string LongTypedName
-    {
-        get => Names[_districtType].FormatLong(UntypedName);
-    }
     private District()
     {
         _id = Utils.INVALID_ID;
@@ -61,7 +49,7 @@ public class District : IAddressPart
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня указано неверно"));
         }
-        NameToken? foundDistrict = null;
+        AddressNameToken? foundDistrict = null;
         DistrictTypes subjectType = DistrictTypes.NotMentioned;  
         foreach (var pair in Names){
             foundDistrict = pair.Value.ExtractToken(addressPart); 
@@ -73,7 +61,7 @@ public class District : IAddressPart
         if (foundDistrict is null){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict.Name, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict.UnformattedName, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -84,7 +72,7 @@ public class District : IAddressPart
                 return Result<District?>.Success(new District(first.AddressPartId){
                     _parentFederalSubject = parent, 
                     _districtType = (DistrictTypes)first.ToponymType,
-                    _untypedName = first.AddressName
+                    _districtName = new AddressNameToken(first.AddressName, Names[(DistrictTypes)first.ToponymType]),
                 });
             }
         }
@@ -92,7 +80,7 @@ public class District : IAddressPart
         var got = new District(){
             _parentFederalSubject = parent,
             _districtType = subjectType,
-            _untypedName = foundDistrict.Name,
+            _districtName = foundDistrict,
         };
         return Result<District?>.Success(got);
     }
@@ -104,7 +92,7 @@ public class District : IAddressPart
         return new District(source.AddressPartId){
             _districtType = (DistrictTypes)source.ToponymType,
             _parentFederalSubject = parent,
-            _untypedName = source.AddressName
+            _districtName = new AddressNameToken(source.AddressName, Names[(DistrictTypes)source.ToponymType]),
         };
     }
     
@@ -121,7 +109,7 @@ public class District : IAddressPart
         return new AddressRecord(){
             ParentId = _parentFederalSubject.Id,
             AddressLevelCode = ADDRESS_LEVEL,
-            AddressName = _untypedName,
+            AddressName = _districtName.UnformattedName,
             AddressPartId = _id,
             ToponymType = (int)_districtType
         };
@@ -135,6 +123,6 @@ public class District : IAddressPart
 
     public override string ToString()
     {
-        return LongTypedName;
+        return _districtName.FormattedName;
     }
 }

@@ -1,8 +1,5 @@
 using System.Drawing;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.TagHelpers;
-using StudentTracking.SQL;
-using Utilities;
 
 namespace StudentTracking.Statistics;
 
@@ -18,7 +15,9 @@ public class StatisticTable<M> {
 
     private IEnumerable<M> _tableDataSource;
 
-    public StatisticTable(TableColumnHeader<M> tableColumnHeader, TableRowHeader<M> rowHeader, IEnumerable<M> dataSource){
+    public string TableName {get; private init;}
+
+    public StatisticTable(TableColumnHeader<M> tableColumnHeader, TableRowHeader<M> rowHeader, IEnumerable<M> dataSource, string tableName){
         _columnHeaders = tableColumnHeader;
         _rowHeaders = rowHeader;
         _startPoint = new Point(
@@ -30,6 +29,7 @@ public class StatisticTable<M> {
             _rowHeaders.HeaderHeigth - 1
         );
         _tableDataSource = dataSource;
+        TableName = tableName;
         Populate();
     }
 

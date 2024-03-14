@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using StudentTracking.SQL;
 namespace StudentTracking.Statistics;
 

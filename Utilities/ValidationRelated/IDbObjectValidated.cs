@@ -1,5 +1,3 @@
-using Npgsql;
-
 namespace Utilities.Validation;
 
 public interface IDbObjectValidated : IValidatedObject, IEquatable<IDbObjectValidated>{

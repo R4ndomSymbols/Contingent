@@ -5,6 +5,8 @@ var currentTagId = minimal_tag_id;
 var addresses = [];
 var selectedTags = [];
 var tags = [];
+var lock = false;
+var timeoutPromise
 
 $(document).ready(function () {
     $.ajax({
@@ -24,7 +26,25 @@ $(document).ready(function () {
     });
 });
 
+function checkTimeout() {
+    if (lock){
+        return false;
+    }
+    lock = true;
+    timeoutPromise = new Promise(
+        (resolve) => setTimeout(
+            () => {
+                lock = false;
+                resolve("resolved")
+            }, 1000)
+    )
+    return true;
+}
+
 $("#ActualAddress").on("keyup", function () {
+    if (!checkTimeout()){
+        return;
+    }
     var address = $("#ActualAddress").val();
     if (address.length > 3) {
         $.ajax({
@@ -33,6 +53,24 @@ $("#ActualAddress").on("keyup", function () {
             dataType: "JSON",
             success: function (response) {
                 $("#ActualAddress").autocomplete({
+                    source: response.map(x => address + " " + x)
+                });
+            }
+        });
+    }
+});
+$("#LegalAddress").on("keyup", function () {
+    if (!checkTimeout()){
+        return;
+    }
+    var address = $("#LegalAddress").val();
+    if (address.length > 3) {
+        $.ajax({
+            type: "GET",
+            url: "/addresses/suggest/" + address,
+            dataType: "JSON",
+            success: function (response) {
+                $("#LegalAddress").autocomplete({
                     source: response.map(x => address + " " + x)
                 });
             }
@@ -132,25 +170,20 @@ $("#save").click(function () {
         url: "/students/addcomplex",
         data: JSON.stringify(
         {
-            ActualAddress: {
+            
+            Id: (document.getElementById("StudentId") === null) ? null : Number($("#StudentId").val()),
+            GradeBookNumber: $("#GradeBookNumber").val(),
+            DateOfBirth: $("#DateOfBirth").val(),
+            Gender: Number($("#Gender").val()),
+            Snils: $("#Snils").val(),
+            Inn: $("#Inn").val(),
+            TargetAgreementType: Number($("#TargetAgreementType").val()),
+            PaidAgreementType: Number($("#PaidAgreementType").val()),
+            AdmissionScore: $("#AdmissionScore").val(),
+            GiaMark: giaMark == "" ? null : giaMark,
+            GiaDemoExamMark:  giaDemMark == "" ? null : giaDemMark,
+            PhysicalAddress: {
                 Address : realAddress,
-            },
-            Student : {
-                Id: (document.getElementById("StudentId") === null) ? null : Number($("#StudentId").val()),
-                GradeBookNumber: $("#GradeBookNumber").val(),
-                DateOfBirth: $("#DateOfBirth").val(),
-                Gender: Number($("#Gender").val()),
-                Snils: $("#Snils").val(),
-                Inn: $("#Inn").val(),
-                TargetAgreementType: Number($("#TargetAgreementType").val()),
-                PaidAgreementType: Number($("#PaidAgreementType").val()),
-                AdmissionScore: $("#AdmissionScore").val(),
-                GiaMark: giaMark == "" ? null : giaMark,
-                GiaDemoExamMark:  giaDemMark == "" ? null : giaDemMark,
-                RussianCitizenshipId : null
-            },
-            FactAddress: {
-                Address : legalAddress,
             },
             RusCitizenship:{
                 Id: (document.getElementById("RussianCitizenshipId") === null) ? null : Number($("#RussianCitizenshipId").val()),
@@ -159,10 +192,12 @@ $("#save").click(function () {
                 Patronymic: patr == "" ? null : patr,
                 PassportNumber: $("#PassportNumber").val(),
                 PassportSeries: $("#PassportSeries").val(),
+                LegalAddress: {
+                    Address : legalAddress,
+                },
             },
             Education: getEducationLevels()
-
-
+            
         }),
         dataType: "JSON",
         success: function (response) {

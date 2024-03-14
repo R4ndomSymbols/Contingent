@@ -1,15 +1,15 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Models.Domain;
 
 namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class StudentDTO {
-    public StudentDTO()
+public class StudentInDTO {
+    public StudentInDTO()
     {
-        RussianCitizenshipId = null;
+        RusCitizenship = null;
         Id = null;
     }
+    public int? Id {get; set; }
 
     [JsonRequired]
     public string GradeBookNumber {get; set;}
@@ -31,7 +31,11 @@ public class StudentDTO {
     public string GiaMark { get; set; }
     [JsonRequired]
     public string GiaDemoExamMark { get; set; }
-    public int? RussianCitizenshipId { get; set; }
-    public int? Id {get; set; }
+    public RussianCitizenshipInDTO? RusCitizenship {get; set;}
+    [JsonRequired]
+    public AddressDTO PhysicalAddress {get; set;}
+    [JsonRequired]
+    public List<StudentEducationRecordDTO> Education {get; set;}
+   
     
 }

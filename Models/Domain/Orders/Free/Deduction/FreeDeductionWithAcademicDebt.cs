@@ -68,9 +68,9 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
             return res;
         }
         foreach (var debtHolder in _debtHolders){
-            var paidGroup = (await debtHolder.Student.GetCurrentGroup())?.SponsorshipType?.IsFree();
-            if (!await StudentHistory.IsStudentEnlisted(debtHolder.Student) ||
-                paidGroup is null || (bool)paidGroup){
+            var aggregate = StudentHistory.GetLastRecordOnStudent(debtHolder.Student.Id);
+            var paidGroup = aggregate?.GroupTo?.SponsorshipType?.IsFree();
+            if (paidGroup is null || (bool)paidGroup){
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
             }
         }

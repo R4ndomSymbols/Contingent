@@ -1,6 +1,3 @@
-using Npgsql.Replication.PgOutput.Messages;
-using Utilities.Validation;
-
 namespace StudentTracking.SQL;
 
 public class ComplexWhereCondition : IQueryPart{
@@ -73,7 +70,7 @@ public class ComplexWhereCondition : IQueryPart{
                 TraceDown(condition._right, history);
             }
             if (condition._facaded is not null){
-                history.Add(condition._facaded.RestrictedColumn);
+                history.Add(condition._facaded.RestrictedLeft);
             }
         }
 

@@ -15,6 +15,28 @@ public class JoinSection : IQueryPart{
         );
         return this;
     }
+    public JoinSection AppendJoin(JoinType type, Column sourceTableColumn, Column joinColumn, string joinAlias){
+        string prefix = _joinPrefixes[type];
+        _joins.Add(
+            prefix + " " + joinColumn.TableName + " AS "+ joinAlias + " ON " +  sourceTableColumn.AsSQLText() + " = " + new Column(joinColumn.Name, joinAlias).AsSQLText() 
+        );
+        return this;
+    }
+    public JoinSection AppendJoin(JoinSection? joinSection){
+        if (joinSection is not null){
+            _joins.AddRange(joinSection._joins);
+        }
+        return this;
+    }
+    public JoinSection AddHead(JoinType type, Column sourceTableColumn, Column joinColumn){
+        string prefix = _joinPrefixes[type];
+        _joins.Insert(0,
+            prefix + " " + joinColumn.TableName + " ON " +  sourceTableColumn.AsSQLText() + " = " + joinColumn.AsSQLText()
+        );
+        return this;
+    }
+
+
     // удостоверится, что методы сравнения ключей переопределены
     public static JoinSection? FindJoinRoute(string sourceTableName, IEnumerable<Column> mustBeSelected){
         // не работает для составных ключей
@@ -176,6 +198,7 @@ public class JoinSection : IQueryPart{
     };    
 
 }
+
 
 
 

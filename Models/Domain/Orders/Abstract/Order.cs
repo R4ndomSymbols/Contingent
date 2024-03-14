@@ -6,8 +6,6 @@ using StudentTracking.Controllers.DTO.In;
 using System.Text.Json;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
-using System.Data.SqlTypes;
-using System.Runtime.InteropServices;
 
 namespace StudentTracking.Models.Domain.Orders;
 
@@ -242,14 +240,14 @@ public abstract class Order
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = new Mapper<Order>(
-            async (r) =>
+            (r) =>
             {
                 var id = r["ordid"];
                 if (id.GetType() == typeof(DBNull))
                 {
                     return QueryResult<Order>.NotFound();
                 }
-                var result = await GetOrderById((int)id);
+                var result = GetOrderById((int)id).Result;
                 if (result.IsFailure)
                 {
                     throw new Exception("Приказ не может быть не получен на данном этапе");
@@ -304,7 +302,7 @@ public abstract class Order
             foreach (var r in records)
             {
                 writer.StartRow();
-                writer.Write<int>(r.Student.Id);
+                writer.Write<int>(r.Student.Id.Value);
                 writer.Write<int>(r.ByOrder.Id);
                 if (r.GroupTo != null)
                 {

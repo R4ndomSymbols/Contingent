@@ -1,5 +1,4 @@
 using Npgsql;
-using Npgsql.Internal;
 
 namespace Utilities;
 

@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace StudentTracking.SQL;
 
 public class OrderByCondition : IQueryPart

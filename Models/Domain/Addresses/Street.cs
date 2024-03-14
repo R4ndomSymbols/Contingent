@@ -1,9 +1,5 @@
 using System.Text.RegularExpressions;
-using Npgsql;
 using Utilities;
-using StudentTracking.Models.Domain.Misc;
-using Utilities.Validation;
-using StudentTracking.Models.JSON;
 namespace StudentTracking.Models.Domain.Address;
 public class Street : IAddressPart
 {
@@ -18,16 +14,16 @@ public class Street : IAddressPart
         new Regex(@"проезд"),
         new Regex(@"шоссе"),
     };
-    public static readonly IReadOnlyDictionary<StreetTypes, NameFormatting> Names = new Dictionary<StreetTypes, NameFormatting>(){
-        {StreetTypes.NotMentioned, new NameFormatting("нет", "Не указано", NameFormatting.BEFORE)},
-        {StreetTypes.Street, new NameFormatting("ул.", "Улица", NameFormatting.BEFORE)},
-        {StreetTypes.Embankment, new NameFormatting("наб.", "Набережная", NameFormatting.BEFORE)},
-        {StreetTypes.Avenue, new NameFormatting("пр-кт", "Проспект", NameFormatting.BEFORE)},
-        {StreetTypes.DeadEnd, new NameFormatting("туп.", "Тупик", NameFormatting.BEFORE)},
-        {StreetTypes.Alley, new NameFormatting("ал.", "Аллея", NameFormatting.BEFORE)},
-        {StreetTypes.Square, new NameFormatting("пл.", "Площадь", NameFormatting.BEFORE)},
-        {StreetTypes.Passage, new NameFormatting("пр-д", "Проезд", NameFormatting.BEFORE)},
-        {StreetTypes.Highway, new NameFormatting("ш.", "Шоссе", NameFormatting.BEFORE)},
+    public static readonly IReadOnlyDictionary<StreetTypes, AddressNameFormatting> Names = new Dictionary<StreetTypes, AddressNameFormatting>(){
+        {StreetTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Street, new AddressNameFormatting("ул.", "Улица", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Embankment, new AddressNameFormatting("наб.", "Набережная", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Avenue, new AddressNameFormatting("пр-кт", "Проспект", AddressNameFormatting.BEFORE)},
+        {StreetTypes.DeadEnd, new AddressNameFormatting("туп.", "Тупик", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Alley, new AddressNameFormatting("ал.", "Аллея", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Square, new AddressNameFormatting("пл.", "Площадь", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Passage, new AddressNameFormatting("пр-д", "Проезд", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Highway, new AddressNameFormatting("ш.", "Шоссе", AddressNameFormatting.BEFORE)},
     };
     public enum StreetTypes
     {
@@ -43,7 +39,7 @@ public class Street : IAddressPart
     }
     private int _id;
     private Settlement _parentSettlement;
-    private string _untypedName;
+    private AddressNameToken _streetName;
     private StreetTypes _streetType;
     public int Id
     {
@@ -52,17 +48,6 @@ public class Street : IAddressPart
     public Settlement SettlementParentId
     {
         get => _parentSettlement;
-    }
-    public string UntypedName
-    {
-        get => Utils.FormatToponymName(_untypedName);
-    }
-    public string LongTypedName
-    {
-        get
-        {
-            return Names[_streetType].FormatLong(UntypedName);
-        }
     }
     protected Street(int id)
     {
@@ -77,7 +62,7 @@ public class Street : IAddressPart
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не указан или указан неверно"));
         }
-        NameToken? foundStreet = null;
+        AddressNameToken? foundStreet = null;
         StreetTypes streetType = StreetTypes.NotMentioned;  
         foreach (var pair in Names){
             foundStreet = pair.Value.ExtractToken(addressPart); 
@@ -89,7 +74,7 @@ public class Street : IAddressPart
         if (foundStreet is null){
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundStreet.Name, (int)streetType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundStreet.UnformattedName, (int)streetType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -100,7 +85,7 @@ public class Street : IAddressPart
                 return Result<Street?>.Success(new Street(first.AddressPartId){
                     _parentSettlement = parent, 
                     _streetType = (StreetTypes)first.ToponymType,
-                    _untypedName = first.AddressName
+                    _streetName = new AddressNameToken(first.AddressName, Names[(StreetTypes)first.ToponymType])
                 });
             }
         }
@@ -108,7 +93,7 @@ public class Street : IAddressPart
         var got = new Street(){
             _parentSettlement = parent,
             _streetType = streetType,
-            _untypedName = foundStreet.Name,
+            _streetName = foundStreet,
         };
         return Result<Street?>.Success(got);
     }
@@ -116,7 +101,7 @@ public class Street : IAddressPart
         return new Street(source.AddressPartId){
             _parentSettlement = parent,
             _streetType = (StreetTypes)source.ToponymType,
-            _untypedName = source.AddressName
+            _streetName = new AddressNameToken(source.AddressName, Names[(StreetTypes)source.ToponymType])
         };
     }
     public async Task Save(ObservableTransaction? scope = null)
@@ -131,7 +116,7 @@ public class Street : IAddressPart
         return new AddressRecord(){
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
-            AddressName = _untypedName,
+            AddressName = _streetName.UnformattedName,
             ToponymType = (int)_streetType,
             ParentId = _parentSettlement.Id
         };
@@ -143,6 +128,6 @@ public class Street : IAddressPart
     }
     public override string ToString()
     {
-        return LongTypedName;
+        return _streetName.FormattedName;
     }
 }

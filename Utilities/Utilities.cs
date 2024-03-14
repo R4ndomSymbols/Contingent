@@ -1,9 +1,3 @@
-using System;
-using System.Data.SqlTypes;
-using System.Net.Http.Headers;
-using System.Reflection;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.VisualBasic;
 using Npgsql;
 using StudentTracking.Models;
 

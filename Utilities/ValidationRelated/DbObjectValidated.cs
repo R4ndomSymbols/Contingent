@@ -1,7 +1,3 @@
-
-using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
-using Npgsql;
 using StudentTracking.Models.Domain;
 
 namespace Utilities.Validation;

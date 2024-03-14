@@ -1,5 +1,3 @@
-using System.IO.Compression;
-
 namespace StudentTracking.Statistics;
 public struct CellPlacement {
     public int X {get; set;}

@@ -1,8 +1,3 @@
-
-using System.Diagnostics;
-using Microsoft.VisualBasic;
-using Utilities;
-
 namespace StudentTracking.Statistics;
 
 public class Filter<T> {
@@ -11,7 +6,7 @@ public class Filter<T> {
     private Func<IEnumerable<T>, IEnumerable<T>> _filter;
     public static Filter<T> Empty => new Filter<T>();
 
-    private Filter(){
+    public Filter(){
         _filter = (source) => source;
         _sources = new List<Filter<T>>();
     }

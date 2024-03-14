@@ -1,9 +1,5 @@
-using System.ComponentModel;
 using System.Text.RegularExpressions;
-using Npgsql;
-using StudentTracking.Models.Domain.Misc;
 using Utilities;
-using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 public class Building : IAddressPart
 {
@@ -12,9 +8,9 @@ public class Building : IAddressPart
         new Regex(@"дом"),
         new Regex(@"д\u002E"),
     };
-    public static readonly IReadOnlyDictionary<BuildingTypes, NameFormatting> Names = new Dictionary<BuildingTypes, NameFormatting>(){
-        {BuildingTypes.NotMentioned, new NameFormatting("нет", "Не указано", NameFormatting.BEFORE)},
-        {BuildingTypes.Building, new NameFormatting("д.", "Дом", NameFormatting.BEFORE)},
+    public static readonly IReadOnlyDictionary<BuildingTypes, AddressNameFormatting> Names = new Dictionary<BuildingTypes, AddressNameFormatting>(){
+        {BuildingTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
+        {BuildingTypes.Building, new AddressNameFormatting("д.", "Дом", AddressNameFormatting.BEFORE)},
     };
     public enum BuildingTypes
     {
@@ -24,7 +20,7 @@ public class Building : IAddressPart
     private int _id;
     private Street _parentStreet;
     private BuildingTypes _buildingType;
-    private string _untypedName;
+    private AddressNameToken _buildingName;
     public int Id
     {
         get => _id;
@@ -36,17 +32,6 @@ public class Building : IAddressPart
     public int BuildingType
     {
         get => (int)_buildingType;
-    }
-    public string UntypedName
-    {
-        get => _untypedName;
-    }
-    public string LongTypedName
-    {
-        get
-        {
-            return Names[_buildingType].FormatLong(_untypedName);
-        }
     }
     private Building(int id)
     {
@@ -61,7 +46,7 @@ public class Building : IAddressPart
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание указано неверно или не указано"));
         }
-        NameToken? foundBuilding = null;
+        AddressNameToken? foundBuilding = null;
         BuildingTypes buildingType = BuildingTypes.NotMentioned;  
         foreach (var pair in Names){
             foundBuilding = pair.Value.ExtractToken(addressPart); 
@@ -73,7 +58,7 @@ public class Building : IAddressPart
         if (foundBuilding is null){
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundBuilding.Name, (int)buildingType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundBuilding.UnformattedName, (int)buildingType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -84,7 +69,7 @@ public class Building : IAddressPart
                 return Result<Building?>.Success(new Building(first.AddressPartId){
                     _parentStreet = parent, 
                     _buildingType = (BuildingTypes)first.ToponymType,
-                    _untypedName = first.AddressName
+                    _buildingName = new AddressNameToken(first.AddressName, Names[(BuildingTypes)first.ToponymType])
                 });
             }
         }
@@ -92,7 +77,7 @@ public class Building : IAddressPart
         var got = new Building(){
             _parentStreet = parent,
             _buildingType = buildingType,
-            _untypedName = foundBuilding.Name,
+            _buildingName = foundBuilding,
         };
         return Result<Building?>.Success(got);
     }
@@ -103,7 +88,7 @@ public class Building : IAddressPart
         return new Building(source.AddressPartId){
             _parentStreet = parent,
             _buildingType = (BuildingTypes)source.ToponymType,
-            _untypedName = source.AddressName
+            _buildingName = new AddressNameToken(source.AddressName, Names[(BuildingTypes)source.ToponymType])
         };
     }
     public async Task Save(ObservableTransaction? scope = null){
@@ -118,7 +103,7 @@ public class Building : IAddressPart
         return new AddressRecord(){
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
-            AddressName = _untypedName,
+            AddressName = _buildingName.UnformattedName,
             ToponymType = (int)_buildingType,
             ParentId = _parentStreet.Id
         };
@@ -129,6 +114,6 @@ public class Building : IAddressPart
         return found.Select(d => Apartment.Create(d, this));    
     }
     public override string ToString(){
-        return LongTypedName;
+        return _buildingName.FormattedName;
     }
 }

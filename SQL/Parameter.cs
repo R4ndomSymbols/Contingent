@@ -1,7 +1,4 @@
 using System.Collections;
-using System.Data.SqlTypes;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
 using Npgsql;
 using NpgsqlTypes;
 

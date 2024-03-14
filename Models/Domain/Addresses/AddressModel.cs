@@ -1,13 +1,9 @@
 namespace StudentTracking.Models.Domain.Address;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.JSON;
 using StudentTracking.SQL;
 using System.Data;
-using System.Diagnostics;
 using Utilities;
-using Utilities.Validation;
 public class AddressModel
 {
     private FederalSubject? _subjectPart;
@@ -17,7 +13,7 @@ public class AddressModel
     private Street? _streetPart;
     private Building? _buildingPart;
     private Apartment? _apartmentPart;
-    public int Id
+    public int? Id
     {
         get
         {
@@ -37,7 +33,7 @@ public class AddressModel
             }
             else
             {
-                return Utils.INVALID_ID;
+                return null;
             }
         }
     }
@@ -70,7 +66,7 @@ public class AddressModel
             }
             string partName = prefix + (part is null ? "" : part.ToString());
             state = "[" + state + "]";
-            return state + string.Join("\n", string.Join(" ", Enumerable.Repeat(' ', 30 - state.Length)) + partName);
+            return state + string.Join("", Enumerable.Repeat(' ', 35 - state.Length)) + partName;
         }
     }
     public override string ToString()
@@ -89,10 +85,13 @@ public class AddressModel
     private AddressModel()
     {
     }
-    public static async Task<AddressModel?> GetAddressById(int id)
+    public static async Task<AddressModel?> GetAddressById(int? id)
     {
+        if (id is null || id.Value == Utils.INVALID_ID){
+            return null;
+        }
         var address = new AddressModel();
-        var restored = await RestoreAddress(id);
+        var restored = await RestoreAddress((int)id);
         ProcessSubject(restored, address);
         return address;
     }
@@ -229,7 +228,7 @@ public class AddressModel
                     ToponymType = (int)m["toponym_type"],
                     ParentId = m["parent_id"].GetType() == typeof(DBNull) ? null : (int)m["parent_id"] 
                 };
-                return Task.Run(() => QueryResult<AddressRecord>.Found(mapped));
+                return QueryResult<AddressRecord>.Found(mapped);
             },
             new List<Column>(){
                 new Column("address_part_id", "address_hierarchy"),
@@ -284,7 +283,7 @@ public class AddressModel
                         AddressLevelCode = (int)reader["address_level"],
                         AddressName = (string)reader["address_name"],
                         ToponymType = (int)reader["toponym_type"],
-                        ParentId = (int)reader["parent_id"]
+                        ParentId = reader["parent_id"].GetType() == typeof(DBNull) ? null : (int)reader["parent_id"] 
                     }
                 );
             }

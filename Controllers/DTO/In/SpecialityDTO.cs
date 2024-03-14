@@ -22,6 +22,8 @@ public class SpecialityDTO {
     public int EducationalLevelOut {get; set; }
     [JsonInclude]
     public int TeachingDepth {get; set;}
+    [JsonInclude]
+    public int ProgramType { get; set; }
 
     public SpecialityDTO()
     {

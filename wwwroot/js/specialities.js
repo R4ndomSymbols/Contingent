@@ -13,6 +13,7 @@ $("#save").click(function () {
             EducationalLevelIn: Number($("#EducationalLevelIn").val()),
             EducationalLevelOut: Number($("#EducationalLevelOut").val()),
             TeachingLevel: Number($("#TeachingLevel").val()),
+            ProgramType: Number($("#ProgramType").val())
         }),
         dataType: "JSON",
         success: function (response) {

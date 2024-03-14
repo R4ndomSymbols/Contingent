@@ -2,40 +2,63 @@ namespace StudentTracking.SQL;
 
 public class WhereCondition : IQueryPart{
 
-    private Column _columnConstrained;
-
-    public Column RestrictedColumn => _columnConstrained;
-    private SQLParameter _value;
+    private Column _columnLeft;
+    private Column? _columnRight;
+    public Column RestrictedLeft => _columnLeft;
+    public Column? RestrictedRight => _columnRight;
+    private SQLParameter? _value;
     private Relations _relation; 
     public WhereCondition(
         Column constrainedColumn, 
         SQLParameter value,
         Relations relation){
-        _columnConstrained = constrainedColumn;
+        _columnLeft = constrainedColumn;
         _value = value;
         _relation = relation;
         _strategy = () => {
-            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " " + _value.GetName(); 
+            return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " " + _value.GetName(); 
+        };
+    }
+    public WhereCondition(
+        Column leftColumn, 
+        Column rigthColumn,
+        Relations relation){
+        _columnLeft = leftColumn;
+        _value = null;
+        _relation = relation;
+        _columnRight = rigthColumn;
+        _strategy = () => {
+            return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " " + _columnRight.AsSQLText(); 
         };
     }
     // ограничение на NULL
     public WhereCondition(
         Column constrainedColumn, 
         Relations relation){
-        _columnConstrained = constrainedColumn;
+        _columnLeft = constrainedColumn;
         _relation = relation;
         _strategy = () => {
-            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " NULL"; 
+            return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " NULL"; 
+        };
+    }
+    public WhereCondition(
+        Column constrainedColumn,
+        SelectQuery query, 
+        Relations relation){
+        _columnLeft = constrainedColumn;
+        _relation = relation;
+        _strategy = () => {
+            return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " ( " + query.AsSQLText() + " ) "; 
         };
     }
     public WhereCondition(
         Column constrainedColumn, 
         string parameterValue,
         Relations relation){
-        _columnConstrained = constrainedColumn;
+        _columnLeft = constrainedColumn;
         _relation = relation;
         _strategy = () => {
-            return _columnConstrained.AsSQLText() + " " + _sqlRelations[_relation] + " " + parameterValue; 
+            return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " " + parameterValue; 
         };
     }
 

@@ -1,7 +1,3 @@
-using System.Drawing;
-using System.Runtime.CompilerServices;
-using Microsoft.VisualBasic;
-using StudentTracking.SQL;
 namespace StudentTracking.Statistics;
 
 // параметр нужен для фильтрации

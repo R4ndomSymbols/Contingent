@@ -1,9 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Npgsql.Replication;
 
 namespace Utilities.Validation;
 
@@ -100,7 +97,7 @@ public static class ValidatorCollection {
         err.Log(); 
         return err;
     }
-    public static bool IsValidRule([NotNull]this IList<ValidationError> source, bool res,  string message, string propName = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0){
+    public static bool IsValidRule([NotNull]this IList<ValidationError?> source, bool res,  string message, string propName = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0){
         if (!res){
             var err = new ValidationError(propName, message, path, line.ToString());
             err.Log();

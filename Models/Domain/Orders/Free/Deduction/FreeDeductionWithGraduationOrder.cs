@@ -1,10 +1,7 @@
-using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
-using StudentTracking.Models.JSON;
 using Utilities;
-using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain.Orders;
 
@@ -71,7 +68,8 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
             return check;
         }
         foreach(var i in _graduates){
-            var group = await i.Student.GetCurrentGroup(); 
+            var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student.Id);
+            var group = aggregate?.GroupTo; 
             if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid()){
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
             }

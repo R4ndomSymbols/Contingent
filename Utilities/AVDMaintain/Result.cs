@@ -1,11 +1,9 @@
-using System.Collections;
-
 namespace Utilities;
 
 public sealed class Result<T> : IResult{
 
     private readonly bool _isSuccess;
-    private readonly IEnumerable<ValidationError> _errors;
+    private readonly IEnumerable<ValidationError?> _errors;
     private T? _resultObject;
     public T? ResultObject {
         get {
@@ -24,7 +22,7 @@ public sealed class Result<T> : IResult{
     public bool IsFailure{
         get => !_isSuccess;
     }
-    public IReadOnlyCollection<ValidationError> Errors {
+    public IReadOnlyCollection<ValidationError?> Errors {
         get {
             if (_isSuccess || _errors is null){
                 throw new Exception("Невозможно получить ошибки из Success запроса"); 
@@ -39,7 +37,7 @@ public sealed class Result<T> : IResult{
         _errors = null;
     }
 
-    private Result (IEnumerable<ValidationError> errors){
+    private Result (IEnumerable<ValidationError?> errors){
         _errors = errors;
         _isSuccess = false;
         _resultObject = default(T);
@@ -48,7 +46,7 @@ public sealed class Result<T> : IResult{
     public static Result<T?> Success(T? obj){
         return new Result<T?>(obj);
     }
-    public static Result<T?> Failure(IEnumerable<ValidationError>? errors){
+    public static Result<T?> Failure(IEnumerable<ValidationError?>? errors){
         if (errors is null){
             throw new ArgumentNullException(nameof(errors));
         }

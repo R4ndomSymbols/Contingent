@@ -1,10 +1,5 @@
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Npgsql;
-using StudentTracking.Models.Domain.Misc;
 using Utilities;
-using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain.Address;
 
@@ -21,26 +16,11 @@ public class FederalSubject : IAddressPart
     };
 
     private int _id;
-    private string _subjectUntypedName;
+    private AddressNameToken _subjectName;
     private FederalSubjectTypes _federalSubjectType;
 
     public int Id {
         get => _id;
-    }
-    public int SubjectType
-    {
-        get => (int)_federalSubjectType;
-    }
-    public string UntypedName
-    {
-        get => Utils.FormatToponymName(_subjectUntypedName);
-    }
-    public string LongTypedName
-    {
-        get
-        {
-            return Names[_federalSubjectType].FormatLong(UntypedName);
-        }
     }
 
     private FederalSubject()
@@ -62,14 +42,14 @@ public class FederalSubject : IAddressPart
         Region = 6, // область
     }
 
-    public static readonly IReadOnlyDictionary<FederalSubjectTypes, NameFormatting> Names = new Dictionary<FederalSubjectTypes, NameFormatting>(){
-        {FederalSubjectTypes.NotMentioned, new NameFormatting("Нет", "Не указано", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.Republic, new NameFormatting("респ.", "Республика", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.FederalCity, new NameFormatting("г.ф.з.", "Город федерального значения", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.Edge, new NameFormatting("край", "Край", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.Autonomy, new NameFormatting("а.обл.", "Автономная область", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.AutomomyDistrict, new NameFormatting("а.окр", "Автономный округ", NameFormatting.BEFORE)},
-        {FederalSubjectTypes.Region, new NameFormatting("обл.", "Область", NameFormatting.BEFORE)},
+    public static readonly IReadOnlyDictionary<FederalSubjectTypes, AddressNameFormatting> Names = new Dictionary<FederalSubjectTypes, AddressNameFormatting>(){
+        {FederalSubjectTypes.NotMentioned, new AddressNameFormatting("Нет", "Не указано", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.Republic, new AddressNameFormatting("респ.", "Республика", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.FederalCity, new AddressNameFormatting("г.ф.з.", "Город федерального значения", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.Edge, new AddressNameFormatting("край", "Край", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.Autonomy, new AddressNameFormatting("а.обл.", "Автономная область", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.AutomomyDistrict, new AddressNameFormatting("а.окр", "Автономный округ", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.Region, new AddressNameFormatting("обл.", "Область", AddressNameFormatting.BEFORE)},
     };
     // кода у субъекта не будет
     // метод одновременно ищет и в базе адресов
@@ -79,7 +59,7 @@ public class FederalSubject : IAddressPart
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации указан неверно"));
         }
 
-        NameToken? found = null;
+        AddressNameToken? found = null;
         FederalSubjectTypes subjectType = FederalSubjectTypes.NotMentioned;  
         foreach (var pair in Names){
             found = pair.Value.ExtractToken(addressPart); 
@@ -91,7 +71,7 @@ public class FederalSubject : IAddressPart
         if (found is null){
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(null, found.Name, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(null, found.UnformattedName, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -101,14 +81,14 @@ public class FederalSubject : IAddressPart
                 var first = fromDb.First();
                 return Result<FederalSubject?>.Success(new FederalSubject(first.AddressPartId){
                     _federalSubjectType = (FederalSubjectTypes)first.ToponymType,
-                    _subjectUntypedName = first.AddressName
+                    _subjectName = new AddressNameToken(first.AddressName, Names[(FederalSubjectTypes)first.ToponymType])
                 });
             }
         }
         
         var got = new FederalSubject(){
             _federalSubjectType = subjectType,
-            _subjectUntypedName = found.Name,
+            _subjectName = found,
         };
         return Result<FederalSubject?>.Success(got);
     }
@@ -119,7 +99,7 @@ public class FederalSubject : IAddressPart
         }
         return new FederalSubject(source.AddressPartId){
             _federalSubjectType = (FederalSubjectTypes)source.ToponymType,
-            _subjectUntypedName = source.AddressName
+            _subjectName = new AddressNameToken(source.AddressName, Names[(FederalSubjectTypes)source.ToponymType])
         };
     } 
 
@@ -151,7 +131,7 @@ public class FederalSubject : IAddressPart
             ParentId = null,
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
-            AddressName =  _subjectUntypedName,
+            AddressName =  _subjectName.UnformattedName,
             ToponymType = (int)_federalSubjectType
         };
     }
@@ -164,6 +144,6 @@ public class FederalSubject : IAddressPart
 
     public override string ToString()
     {
-        return LongTypedName;
+        return _subjectName.FormattedName;
     }
 }

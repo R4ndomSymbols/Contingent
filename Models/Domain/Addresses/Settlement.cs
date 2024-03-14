@@ -1,11 +1,6 @@
-using System.Collections.ObjectModel;
 using System.Data;
 using System.Text.RegularExpressions;
-using System.Xml;
-using Npgsql;
-using StudentTracking.Models.Domain.Misc;
 using Utilities;
-using Utilities.Validation;
 namespace StudentTracking.Models.Domain.Address;
 public class Settlement : IAddressPart
 {
@@ -16,13 +11,13 @@ public class Settlement : IAddressPart
         new Regex(@"село\s"),
         new Regex(@"деревня"),
     };
-    public static readonly IReadOnlyDictionary<SettlementTypes, NameFormatting> Names = new Dictionary<SettlementTypes, NameFormatting>(){
-        {SettlementTypes.NotMentioned, new NameFormatting("нет", "Не указано", NameFormatting.BEFORE)},
-        {SettlementTypes.City, new NameFormatting("г.", "Город", NameFormatting.BEFORE)},
-        {SettlementTypes.Town, new NameFormatting("пгт.", "Поселок городского типа", NameFormatting.BEFORE)},
-        {SettlementTypes.Village, new NameFormatting("с.", "Село", NameFormatting.BEFORE)},
-        {SettlementTypes.SmallVillage, new NameFormatting("д.", "Деревня", NameFormatting.BEFORE)},
-        {SettlementTypes.TinyVillage, new NameFormatting("п.", "Поселок", NameFormatting.BEFORE)},
+    public static readonly IReadOnlyDictionary<SettlementTypes, AddressNameFormatting> Names = new Dictionary<SettlementTypes, AddressNameFormatting>(){
+        {SettlementTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.City, new AddressNameFormatting("г.", "Город", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.Town, new AddressNameFormatting("пгт.", "Поселок городского типа", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.Village, new AddressNameFormatting("с.", "Село", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.SmallVillage, new AddressNameFormatting("д.", "Деревня", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.TinyVillage, new AddressNameFormatting("п.", "Поселок", AddressNameFormatting.BEFORE)},
     };
     public enum SettlementTypes
     {
@@ -36,7 +31,7 @@ public class Settlement : IAddressPart
     private int _id;
     private SettlementArea? _parentSettlementArea;
     private District? _parentDistrict;
-    private string _untypedName;
+    private AddressNameToken _settlementName;
     private SettlementTypes _settlementType;
     public int Id
     {
@@ -54,17 +49,7 @@ public class Settlement : IAddressPart
     {
         get => (int)_settlementType;
     }
-    public string UntypedName
-    {
-        get => Utils.FormatToponymName(_untypedName);
-    }
-    public string LongTypedName
-    {
-        get
-        {
-            return Names[_settlementType].FormatLong(UntypedName);
-        }
-    }
+
     // валидация не проверяет типы, внутри которых возможно размещение городов, добавить
     private Settlement(){
         _id = Utils.INVALID_ID;
@@ -80,7 +65,7 @@ public class Settlement : IAddressPart
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
-        NameToken? foundSettlement = null;
+        AddressNameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
             foundSettlement = pair.Value.ExtractToken(addressPart); 
@@ -92,7 +77,7 @@ public class Settlement : IAddressPart
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.UnformattedName, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -103,7 +88,7 @@ public class Settlement : IAddressPart
                 return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
                     _parentDistrict = parent, 
                     _settlementType = (SettlementTypes)first.ToponymType,
-                    _untypedName = first.AddressName
+                    _settlementName = new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
                 });
             }
         }
@@ -111,7 +96,7 @@ public class Settlement : IAddressPart
         var got = new Settlement(){
             _parentDistrict = parent,
             _settlementType = settlementType,
-            _untypedName = foundSettlement.Name,
+            _settlementName = foundSettlement,
         };
         return Result<Settlement?>.Success(got);
     }
@@ -121,7 +106,7 @@ public class Settlement : IAddressPart
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
-        NameToken? foundSettlement = null;
+        AddressNameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
             foundSettlement = pair.Value.ExtractToken(addressPart); 
@@ -133,7 +118,7 @@ public class Settlement : IAddressPart
         if (foundSettlement is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.Name, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlement.UnformattedName, (int)settlementType, ADDRESS_LEVEL, searchScope).Result;
         
         if (fromDb.Any()){
             if (fromDb.Count() != 1){
@@ -144,7 +129,7 @@ public class Settlement : IAddressPart
                 return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
                     _parentSettlementArea = parent, 
                     _settlementType = (SettlementTypes)first.ToponymType,
-                    _untypedName = first.AddressName
+                    _settlementName = new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
                 });
             }
         }
@@ -152,7 +137,7 @@ public class Settlement : IAddressPart
         var got = new Settlement(){
             _parentSettlementArea = parent,
             _settlementType = settlementType,
-            _untypedName = foundSettlement.Name,
+            _settlementName = foundSettlement,
         };
         return Result<Settlement?>.Success(got);
     }
@@ -164,7 +149,7 @@ public class Settlement : IAddressPart
             _parentSettlementArea = null,
             _parentDistrict = parent,
             _settlementType = (SettlementTypes)record.ToponymType,
-            _untypedName = record.AddressName
+            _settlementName = new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
         };
     }
     public static Settlement? Create(AddressRecord record, SettlementArea parent){
@@ -175,7 +160,7 @@ public class Settlement : IAddressPart
             _parentDistrict = null,
             _parentSettlementArea = parent,
             _settlementType = (SettlementTypes)record.ToponymType,
-            _untypedName = record.AddressName
+            _settlementName = new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
         };
     }
     public async Task Save(ObservableTransaction? scope = null)
@@ -195,7 +180,7 @@ public class Settlement : IAddressPart
         return new AddressRecord(){
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
-            AddressName = _untypedName,
+            AddressName = _settlementName.UnformattedName,
             ParentId = _parentDistrict is null ? _parentSettlementArea.Id : _parentDistrict.Id,
             ToponymType = (int)_settlementType
         };
@@ -208,6 +193,6 @@ public class Settlement : IAddressPart
 
     public override string ToString()
     {
-        return LongTypedName;
+        return _settlementName.FormattedName;
     }
 }

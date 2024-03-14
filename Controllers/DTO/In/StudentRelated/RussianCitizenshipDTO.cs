@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
 
 namespace StudentTracking.Controllers.DTO.In;
-[Serializable]
-public class RussianCitizenshipDTO {
 
-    public RussianCitizenshipDTO()
+[Serializable]
+public class RussianCitizenshipInDTO {
+
+    public RussianCitizenshipInDTO()
     {
         Id = null;
         Name = "";
@@ -24,6 +25,7 @@ public class RussianCitizenshipDTO {
     public string PassportNumber {get; set; }
     [JsonRequired]
     public string PassportSeries {get; set; }
-    public int LegalAddressId { get; set; }
+    [JsonRequired]
+    public AddressDTO LegalAddress{get; set;}
 
 }

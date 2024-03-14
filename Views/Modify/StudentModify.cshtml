@@ -2,6 +2,7 @@
 @using StudentTracking.Models.Domain.Misc;
 @using StudentTracking.Models.Domain.Address;
 @using Utilities;
+@using StudentTracking.Controllers.DTO.Out;
 @model StudentTracking.Controllers.DTO.Out.StudentFullDTO;
 @{
     ViewData["Title"] = "Студент";
@@ -63,13 +64,15 @@
             @foreach (var g in Genders.Names)
             {
                 var code = (int)g.Key;
-                if (code == Model.Gender){
-                    <option value="@code" selected >@g.Value</option>    
+                if (code == Model.Gender)
+                {
+                    <option value="@code" selected>@g.Value</option>
                 }
-                else {
+                else
+                {
                     <option value="@code">@g.Value</option>
                 }
-                
+
             }
         </select>
         <div class="col-3"></div>
@@ -116,16 +119,18 @@
     <div class="d-flex flex-row mb-3">
         <select id="TargetAgreementType" class="col-5">
             @foreach (var g in TargetEduAgreement.ListOfTypes)
-            {   
-                var code = (int)g.AgreementType; 
-                if (code == Model.TargetAgreementType){
+            {
+                var code = (int)g.AgreementType;
+                if (code == Model.TargetAgreementType)
+                {
                     <option value="@code" selected>@g.RussianName</option>
                 }
-                else{
+                else
+                {
                     <option value="@code">@g.RussianName</option>
                 }
-                
-                
+
+
             }
         </select>
     </div>
@@ -136,11 +141,13 @@
         <select id="PaidAgreementType" class="col-6">
             @foreach (var g in PaidEduAgreement.ListOfTypes)
             {
-                var code = (int)g.AgreementType; 
-                if (code == Model.PaidAgreementType){
+                var code = (int)g.AgreementType;
+                if (code == Model.PaidAgreementType)
+                {
                     <option value="@code" selected>@g.RussianName</option>
                 }
-                else{
+                else
+                {
                     <option value="@code">@g.RussianName</option>
                 }
             }
@@ -151,11 +158,7 @@
     </div>
     <div class="d-flex flex-row">
         @{
-            string RealAddress = "";
-            if (Model.ActualAddressId != null)
-            {
-                RealAddress = (await AddressModel.GetAddressById((int)Model.ActualAddressId))?.ToString() ?? "";
-            }
+            string RealAddress = Model.ActualAddress.AddressName;
         }
         <input id="ActualAddress" class="col-10" value="@RealAddress" />
         <button id="about" class="col-1">Разобрать</button>
@@ -178,10 +181,7 @@
 
 
     @{
-        RussianCitizenship? citizenship = Model.RussianCitizenshipId == null ? null : await
-        RussianCitizenship.GetById((int)Model.RussianCitizenshipId, null);
-        AddressModel? address = await AddressModel.GetAddressById(citizenship?.LegalAddressId ?? Utils.INVALID_ID);
-        string LegalAddress = address?.ToString() ?? "";
+        RussianCitizenshipDTO citizenship = Model.Citizenship;
     }
     <div class="mt-4">
         <h2>Гражданство (РФ)</h2>
@@ -194,32 +194,11 @@
             <h5 class="col-3 mx-0">Отчество</h5>
         </div>
         <div class="d-flex flex-row">
-            @if (citizenship == null)
-            {
-                <input id="Surname" class="col-3" />
-            }
-            else
-            {
-                <input id="Surname" class="col-3" value="@citizenship.Surname" />
-            }
+            <input id="Surname" class="col-3" value="@citizenship.Surname" />
             <div class="col-1"></div>
-            @if (citizenship == null)
-            {
-                <input id="Name" class="col-3" />
-            }
-            else
-            {
-                <input id="Name" class="col-3" value="@citizenship.Name" />
-            }
+            <input id="Name" class="col-3" value="@citizenship.Name" />
             <div class="col-1"></div>
-            @if (citizenship == null)
-            {
-                <input id="Patronymic" class="col-3" />
-            }
-            else
-            {
-                <input id="Patronymic" class="col-3" value="@citizenship.Patronymic" />
-            }
+            <input id="Patronymic" class="col-3" value="@citizenship.Patronymic" />
         </div>
         <div class="d-flex flex-row">
             <div class="col-3">
@@ -234,7 +213,7 @@
                 </small>
             </div>
             <div class="col-1"></div>
-             <div class="col-3">
+            <div class="col-3">
                 <small class="accent_color" id="Patronymic_err">
 
                 </small>
@@ -247,23 +226,9 @@
             <h5 class="col-5 mx-0">Серия паспорта</h5>
         </div>
         <div class="d-flex flex-row">
-            @if (citizenship == null)
-            {
-                <input id="PassportNumber" class="col-5" />
-            }
-            else
-            {
-                <input id="PassportNumber" class="col-5" value="@citizenship.PassportNumber" />
-            }
+            <input id="PassportNumber" class="col-5" value="@citizenship.PassportNumber" />
             <div class="col-1"></div>
-            @if (citizenship == null)
-            {
-                <input id="PassportSeries" class="col-5" />
-            }
-            else
-            {
-                <input id="PassportSeries" class="col-5" value="@citizenship.PassportSeries" />
-            }
+            <input id="PassportSeries" class="col-5" value="@citizenship.PassportSeries" />
         </div>
         <div class="d-flex flex-row">
             <div class="col-5">
@@ -283,14 +248,7 @@
             <h5 class="col-12 mx-0">Прописка</h5>
         </div>
         <div class="d-flex flex-row">
-            @if (citizenship == null)
-            {
-                <input id="LegalAddress" class="col-10" />
-            }
-            else
-            {
-                <input id="LegalAddress" class="col-10" value="@LegalAddress" />
-            }
+            <input id="LegalAddress" class="col-10" value="@citizenship.LegalAddress.AddressName" />
             <button class="col-1" id="about_legal_address">
                 Разобрать
             </button>
@@ -311,15 +269,16 @@
         </div>
     </div>
     @{
-        var tags = await StudentEducationalLevelRecord.GetByOwner(Model.Id);
+        var tags = await StudentEducationalLevelRecord.GetByOwner(await StudentModel.GetStudentById(Model.Id));
     }
     <div id="education_levels">
-        @foreach(var t in tags){
-        <div class="d-flex flex-row">
-            <div class="col-4"> 
-                @t.RussianName
+        @foreach (var t in tags)
+        {
+            <div class="d-flex flex-row">
+                <div class="col-4">
+                    @t.RussianName
+                </div>
             </div>
-        </div>
         }
     </div>
     <button class="btn btn-primary" id="add_education_level">
@@ -329,23 +288,26 @@
 
     <div class="d-flex flex-row">
         <button id="save" class="mt-4 btn btn-primary">
-        Сохранить
+            Сохранить
         </button>
     </div>
 </div>
 
-
-@{
-    string corrRusId = citizenship?.Id.ToString() ?? "";
-    string corrRusAddress = citizenship?.LegalAddressId.ToString() ?? "";
-}
-<div id = "id_section">
-    @if (!Model.IsEmpty){
-        <input type="hidden" id="StudentId" value="@Model.Id" />
-        <input type="hidden" id="AddressId" value="@Model.ActualAddressId" />
-        <input type="hidden" id="RussianLegalAddressId" value="@corrRusAddress" />
-        <input type="hidden" id="RussianCitizenshipId" value="@corrRusId" />
+<div id="id_section">
+    @if (Model.Id is not null)
+    {
+        <input type="hidden" id="StudentId" value="@Model.Id.Value" />
     }
+    @if (Model.ActualAddress.Id is not null){
+        <input type="hidden" id="AddressId" value="@Model.ActualAddress.Id.Value" />
+    }
+    @if (Model.Citizenship.Id is not null){
+        <input type="hidden" id="RussianLegalAddressId" value="@Model.Citizenship.Id.Value" />
+    }
+    @if (Model.Citizenship.LegalAddress.Id is not null){
+        <input type="hidden" id="RussianCitizenshipId" value="@Model.Citizenship.LegalAddress.Id.Value" />
+    }
+    
 </div>
 
 </div>

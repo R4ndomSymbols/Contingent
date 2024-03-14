@@ -1,6 +1,4 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using Npgsql.Replication;
 
 [Serializable]
 public class ValidationError {

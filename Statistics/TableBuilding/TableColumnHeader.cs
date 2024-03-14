@@ -1,6 +1,3 @@
-using System.Data;
-using System.Drawing;
-using System.Net;
 using System.Text;
 
 namespace StudentTracking.Statistics;
