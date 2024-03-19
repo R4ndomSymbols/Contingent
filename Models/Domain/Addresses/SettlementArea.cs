@@ -4,6 +4,11 @@ namespace StudentTracking.Models.Domain.Address;
 public class SettlementArea : IAddressPart
 {
     public const int ADDRESS_LEVEL = 3;
+
+    private static List<SettlementArea> _duplicationBuffer;
+    static SettlementArea(){
+        _duplicationBuffer = new List<SettlementArea>();
+    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"поселение"),
     };
@@ -31,15 +36,30 @@ public class SettlementArea : IAddressPart
         get => _parentDistrict;
     }
 
-    private SettlementArea(int id)
+    private SettlementArea(int id, District parent, SettlementAreaTypes type, AddressNameToken name)
     {
         _id = id;
+        _parentDistrict = parent;
+        _settlementAreaType = type;
+        _settlementAreaName = name;
     }
     
-    private SettlementArea()
+    private SettlementArea(District parent, SettlementAreaTypes type, AddressNameToken name)
     {
         _id = Utils.INVALID_ID;
+        _parentDistrict = parent;
+        _settlementAreaType = type;
+        _settlementAreaName = name;
+        _duplicationBuffer.Add(this);
     }   
+
+    private static IEnumerable<SettlementArea> GetDuplicates(SettlementArea area){
+        return _duplicationBuffer.Where(
+            a => a._parentDistrict.Equals(area._parentDistrict)
+            && a._settlementAreaName.Equals(area._settlementAreaName)
+            && a._settlementAreaType == area._settlementAreaType
+        );
+    }
     // добавить ограничение на создание 
     // исходя из типа родителя
     public static Result<SettlementArea?> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
@@ -67,36 +87,42 @@ public class SettlementArea : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<SettlementArea?>.Success(new SettlementArea(first.AddressPartId){
-                    _parentDistrict = parent, 
-                    _settlementAreaType = (SettlementAreaTypes)first.ToponymType,
-                    _settlementAreaName = new AddressNameToken(first.AddressName, Names[(SettlementAreaTypes)first.ToponymType]),
-                });
+                return Result<SettlementArea?>.Success(new SettlementArea(first.AddressPartId,
+                    parent, 
+                    (SettlementAreaTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(SettlementAreaTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new SettlementArea(){
-            _parentDistrict = parent,
-            _settlementAreaType = settlementAreaType,
-            _settlementAreaName = foundSettlementArea,
-        };
+        var got = new SettlementArea(
+            parent,
+            settlementAreaType,
+            foundSettlementArea
+        );
         return Result<SettlementArea?>.Success(got);
     }
     public static SettlementArea? Create(AddressRecord source, District parent){
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
         }
-        return new SettlementArea(source.AddressPartId){
-            _parentDistrict = parent,
-            _settlementAreaType = (SettlementAreaTypes)source.ToponymType,
-            _settlementAreaName = new AddressNameToken(source.AddressName, Names[(SettlementAreaTypes)source.ToponymType]),
-        };
+        return new SettlementArea(source.AddressPartId,
+            parent,
+            (SettlementAreaTypes)source.ToponymType,
+            new AddressNameToken(source.AddressName, Names[(SettlementAreaTypes)source.ToponymType])
+        );
     }
     public async Task Save(ObservableTransaction? scope = null)
-    {   await _parentDistrict.Save(scope);
+    {   
+        await _parentDistrict.Save(scope);
         if (_id == Utils.INVALID_ID){
-            _id = await AddressModel.SaveRecord(this, scope); 
+            _id = await AddressModel.SaveRecord(this, scope);
         }
+        var duplicates = GetDuplicates(this);
+        foreach(var d in duplicates){
+            d._id = this._id;
+        }
+        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
    
     public AddressRecord ToAddressRecord()
@@ -116,5 +142,14 @@ public class SettlementArea : IAddressPart
     }
     public override string ToString(){
         return _settlementAreaName.FormattedName;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(SettlementArea)){
+            return false;
+        }
+        var toCompare = (SettlementArea)obj;
+        return toCompare._id == this._id;
     }
 }

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.SQL;
@@ -62,7 +64,6 @@ public class StudentHistory
     }
     private List<StudentFlowRecord> _history;
     public IReadOnlyList<StudentFlowRecord> History => _history;
-    private int _studentId;
     private StudentHistory()
     {
 
@@ -135,7 +136,6 @@ public class StudentHistory
         }
         return GetClosestBefore(order.EffectiveDate);
     }
-
     public StudentFlowRecord? GetClosestAfter(DateTime anchor)
     {
         TimeSpan minDiff = TimeSpan.MaxValue;
@@ -179,118 +179,32 @@ public class StudentHistory
     }
 
     // получает всю историю студента в приказах
-    // история отсортирована по дате регистрации приказа
+    // история НЕ отсортирована по дате регистрации приказа
     private static async Task<List<StudentFlowRecord>> GetHistory(int id)
     {
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT student_flow.id AS sid, student_id, order_id, group_id_to, orders.effective_date AS oed, orders.type AS ot " +
-        " FROM student_flow" +
-        " JOIN orders ON orders.id = student_flow.order_id " +
-        " WHERE student_id = @p1 " +
-        " ORDER BY oed ASC";
-        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-
-        var raws = new List<RawStudentFlowRecord>();
-        List<StudentFlowRecord> found = new();
-
-        await using (conn)
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return found;
-            }
-            while (reader.Read())
-            {
-                var record = new RawStudentFlowRecord();
-                record.Id = (int)reader["sid"];
-                record.OrderId = (int)reader["order_id"];
-                record.StudentId = id;
-                record.GroupToId = reader["group_id_to"].GetType() == typeof(DBNull) ? null : (int)reader["group_id_to"];
-                raws.Add(record);
-            }
-        }
-        var groupParams = new SQLParameterCollection();
-        var gp1 = groupParams.Add(raws.Where(x => x.GroupToId != null).Select(x => x.GroupToId).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
-        gp1.UseBrackets = true;
-        var groupWhere = new ComplexWhereCondition(
-            new WhereCondition(
-                new Column("group_id", "educational_group"),
-                gp1,
-                WhereCondition.Relations.InArray
-            )
-        );
-        var groupsFound = await GroupModel.FindGroups(new QueryLimits(0, 100), additionalConditions: groupWhere, addtitionalParameters: groupParams);
-
-        var ordersParams = new SQLParameterCollection();
-        var sp1 = ordersParams.Add(raws.Select(x => x.OrderId).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
-        sp1.UseBrackets = true;
-        var orderWhere = new ComplexWhereCondition(
-            new WhereCondition(
-                new Column("id", "orders"),
-                sp1,
-                WhereCondition.Relations.InArray
-            )
-        );
-
-        var student = await StudentModel.GetStudentById(id);
-        var ordersFound = await Order.FindOrders(new QueryLimits(0, 100), additionalParams: ordersParams, filter: orderWhere);
-        foreach (var raw in raws)
-        {
-            found.Add(
-                new StudentFlowRecord(
-                    order: ordersFound.Where(x => x.Id == raw.OrderId).First(),
-                    student: student,
-                    group: groupsFound.Where(x => x.Id == raw.GroupToId).FirstOrDefault()
-                )
-            );
-        }
-        return found;
-    }
-
-    public static async Task<GroupModel?> GetCurrentStudentGroup(int studentId)
-    {
-        var joins = new JoinSection()
-        .AppendJoin(
-            JoinSection.JoinType.RightJoin,
-            new Column("group_id", "educational_group"),
-            new Column("group_id_to", "student_flow")
-
-        )
-        .AppendJoin(JoinSection.JoinType.InnerJoin,
-            new Column("order_id", "student_flow"),
-            new Column("id", "orders")
-        );
-
-        var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add(studentId);
+        var sqlParams = new SQLParameterCollection();
+        var p1 = sqlParams.Add(id);
         var where = new ComplexWhereCondition(
             new WhereCondition(
-                new Column("student_id", "student_flow"),
+                new Column("id", "students"),
                 p1,
                 WhereCondition.Relations.Equal
-            )
-        );
-        var orderBy = new OrderByCondition(new Column("effective_date", "orders"), OrderByCondition.OrderByTypes.DESC);
-        var found = await GroupModel.FindGroups(new QueryLimits(0, 1),
-            additionalJoins: joins,
-            additionalConditions: where,
-            additionalOrderBy: orderBy,
-            addtitionalParameters: parameters);
-        if (found.Count == 0)
-        {
-            return null;
-        }
-        return found.First();
-    }
+            ),
+            new WhereCondition(
+                new Column("id", "outer_table"),
+                WhereCondition.Relations.IsNot
+            ),
+            ComplexWhereCondition.ConditionRelation.AND
 
-    public static async Task<GroupModel?> GetCurrentStudentGroup(StudentModel student)
-    {
-        return await GetCurrentStudentGroup((int)student.Id);
-    }
+        ); 
 
+        var history = await GetHistoryAggregate(new QueryLimits(0,50), 
+        addtionalFilter: where,
+        parameters: sqlParams,
+        addOrders: true, 
+        queryLastOnly: false);
+        return history.ToList();
+    }
 
     public static async Task<bool> IsAnyStudentInNotClosedOrder(IEnumerable<StudentModel> students)
     {
@@ -315,7 +229,6 @@ public class StudentHistory
 
     public GroupModel? GetCurrentGroup()
     {
-        var last = GetLastRecord();
         return GetLastRecord()?.GroupTo;
     }
 
@@ -394,12 +307,19 @@ public class StudentHistory
     }
     // параметер оставлен в случае, если потребуется
     // добавить опциональные приказы
-    private static async Task<IEnumerable<StudentFlowRecord>> GetHistoryAggregate(QueryLimits limits, ComplexWhereCondition? addtionalFilter = null, SQLParameterCollection? parameters = null, DateTime? before = null, bool queryLastOnly = true)
+    private static async Task<IEnumerable<StudentFlowRecord>> GetHistoryAggregate(QueryLimits limits,
+        ComplexWhereCondition? addtionalFilter = null,
+        SQLParameterCollection? parameters = null,
+        DateTime? before = null,
+        bool queryLastOnly = true,
+        bool addOrders = false)
     {
         string alias = "outer_table";
-        var studentMapper = StudentModel.GetMapper(true, new Column("id", alias), JoinSection.JoinType.FullJoin);
+        var studentMapper = StudentModel.GetMapper(true, new Column("student_id", alias), JoinSection.JoinType.FullJoin);
         var groupMapper = GroupModel.GetMapper(new Column("group_id_to", alias), JoinSection.JoinType.LeftJoin);
-
+        var orderMapper = addOrders ? 
+        Order.GetMapper(new Column("order_id", alias), JoinSection.JoinType.LeftJoin) :
+        null;
 
         var usedCols = new List<Column> {
             new Column("id", "rec_id", alias),
@@ -419,12 +339,27 @@ public class StudentHistory
                 var student = studentMapper.Map(m).ResultObject;
                 var groupFound = groupMapper.Map(m);
                 var group = groupFound.IsFound ? groupFound.ResultObject : null;
-                return QueryResult<StudentFlowRecord>.Found(new StudentFlowRecord(raw, null, student, group));
+                var orderFound = orderMapper?.Map(m);
+                var orderRecieved = orderFound is null || !orderFound.IsFound ? null : orderFound.ResultObject;
+                return QueryResult<StudentFlowRecord>.Found(new StudentFlowRecord(raw, orderRecieved, student, group));
             },
             usedCols
         );
         historyMapper.AssumeChild(studentMapper);
         historyMapper.AssumeChild(groupMapper);
+
+        if (addOrders)
+        {;
+            historyMapper.AssumeChild(orderMapper);
+        }
+        else
+        {
+            historyMapper.PathTo.AppendJoin(
+            JoinSection.JoinType.LeftJoin,
+            new Column("order_id", alias),
+            new Column("id", "orders")
+            );
+        }
 
         ComplexWhereCondition? basicFilter = null;
         if (queryLastOnly)
@@ -450,16 +385,15 @@ public class StudentHistory
             basicFilter = addtionalFilter;
         }
 
-        var query = SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("student_id", alias), alias)
+        var query = 
+        (queryLastOnly ? 
+        SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("id", "students"), alias)
+        : SelectQuery<StudentFlowRecord>.Init("student_flow", alias))
         .AddMapper(historyMapper)
-        .AddJoins(historyMapper.PathTo.AppendJoin(
-            JoinSection.JoinType.LeftJoin,
-            new Column("order_id", alias),
-            new Column("id", "orders")
-        ))
+        .AddJoins(historyMapper.PathTo)
         .AddWhereStatement(basicFilter)
         .AddOrderByStatement(new OrderByCondition(
-            new Column("student_id", alias),
+            new Column("id", "students"),
             OrderByCondition.OrderByTypes.ASC
         ))
         .AddParameters(parameters)
@@ -526,16 +460,21 @@ public class StudentHistory
                     WhereCondition.Relations.Equal
                 )
             );
-            break;
+                break;
             case OrderRelationMode.OnlyExcluded:
                 filter = new ComplexWhereCondition(
                 new WhereCondition(
                     new Column("id", "orders"),
                     p1,
                     WhereCondition.Relations.NotEqual
-                )
+                ),
+                new WhereCondition(
+                    new Column("id", "orders"),
+                    WhereCondition.Relations.Is
+                ),
+                ComplexWhereCondition.ConditionRelation.OR
             );
-            break;
+                break;
             default:
                 filter = null;
                 break;

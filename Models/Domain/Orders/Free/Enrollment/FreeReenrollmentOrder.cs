@@ -1,5 +1,6 @@
 
 
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -21,13 +22,14 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         var created = new FreeReenrollmentOrder();
         return await MapBase(dto, created);
     }
-    public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId){
-        var model = new FreeReenrollmentOrder(orderId);
-        return await MapFromDbBase(orderId, model);
+    public static QueryResult<FreeReenrollmentOrder?> Create(int id, NpgsqlDataReader reader)
+    {
+        var order = new FreeReenrollmentOrder(id);
+        return MapParticialFromDbBase(reader, order);
     }
     public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId, StudentGroupChangeMoveDTO? dto){
         var model = new FreeReenrollmentOrder(orderId);
-        var orderResult = await MapFromDbBaseForConduction(orderId, model);
+        var orderResult = MapFromDbBaseForConduction(model);
         if (orderResult.IsFailure)
         {
             return orderResult;

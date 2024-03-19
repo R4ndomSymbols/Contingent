@@ -87,7 +87,7 @@ public class RussianCitizenship : ICitizenship
 
     public int? LegalAddressId
     {
-        get => _legalAddress is null ? _legalAddressId : _legalAddressId;
+        get => _legalAddress is null ? _legalAddressId : _legalAddress.Id;
     }
     public AddressModel? LegalAddress
     {
@@ -147,7 +147,6 @@ public class RussianCitizenship : ICitizenship
             };
         }
     }
-   
 
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope = null)
     {
@@ -291,7 +290,7 @@ public class RussianCitizenship : ICitizenship
         command.Parameters.Add(new NpgsqlParameter<string>("p3", Surname));
         command.Parameters.Add(new NpgsqlParameter<string>("p4", Name));
         command.Parameters.Add(new NpgsqlParameter("p5", _patronymic == null ? DBNull.Value : Patronymic));
-        command.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_legalAddress.Id));
+        command.Parameters.Add(new NpgsqlParameter<int>("p6", (int)LegalAddressId));
 
         await using (conn)
         {
@@ -325,7 +324,7 @@ public class RussianCitizenship : ICitizenship
         cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _surname.NameToken));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p4", _name.NameToken));
         cmd.Parameters.Add(new NpgsqlParameter("p5", _patronymic?.NameToken is null ? DBNull.Value : _patronymic.NameToken));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_legalAddress.Id));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)LegalAddressId));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_id));
 
         using (cmd)

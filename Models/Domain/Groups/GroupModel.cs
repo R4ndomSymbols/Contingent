@@ -103,7 +103,6 @@ public class GroupModel
                 new Column("name_generated", "educational_group"),
                 new Column("group_sequence_id", "educational_group")
             };
-        usedCols.AddRange(specialityMapper.Columns);
         var groupMapper = new Mapper<GroupModel>(
             (reader) =>
             {   
@@ -433,7 +432,7 @@ public class GroupModel
         var mapper = GetMapper(null);
         var buildResult = SelectQuery<GroupModel>.Init("educational_group")
         .AddMapper(mapper)
-        .AddJoins(additionalJoins)
+        .AddJoins(mapper.PathTo.AppendJoin(additionalJoins))
         .AddWhereStatement(additionalConditions)
         .AddParameters(addtitionalParameters)
         .AddOrderByStatement(additionalOrderBy)

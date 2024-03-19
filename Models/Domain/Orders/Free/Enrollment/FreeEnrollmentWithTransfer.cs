@@ -1,4 +1,5 @@
 
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -9,31 +10,38 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _toEnroll;
 
-    private FreeEnrollmentWithTransferOrder() : base(){
+    private FreeEnrollmentWithTransferOrder() : base()
+    {
 
     }
-    private FreeEnrollmentWithTransferOrder(int id) : base(id){
+    private FreeEnrollmentWithTransferOrder(int id) : base(id)
+    {
 
     }
 
-    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(OrderDTO dto){
+    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(OrderDTO dto)
+    {
         var created = new FreeEnrollmentWithTransferOrder();
         return await MapBase(dto, created);
     }
 
-    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id){
-        var created = new FreeEnrollmentWithTransferOrder(id);
-        return await MapFromDbBase(id, created);
+    public static QueryResult<FreeEnrollmentWithTransferOrder?> Create(int id, NpgsqlDataReader reader)
+    {
+        var order = new FreeEnrollmentWithTransferOrder(id);
+        return MapParticialFromDbBase(reader, order);
     }
 
-    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id, StudentGroupChangeMoveDTO? data){
+    public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id, StudentGroupChangeMoveDTO? data)
+    {
         var created = new FreeEnrollmentWithTransferOrder(id);
-        var result = await MapFromDbBaseForConduction(id, created);
-        if (result.IsFailure){
+        var result = MapFromDbBaseForConduction(created);
+        if (result.IsFailure)
+        {
             return result;
         }
         var dtoParseResult = await StudentToGroupMoveList.Create(data);
-        if (dtoParseResult.IsFailure){
+        if (dtoParseResult.IsFailure)
+        {
             return dtoParseResult.Retrace(created);
         }
         var order = result.ResultObject;
@@ -61,16 +69,19 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()
     {
         var baseCheck = await CheckBaseConductionPossibility(_toEnroll.Select(x => x.Student));
-        if (baseCheck.IsFailure){
+        if (baseCheck.IsFailure)
+        {
             return baseCheck;
         }
-        foreach (var rec in _toEnroll){
+        foreach (var rec in _toEnroll)
+        {
             var history = await StudentHistory.Create(rec.Student);
-            var groupCheck = await rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student);  
-            if (history.IsStudentEnlisted() || !groupCheck){
+            var groupCheck = await rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student);
+            if (history.IsStudentEnlisted() || !groupCheck)
+            {
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов в приказе на зачисление не соответствуют требованиям"));
             }
-    
+
         }
         _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();

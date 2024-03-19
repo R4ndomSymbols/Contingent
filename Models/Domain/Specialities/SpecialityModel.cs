@@ -82,8 +82,8 @@ public class SpecialityModel
                 }
                 var mapped = new SpecialityModel();
                 mapped._id = (int)reader["id_spec"];
-                mapped._fgosName = (string)reader["fgos_code"];
-                mapped._fgosCode = (string)reader["fgos_name"];
+                mapped._fgosCode = (string)reader["fgos_code"];
+                mapped._fgosName = (string)reader["fgos_name"];
                 mapped._qualification = (string)reader["qualification"];
                 mapped._groupNameFgosPrefix = (string)reader["group_prefix"];
                 mapped._groupNameQualificationPostfix = reader["group_postfix"].GetType() == typeof(DBNull) ? null : (string)reader["group_postfix"];
@@ -153,7 +153,7 @@ public class SpecialityModel
             model._groupNameQualificationPostfix = null;
         }
         else if (errors.IsValidRule(
-            ValidatorCollection.CheckStringPattern(dto.QualificationPostfix, ValidatorCollection.OnlyLetters),
+            ValidatorCollection.CheckStringPattern(dto.QualificationPostfix, ValidatorCollection.OnlyLetters) || dto.QualificationPostfix == string.Empty,
             message: "Постфикс квалификации указан неверно",
             propName: nameof(QualificationPostfix)
         )){
@@ -227,8 +227,8 @@ public class SpecialityModel
         NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
         string cmdText = "INSERT INTO public.educational_program( " +
 	    " fgos_code, fgos_name, qualification, course_count, " + 
-        " speciality_out_education_level, speciality_in_education_level, knowledge_depth, group_prefix, group_postfix) " +
-	    " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9) RETURNING id";
+        " speciality_out_education_level, speciality_in_education_level, knowledge_depth, group_prefix, group_postfix, training_program_type) " +
+	    " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9,@p10) RETURNING id";
         NpgsqlCommand cmd;
         if (scope != null){
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
@@ -245,6 +245,7 @@ public class SpecialityModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_teachingDepth.Level));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p8", _groupNameFgosPrefix));
         cmd.Parameters.Add(new NpgsqlParameter<string?>("p9", _groupNameQualificationPostfix));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p10", (int)_trainingProgram.Type));
 
         await using (cmd){
             await using var reader = await cmd.ExecuteReaderAsync();
@@ -347,6 +348,25 @@ public class SpecialityModel
         var levels = await StudentEducationalLevelRecord.GetByOwner(student);
         return levels.Any(x => x.Level.Weight >= _levelIn.Weight); 
     }
+
+    public static IEnumerable<SpecialityModel> GetAll(){
+        return FindSpecialities(new QueryLimits(0,2000)).Result;
+
+    }
+
+    public override string ToString()
+    {
+        return FgosCode + " " + FgosName + " (" + Qualification + ")";
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(SpecialityModel)){
+            return false;
+        }
+        return ((SpecialityModel)obj)._id == this._id;
+    }
+
 }
 
 

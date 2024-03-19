@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -29,7 +30,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto)
     {
         var model = new FreeTransferToTheNextCourseOrder(id);   
-        var result = await MapFromDbBaseForConduction(id,model);
+        var result = MapFromDbBaseForConduction(model);
         if (result.IsFailure)
         {
             return result;
@@ -44,11 +45,10 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         return conductionStatus.Retrace(order);
     }
 
-    public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(int id)
+    public static QueryResult<FreeTransferToTheNextCourseOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeTransferToTheNextCourseOrder(id);
-        var result = await MapFromDbBase(id,order);
-        return result;
+        return MapParticialFromDbBase(reader, order);
     }
 
     public override async Task ConductByOrder()

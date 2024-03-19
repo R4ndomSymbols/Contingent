@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -22,16 +23,16 @@ public class FreeTransferToFreeGroupOrder : FreeContingentOrder
         var result = await MapBase(orderDTO,created);
         return result;
     }
-    public static async Task<Result<FreeTransferToFreeGroupOrder?>> Create(int id){
-        var created = new FreeTransferToFreeGroupOrder(id);
-        var result = await MapFromDbBase(id,created);
-        return result;
+    public static QueryResult<FreeTransferToFreeGroupOrder?> Create(int id, NpgsqlDataReader reader)
+    {
+        var order = new FreeTransferToFreeGroupOrder(id);
+        return MapParticialFromDbBase(reader, order);
     }
 
 
     public static async Task<Result<FreeTransferToFreeGroupOrder?>> Create(int id, StudentGroupChangeMoveDTO moves){
         var created = new FreeTransferToFreeGroupOrder(id); 
-        var result = await MapFromDbBaseForConduction(id, created);
+        var result = MapFromDbBaseForConduction(created);
         if (result.IsFailure){
             return result;
         }
@@ -70,7 +71,7 @@ public class FreeTransferToFreeGroupOrder : FreeContingentOrder
             return ResultWithoutValue.Failure(new OrderValidationError("Студент или студенты, находящиеся в приказе на перевод с платного на беспланое не удовлетворяют условиям (договор о платном образовани или незакрытый приказ)"));
         }
         foreach (var move in _moves){
-            var currentStudentGroup = await StudentHistory.GetCurrentStudentGroup(move.Student);
+            var currentStudentGroup = move.Student.History.GetCurrentGroup();
             var conditionsSatisfied = 
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn   
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear

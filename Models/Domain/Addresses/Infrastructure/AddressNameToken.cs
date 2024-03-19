@@ -46,4 +46,14 @@ public class AddressNameToken
         string normalized = string.Join(" ", name.Split(" ").Where(x => x!=string.Empty));
         return name.Trim().ToLower();
     }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(AddressNameToken)){
+            return false;
+        }
+        var toCompare = (AddressNameToken)obj;
+        return toCompare._normalizedName == this._normalizedName && 
+                toCompare.Formatting.Equals(this.Formatting);
+    }
 }

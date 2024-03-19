@@ -1,9 +1,11 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Infrastruture;
 using StudentTracking.SQL;
 using StudentTracking.Statistics;
 namespace StudentTracking.Controllers.Search;
@@ -35,7 +37,6 @@ public class StudentSearchController : Controller
         try
         {
             var text = await stream.ReadToEndAsync();
-            Console.WriteLine(text);
             query = JsonSerializer.Deserialize<StudentSearchQueryDTO>(text);
         }
         catch (Exception e)
@@ -47,8 +48,16 @@ public class StudentSearchController : Controller
         {
             return Json(new ErrorsDTO(new ValidationError(nameof(FindStudents), "Запрос не может быть пустым")));
         }
+        var search = new SearchHelper();
+        var source = search.GetSource(query.Source);
+        var filter = search.GetFilter(query);
 
-        var filter = GetFilter(query);
+        if (source!=null){
+            var found = filter.Execute(source.Invoke());
+            var foundSize = found.Count(); 
+            return Json(found.Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo, foundSize)));   
+        }
+
         var result = new List<StudentFlowRecord>();
         int pageOffset = 0;
         int maxOffset = 0;
@@ -65,40 +74,5 @@ public class StudentSearchController : Controller
             pageOffset+=query.PageSize;
         }
         return Json(result.Take(query.PageSize).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo, maxOffset)));
-    }
-
-
-
-
-    private Filter<StudentFlowRecord> GetFilter(StudentSearchQueryDTO query){
-        var filter = new Filter<StudentFlowRecord>();
-        if (!string.IsNullOrEmpty(query.Name))
-        {
-            var normalized = query.Name.Trim();
-            if (normalized.Length >= 3)
-            {
-                filter.Include(
-                new Filter<StudentFlowRecord>(
-                    (source) => source.Where(
-                        rec => rec.Student.GetName().Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                    )
-                ));
-            }
-        }
-        if (!string.IsNullOrEmpty(query.GroupName))
-        {
-            var normalized = query.GroupName.Trim();
-            if (normalized.Length >= 3)
-            {
-                filter.Include(
-                new Filter<StudentFlowRecord>(
-                    (source) => source.Where(
-                        rec => rec.GroupTo is null ? GroupModel.InvalidNamePlaceholder.ToLower() == normalized.ToLower() :
-                        rec.GroupTo.GroupName.Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                    )
-                ));
-            }
-        }
-        return filter;
-    }        
+    }      
 }

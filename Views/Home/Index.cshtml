@@ -1,8 +1,30 @@
-﻿@{
+﻿@using StudentTracking.Models.Domain.Flow;
+@using Utilities;
+@{
     ViewData["Title"] = "Домашняя";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Привет</h1>
-    <p> Это заглавная страница, пока тут ничего нет, но скоро будет. </p>
+    <h1 class="display-4">Статистика</h1>
+    <p class="text-center" style="font-size:30px">
+        За период с 
+        @Utils.FormatDateTime(StudentHistory.CurrentPeriodStartDate, true)
+        по
+        @Utils.FormatDateTime(StudentHistory.CurrentPeriodEndDate, true)
+    </p>
+</div>
+<div class="d-flex flex-column">
+    <ul>
+        <li>
+            <a href="~/statistics/age">
+                Студенты по возрастам
+            </a>
+        </li>
+        <li>
+            <a href="~/statistics/speciality">
+                Студенты по специальностям
+            </a>
+        </li>
+    </ul>
+    
 </div>

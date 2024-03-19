@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -12,7 +13,8 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     {
 
     }
-    protected FreeDeductionWithGraduationOrder(int id) : base(id){
+    protected FreeDeductionWithGraduationOrder(int id) : base(id)
+    {
 
     }
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(OrderDTO? order)
@@ -22,15 +24,17 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         return valResult;
     }
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto)
-    {   var model = new FreeDeductionWithGraduationOrder(id);
-        var result = await MapFromDbBaseForConduction(id, model);
+    {
+        var model = new FreeDeductionWithGraduationOrder(id);
+        var result = MapFromDbBaseForConduction(model);
         if (result.IsFailure)
         {
             return result;
         }
         var order = result.ResultObject;
         var dtoAsModelResult = await StudentGroupNullifyMoveList.Create(dto?.Students);
-        if (dtoAsModelResult.IsFailure){
+        if (dtoAsModelResult.IsFailure)
+        {
             return dtoAsModelResult.RetraceFailure<FreeDeductionWithGraduationOrder>();
         }
         order._graduates = dtoAsModelResult.ResultObject;
@@ -38,11 +42,10 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         return conductionCheck.Retrace(order);
     }
 
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id)
+    public static QueryResult<FreeDeductionWithGraduationOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeDeductionWithGraduationOrder(id);
-        var result = await MapFromDbBase(id, order);
-        return result;
+        return MapParticialFromDbBase(reader, order);
     }
 
 
@@ -62,15 +65,18 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     }
 
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()
-    {   
-        var check = await base.CheckBaseConductionPossibility(_graduates.ToStudentCollection()); 
-        if (check.IsFailure){
+    {
+        var check = await base.CheckBaseConductionPossibility(_graduates.ToStudentCollection());
+        if (check.IsFailure)
+        {
             return check;
         }
-        foreach(var i in _graduates){
+        foreach (var i in _graduates)
+        {
             var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student.Id);
-            var group = aggregate?.GroupTo; 
-            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid()){
+            var group = aggregate?.GroupTo;
+            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid())
+            {
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
             }
         }

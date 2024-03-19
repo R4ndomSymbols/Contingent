@@ -3,7 +3,11 @@ using Utilities;
 namespace StudentTracking.Models.Domain.Address;
 public class Street : IAddressPart
 {
-    public const int ADDRESS_LEVEL = 5;  
+    public const int ADDRESS_LEVEL = 5;
+    private static List<Street> _duplicationBuffer;
+    static Street(){
+        _duplicationBuffer = new List<Street>();
+    } 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"улица"),
         new Regex(@"набережная"),
@@ -14,6 +18,15 @@ public class Street : IAddressPart
         new Regex(@"проезд"),
         new Regex(@"шоссе"),
     };
+
+    private IEnumerable<Street> GetDuplicates(Street street){
+        return _duplicationBuffer.Where(str =>
+            str._parentSettlement.Equals(street._parentSettlement) &&
+            str._streetName.Equals(street._streetName) &&
+            str._streetType == street._streetType
+        );
+    }
+
     public static readonly IReadOnlyDictionary<StreetTypes, AddressNameFormatting> Names = new Dictionary<StreetTypes, AddressNameFormatting>(){
         {StreetTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {StreetTypes.Street, new AddressNameFormatting("ул.", "Улица", AddressNameFormatting.BEFORE)},
@@ -49,13 +62,20 @@ public class Street : IAddressPart
     {
         get => _parentSettlement;
     }
-    protected Street(int id)
+    private Street(int id, Settlement parent, StreetTypes type, AddressNameToken name)
     {
         _id = id;
+        _parentSettlement = parent;
+        _streetType = type;
+        _streetName = name;
     }
-    protected Street() : base()
+    private Street(Settlement parent, StreetTypes type, AddressNameToken name)
     {
         _id = Utils.INVALID_ID;
+        _parentSettlement = parent;
+        _streetType = type;
+        _streetName = name;
+        _duplicationBuffer.Add(this);
     }
     public static Result<Street?> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
@@ -82,27 +102,27 @@ public class Street : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Street?>.Success(new Street(first.AddressPartId){
-                    _parentSettlement = parent, 
-                    _streetType = (StreetTypes)first.ToponymType,
-                    _streetName = new AddressNameToken(first.AddressName, Names[(StreetTypes)first.ToponymType])
-                });
+                return Result<Street?>.Success(new Street(first.AddressPartId,
+                    parent, 
+                    (StreetTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(StreetTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new Street(){
-            _parentSettlement = parent,
-            _streetType = streetType,
-            _streetName = foundStreet,
-        };
+        var got = new Street(
+             parent,
+             streetType,
+             foundStreet
+        );
         return Result<Street?>.Success(got);
     }
     public static Street Create(AddressRecord source, Settlement parent){
-        return new Street(source.AddressPartId){
-            _parentSettlement = parent,
-            _streetType = (StreetTypes)source.ToponymType,
-            _streetName = new AddressNameToken(source.AddressName, Names[(StreetTypes)source.ToponymType])
-        };
+        return new Street(source.AddressPartId,
+            parent,
+            (StreetTypes)source.ToponymType,
+            new AddressNameToken(source.AddressName, Names[(StreetTypes)source.ToponymType])
+        );
     }
     public async Task Save(ObservableTransaction? scope = null)
     {   
@@ -110,6 +130,11 @@ public class Street : IAddressPart
         if (_id == Utils.INVALID_ID){
             _id = await AddressModel.SaveRecord(this, scope); 
         }
+        var duplicates = GetDuplicates(this);
+        foreach(var d in duplicates){
+            d._id = this._id;
+        }
+        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
     public AddressRecord ToAddressRecord()
     {
@@ -130,4 +155,15 @@ public class Street : IAddressPart
     {
         return _streetName.FormattedName;
     }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(Street)){
+            return false;
+        }
+        var toCompare = (Street)obj;
+        return toCompare._id == this._id;
+    }
+
+
 }

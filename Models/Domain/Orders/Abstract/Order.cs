@@ -63,6 +63,78 @@ public abstract class Order
         private set => _orderDisplayedName = value;
     }
 
+    public static Mapper<Order> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
+    {
+        var mapper = new Mapper<Order>(
+            (reader) =>
+            {
+                var idraw = reader["ord_id"];
+                if (idraw.GetType() == typeof(DBNull))
+                {
+                    return QueryResult<Order>.NotFound();
+                }
+                var id = (int)idraw;
+                Utilities.IResult? result = null;
+                OrderTypes typeGot = (OrderTypes)(int)reader["type"];
+                switch (typeGot)
+                {
+                    case OrderTypes.FreeEnrollment:
+                        result = FreeEnrollmentOrder.Create(id, reader);
+                        break;
+                    case OrderTypes.FreeReenrollment:
+                        result = FreeReenrollmentOrder.Create(id, reader);
+                        break;
+                    case OrderTypes.FreeEnrollmentWithTransfer:
+                        result = FreeEnrollmentWithTransferOrder.Create(id, reader);
+                        break;
+
+                }
+                // приказы об отчилении
+                switch (typeGot)
+                {
+                    case OrderTypes.FreeDeductionWithGraduation:
+                        result = FreeDeductionWithGraduationOrder.Create(id, reader);
+                        break;
+                    case OrderTypes.FreeDeductionWithAcademicDebt:
+                        result = FreeDeductionWithAcademicDebtOrder.Create(id, reader);
+                        break;
+                    case OrderTypes.FreeDeductionWithOwnDesire:
+                        result = FreeDeductionWithOwnDesireOrder.Create(id, reader);
+                        break;
+                }
+                // приказы о переводе
+                switch (typeGot)
+                {
+                    case OrderTypes.FreeNextCourseTransfer:
+                        result = FreeTransferToTheNextCourseOrder.Create(id, reader);
+                        break;
+                    case OrderTypes.FreeTransferBetweenSpecialities:
+                        result = FreeTransferBetweenSpecialitiesOrder.Create(id, reader);
+                        break;
+                }
+                if (result is null){
+                    return QueryResult<Order>.NotFound();
+                }
+                return QueryResult<Order>.Found((Order)result.GetResultObject());
+            },
+            new Column[]{
+                new Column("id", "ord_id", "orders"),
+                new Column("is_closed", "orders"),
+                new Column("effective_date", "orders"),
+                new Column("specified_date", "orders"),
+                new Column("description", "orders"),
+                new Column("name", "orders"),
+                new Column("type", "orders"),
+                new Column("serial_number", "orders"),
+
+            }
+        );
+        if (source is not null){
+            mapper.PathTo.AddHead(joinType,source, new Column("id", "orders"));
+        }
+        return mapper;
+    }
+
     protected Order()
     {
         _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
@@ -130,56 +202,39 @@ public abstract class Order
             return Result<T>.Success(model);
         }
     }
-    protected static async Task<Result<T?>> MapFromDbBase<T>(int id, T model) where T : Order
+    protected static QueryResult<T?> MapParticialFromDbBase<T>(NpgsqlDataReader reader, T model) where T : Order
     {
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT * FROM orders WHERE id = @p1";
-        var cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-        using (cmd)
+        OrderTypes typeGot = (OrderTypes)(int)reader["type"];
+        if (model.GetOrderTypeDetails().Type != typeGot)
         {
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return Result<T>.Failure(new ValidationError(nameof(_id), "Приказа с таким id не существует"));
-            }
-            reader.Read();
-            OrderTypes typeGot = (OrderTypes)(int)reader["type"];
-            if (model.GetOrderTypeDetails().Type != typeGot)
-            {
-                return Result<T>.Failure(new ValidationError(nameof(GetOrderTypeDetails), "Тип приказа не совпадает с найденным"));
-            }
-            model._id = id;
-            model._isClosed = (bool)reader["is_closed"];
-            model._effectiveDate = (DateTime)reader["effective_date"];
-            model._specifiedDate = (DateTime)reader["specified_date"];
-            var description = reader["description"];
-            if (description.GetType() == typeof(DBNull))
-            {
-                model._orderDescription = null;
-            }
-            else
-            {
-                model._orderDescription = (string)reader["description"];
-            }
-            model._orderDisplayedName = (string)reader["name"];
-            model._orderNumber = (int)reader["serial_number"];
-            return Result<T>.Success(model);
+            return QueryResult<T?>.NotFound();
         }
+        model._isClosed = (bool)reader["is_closed"];
+        model._effectiveDate = (DateTime)reader["effective_date"];
+        model._specifiedDate = (DateTime)reader["specified_date"];
+        var description = reader["description"];
+        if (description.GetType() == typeof(DBNull))
+        {
+            model._orderDescription = null;
+        }
+        else
+        {
+            model._orderDescription = (string)reader["description"];
+        }
+        model._orderDisplayedName = (string)reader["name"];
+        model._orderNumber = (int)reader["serial_number"];
+        return QueryResult<T?>.Found(model);
+        
     }
 
-    protected static async Task<Result<T?>> MapFromDbBaseForConduction<T>(int id, T model) where T : Order
+    protected static Result<T?> MapFromDbBaseForConduction<T>(T model) where T : Order
     {
-        var got = await MapFromDbBase(id, model);
-        if (got.IsFailure)
+        var got = GetOrderById(model._id).Result;
+        if (got.IsFailure || got.ResultObject.IsClosed)
         {
-            return got;
+            return Result<T>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения, либо приказа не существует"));
         }
-        if (got.ResultObject.IsClosed)
-        {
-            return Result<T>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения"));
-        }
-        return got;
+        return Result<T>.Success((T?)got.ResultObject);
     }
 
     // этот метод должен по умолчанию менять статус приказа, без его вызова
@@ -192,6 +247,12 @@ public abstract class Order
         if (await StudentHistory.IsAnyStudentInNotClosedOrder(toCheck))
         {
             return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
+        }
+        foreach(var s in toCheck){
+            var record = s.History.GetLastRecord(); 
+            if (record is not null && record.ByOrder._effectiveDate > this._effectiveDate){
+                ResultWithoutValue.Failure(new OrderValidationError("Приказ не является хронологически последовательным для одного или нескольких студентов"));
+            }
         }
         return ResultWithoutValue.Success();
     }
@@ -239,25 +300,7 @@ public abstract class Order
     public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        var mapper = new Mapper<Order>(
-            (r) =>
-            {
-                var id = r["ordid"];
-                if (id.GetType() == typeof(DBNull))
-                {
-                    return QueryResult<Order>.NotFound();
-                }
-                var result = GetOrderById((int)id).Result;
-                if (result.IsFailure)
-                {
-                    throw new Exception("Приказ не может быть не получен на данном этапе");
-                }
-                return QueryResult<Order>.Found(result.ResultObject);
-            },
-            new List<Column>(){
-                new Column("id", "ordid", "orders"),
-            }
-        );
+        var mapper = GetMapper(null);
         var result = SelectQuery<Order>.Init("orders")
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
@@ -365,64 +408,24 @@ public abstract class Order
 
     public static async Task<Result<Order?>> GetOrderById(int id)
     {
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT type FROM orders WHERE id = @p1";
-        var cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-        Utilities.IResult result = null;
-        using (cmd)
-        {
-            using var reader = cmd.ExecuteReader();
-            if (!reader.HasRows)
-            {
-                return Result<Order?>.Failure(new OrderValidationError("Приказа не существует"));
-            }
-            reader.Read();
-            OrderTypes type = (OrderTypes)(int)reader["type"];
-            switch (type)
-            {
-                case OrderTypes.FreeEnrollment:
-                    result = await FreeEnrollmentOrder.Create(id);
-                    break;
-                case OrderTypes.FreeReenrollment:
-                    result = await FreeReenrollmentOrder.Create(id);
-                    break;
-                case OrderTypes.FreeEnrollmentWithTransfer:
-                    result = await FreeEnrollmentWithTransferOrder.Create(id);
-                    break;
-
-            }
-            // приказы об отчилении
-            switch (type)
-            {
-                case OrderTypes.FreeDeductionWithGraduation:
-                    result = await FreeDeductionWithGraduationOrder.Create(id);
-                    break;
-                case OrderTypes.FreeDeductionWithAcademicDebt:
-                    result = await FreeDeductionWithAcademicDebtOrder.Create(id);
-                    break;
-                case OrderTypes.FreeDeductionWithOwnDesire:
-                    result = await FreeDeductionWithOwnDesireOrder.Create(id);
-                    break;
-            }
-            // приказы о переводе
-            switch (type)
-            {
-                case OrderTypes.FreeNextCourseTransfer:
-                    result = await FreeTransferToTheNextCourseOrder.Create(id);
-                    break;
-                case OrderTypes.FreeTransferBetweenSpecialities:
-                    result = await FreeTransferBetweenSpecialitiesOrder.Create(id);
-                    break;
-            }
-            if (result is null){
-                return Result<Order?>.Failure(new OrderValidationError("Приказ не может быть получен из базы данных"));
-            }
-            if (result.IsFailure){
-                return Result<Order?>.Failure(result);
-            }
+        var paramCollection = new SQLParameterCollection();
+        var p1 = paramCollection.Add(id); 
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("id", "orders"),
+                p1,
+                WhereCondition.Relations.Equal
+            )
+        );
+        var found = await FindOrders(
+            new QueryLimits(0,1), 
+            filter: where,
+            additionalParams: paramCollection
+        );
+        if (found.Any()){
+             return Result<Order?>.Success(found.First());
         }
-        return Result<Order?>.Success((Order?)result.GetResultObject());
+        return Result<Order?>.Failure(new OrderValidationError("Приказ не может быть получен из базы данных"));
     }
 
     public static async Task<Result<Order?>> GetOrderForConduction(int id, string conductionDataDTO)
@@ -488,10 +491,12 @@ public abstract class Order
                     JsonSerializer.Deserialize<StudentGroupChangeMoveDTO>(conductionDataDTO));
                     break;
             }
-            if (result is null){
+            if (result is null)
+            {
                 return Result<Order?>.Failure(new OrderValidationError("Приказ для проведения не может быть получен из базы данных"));
             }
-            if (result.IsFailure){
+            if (result.IsFailure)
+            {
                 return Result<Order?>.Failure(result);
             }
             return Result<Order?>.Success((Order?)result.GetResultObject());

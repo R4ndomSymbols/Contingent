@@ -6,18 +6,21 @@ public class Filter<T> {
     private Func<IEnumerable<T>, IEnumerable<T>> _filter;
     public static Filter<T> Empty => new Filter<T>();
 
-    public Filter(){
+    private Filter(){
         _filter = (source) => source;
         _sources = new List<Filter<T>>();
     }
 
     public Filter(Func<IEnumerable<T>, IEnumerable<T>> filter){
-        //_filter = filter;
-        // логирование 
+        _filter = filter;
+        /* логирование 
         _filter = (source) => {
-            Console.WriteLine(source.Count());
+            var count = source.Count();
+            if (count!=0){
+                Console.WriteLine(count + "\t" + _sources.Count());
+            }
             return filter.Invoke(source);
-        };
+        };*/
         _sources = new List<Filter<T>>();
 
     }
@@ -31,12 +34,15 @@ public class Filter<T> {
     }
 
     public Filter<T> Include(Filter<T> source){        
-        _sources.Add(source);
+        var toReturn = Empty;
+        toReturn._sources.Add(source);
+        toReturn._sources.Add(this);
+
         if (ReferenceEquals(this, source)){
             throw new Exception("Filter can appear only once in a tree");
         }
         CheckFilterDuplicates(this);
-        return this;
+        return toReturn;
     }
 
     private void CheckFilterDuplicates(Filter<T> instance){

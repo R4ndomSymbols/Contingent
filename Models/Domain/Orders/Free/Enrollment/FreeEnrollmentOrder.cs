@@ -2,6 +2,8 @@ using Utilities;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Orders.OrderData;
+using Npgsql;
+using System.Net.Http.Headers;
 
 
 namespace StudentTracking.Models.Domain.Orders;
@@ -27,7 +29,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     }
     public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto){
         var model = new FreeEnrollmentOrder(id);
-        var result = await MapFromDbBaseForConduction(id, model);
+        var result = MapFromDbBaseForConduction(model);
         if (result.IsFailure){
             return result.RetraceFailure<FreeEnrollmentOrder>();
         }
@@ -41,10 +43,10 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         return checkResult.Retrace(order); 
     }
 
-    public static async Task<Result<FreeEnrollmentOrder?>> Create (int id){
+    public static QueryResult<FreeEnrollmentOrder?> Create (int id, NpgsqlDataReader reader){
         var order = new FreeEnrollmentOrder(id);
-        var result = await MapFromDbBase(id,order);
-        return result.Retrace(order); 
+        return MapParticialFromDbBase(reader,order);
+        
     }
 
     public override async Task Save(ObservableTransaction? scope)

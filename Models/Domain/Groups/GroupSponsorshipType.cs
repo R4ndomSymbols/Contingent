@@ -40,7 +40,10 @@ public class GroupSponsorship {
     };
 
     public bool IsFree(){
-        return TypeOfSponsorship != GroupSponsorshipTypes.IndividualSponsorship;
+        return 
+        TypeOfSponsorship == GroupSponsorshipTypes.FederalGovernmentSponsorship ||
+        TypeOfSponsorship == GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship || 
+        TypeOfSponsorship == GroupSponsorshipTypes.LocalGovenmentSponsorship;
     }
     public bool IsPaid(){
         return TypeOfSponsorship == GroupSponsorshipTypes.IndividualSponsorship;

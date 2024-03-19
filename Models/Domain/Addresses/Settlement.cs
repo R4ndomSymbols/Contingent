@@ -5,12 +5,30 @@ namespace StudentTracking.Models.Domain.Address;
 public class Settlement : IAddressPart
 {
     public const int ADDRESS_LEVEL = 4;
+    
+    private static List<Settlement> _duplicationBuffer;
+
+    static Settlement(){
+        _duplicationBuffer = new List<Settlement>();
+    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"город"),
         new Regex(@"поселок"),
         new Regex(@"село\s"),
         new Regex(@"деревня"),
     };
+
+    private static IEnumerable<Settlement> GetDuplicates(Settlement settlement){
+        return _duplicationBuffer.Where(
+            s => 
+            s._parentSettlementArea is not null 
+                ? s._parentSettlementArea.Equals(settlement._parentSettlementArea)
+                : s._parentDistrict.Equals(settlement._parentDistrict)
+            && s._settlementName.Equals(settlement._settlementName)
+            && s._settlementType == settlement._settlementType
+        );
+    }
+     
     public static readonly IReadOnlyDictionary<SettlementTypes, AddressNameFormatting> Names = new Dictionary<SettlementTypes, AddressNameFormatting>(){
         {SettlementTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {SettlementTypes.City, new AddressNameFormatting("г.", "Город", AddressNameFormatting.BEFORE)},
@@ -51,14 +69,32 @@ public class Settlement : IAddressPart
     }
 
     // валидация не проверяет типы, внутри которых возможно размещение городов, добавить
-    private Settlement(){
+    private Settlement(District? parentD, SettlementArea? parentSA, SettlementTypes type, AddressNameToken name){
         _id = Utils.INVALID_ID;
+        if (parentD is null && parentSA is null
+            || parentD is not null && parentSA is not null){
+                throw new Exception("Неверная инициализация населенного пункта");
+        }
+        _parentDistrict = parentD;
+        _parentSettlementArea = parentSA;
+        _settlementType = type;
+        _settlementName = name;
+        _duplicationBuffer.Add(this);
     } 
     
-    protected Settlement(int id)
+    private Settlement(int id, District? parentD, SettlementArea? parentSA, SettlementTypes type, AddressNameToken name)
     {
         _id = id;
+        if (parentD is null && parentSA is null
+            || parentD is not null && parentSA is not null){
+                throw new Exception("Неверная инициализация населенного пункта");
+        }
+        _parentDistrict = parentD;
+        _parentSettlementArea = parentSA;
+        _settlementType = type;
+        _settlementName = name;
     }
+
     // проверка на тип родителя
     public static Result<Settlement?> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
@@ -85,19 +121,22 @@ public class Settlement : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
-                    _parentDistrict = parent, 
-                    _settlementType = (SettlementTypes)first.ToponymType,
-                    _settlementName = new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
-                });
+                return Result<Settlement?>.Success(new Settlement(
+                    first.AddressPartId,
+                    parent,
+                    null, 
+                    (SettlementTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new Settlement(){
-            _parentDistrict = parent,
-            _settlementType = settlementType,
-            _settlementName = foundSettlement,
-        };
+        var got = new Settlement(
+            parent,
+            null,
+            settlementType,
+            foundSettlement
+        );
         return Result<Settlement?>.Success(got);
     }
     // отличия между ними в валидации иерархии, добавить потом
@@ -126,42 +165,46 @@ public class Settlement : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Settlement?>.Success(new Settlement(first.AddressPartId){
-                    _parentSettlementArea = parent, 
-                    _settlementType = (SettlementTypes)first.ToponymType,
-                    _settlementName = new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
-                });
+                return Result<Settlement?>.Success(new Settlement(first.AddressPartId,
+                    null,
+                    parent, 
+                    (SettlementTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(SettlementTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new Settlement(){
-            _parentSettlementArea = parent,
-            _settlementType = settlementType,
-            _settlementName = foundSettlement,
-        };
+        var got = new Settlement(
+            null,
+            parent,
+            settlementType,
+            foundSettlement
+        );
         return Result<Settlement?>.Success(got);
     }
     public static Settlement? Create(AddressRecord record, District parent){
         if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
         }
-        return new Settlement(record.AddressPartId){
-            _parentSettlementArea = null,
-            _parentDistrict = parent,
-            _settlementType = (SettlementTypes)record.ToponymType,
-            _settlementName = new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
-        };
+        return new Settlement(
+            record.AddressPartId,
+            parent,
+            null,
+            (SettlementTypes)record.ToponymType,
+            new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
+        );
     }
     public static Settlement? Create(AddressRecord record, SettlementArea parent){
         if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
         }
-        return new Settlement(record.AddressPartId){
-            _parentDistrict = null,
-            _parentSettlementArea = parent,
-            _settlementType = (SettlementTypes)record.ToponymType,
-            _settlementName = new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
-        };
+        return new Settlement(
+            record.AddressPartId,
+            null,
+            parent,
+            (SettlementTypes)record.ToponymType,
+            new AddressNameToken(record.AddressName, Names[(SettlementTypes)record.ToponymType])
+        );
     }
     public async Task Save(ObservableTransaction? scope = null)
     {
@@ -174,6 +217,12 @@ public class Settlement : IAddressPart
         if (_id == Utils.INVALID_ID){
             _id = await AddressModel.SaveRecord(this, scope);
         }
+        var duplicates = GetDuplicates(this);
+        foreach(var d in duplicates){
+            d._id = this._id;
+        }
+        _duplicationBuffer.RemoveAll(d => d._id == this._id);
+
     }
     public AddressRecord ToAddressRecord()
     {
@@ -194,5 +243,14 @@ public class Settlement : IAddressPart
     public override string ToString()
     {
         return _settlementName.FormattedName;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(Settlement)){
+            return false;
+        }
+        var toCompare = (Settlement)obj;
+        return toCompare._id == this._id;
     }
 }

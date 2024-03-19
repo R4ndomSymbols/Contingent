@@ -4,10 +4,23 @@ namespace StudentTracking.Models.Domain.Address;
 public class Building : IAddressPart
 {
     public const int ADDRESS_LEVEL = 6;
+
+    private static List<Building> _duplicationBuffer;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"дом"),
         new Regex(@"д\u002E"),
     };
+    static Building(){
+        _duplicationBuffer = new List<Building>();
+    }
+    private static IEnumerable<Building> GetDuplicates(Building building){
+        return _duplicationBuffer.Where(
+            b => b._parentStreet.Equals(building._parentStreet)
+            && b._buildingName.Equals(building._buildingName) 
+            && b._buildingType == building._buildingType 
+        );
+    } 
+
     public static readonly IReadOnlyDictionary<BuildingTypes, AddressNameFormatting> Names = new Dictionary<BuildingTypes, AddressNameFormatting>(){
         {BuildingTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {BuildingTypes.Building, new AddressNameFormatting("д.", "Дом", AddressNameFormatting.BEFORE)},
@@ -33,13 +46,20 @@ public class Building : IAddressPart
     {
         get => (int)_buildingType;
     }
-    private Building(int id)
+    private Building(int id, Street parent, BuildingTypes type, AddressNameToken name)
     {
         _id = id;
+        _buildingName = name;
+        _parentStreet = parent;
+        _buildingType = type;
     }
-    protected Building()
+    protected Building(Street parent, BuildingTypes type, AddressNameToken name)
     {
-       _id = Utils.INVALID_ID;
+        _id = Utils.INVALID_ID;
+        _buildingName = name;
+        _parentStreet = parent;
+        _buildingType = type;
+        _duplicationBuffer.Add(this);
     }
     public static Result<Building?> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
@@ -66,36 +86,42 @@ public class Building : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Building?>.Success(new Building(first.AddressPartId){
-                    _parentStreet = parent, 
-                    _buildingType = (BuildingTypes)first.ToponymType,
-                    _buildingName = new AddressNameToken(first.AddressName, Names[(BuildingTypes)first.ToponymType])
-                });
+                return Result<Building?>.Success(new Building(
+                    first.AddressPartId,
+                    parent, 
+                    (BuildingTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(BuildingTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new Building(){
-            _parentStreet = parent,
-            _buildingType = buildingType,
-            _buildingName = foundBuilding,
-        };
+        var got = new Building(
+            parent,
+            buildingType,
+            foundBuilding
+        );
         return Result<Building?>.Success(got);
     }
     public static Building? Create(AddressRecord source, Street parent){
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
         }
-        return new Building(source.AddressPartId){
-            _parentStreet = parent,
-            _buildingType = (BuildingTypes)source.ToponymType,
-            _buildingName = new AddressNameToken(source.AddressName, Names[(BuildingTypes)source.ToponymType])
-        };
+        return new Building(source.AddressPartId,
+            parent,
+            (BuildingTypes)source.ToponymType,
+            new AddressNameToken(source.AddressName, Names[(BuildingTypes)source.ToponymType])
+        );
     }
     public async Task Save(ObservableTransaction? scope = null){
         await _parentStreet.Save(scope);
         if (_id == Utils.INVALID_ID){
             _id = await AddressModel.SaveRecord(this, scope);
         }
+        var duplicates = GetDuplicates(this);
+        foreach(var d in duplicates){
+            d._id = this._id;
+        }
+        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
     
     public AddressRecord ToAddressRecord()
@@ -115,5 +141,13 @@ public class Building : IAddressPart
     }
     public override string ToString(){
         return _buildingName.FormattedName;
+    }
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(Building)){
+            return false;
+        }
+        var toCompare = (Building)obj;
+        return toCompare._id == this._id;
     }
 }

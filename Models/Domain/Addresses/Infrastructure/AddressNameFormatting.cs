@@ -6,20 +6,20 @@ public class AddressNameFormatting {
 
     public const bool AFTER = false;
     public const bool BEFORE = true;
-    private string _shortName;
-    private string _longName;
+    private string _shortTypeName;
+    private string _longTypeName;
     private bool _positioning;
     private List<Regex> _tokenOcurrences;
 
     public string ShortName {
-        get => _shortName;
+        get => _shortTypeName;
     } 
     public string LongName {
-        get => _longName;
+        get => _longTypeName;
     }
     public AddressNameFormatting(string shortN, string longN, bool outPositioning){
-        _shortName = shortN;
-        _longName = longN;
+        _shortTypeName = shortN;
+        _longTypeName = longN;
         _positioning = outPositioning;
         _tokenOcurrences = new List<Regex>();
     }
@@ -34,19 +34,19 @@ public class AddressNameFormatting {
        else{
             try{
                 string token = tokenContainer.Trim();
-                int shortFound = token.IndexOf(_shortName, StringComparison.OrdinalIgnoreCase);
+                int shortFound = token.IndexOf(_shortTypeName, StringComparison.OrdinalIgnoreCase);
                 if (shortFound != -1){
-                    if (shortFound == 0 || shortFound == token.Length - _shortName.Length){
-                        return new AddressNameToken(token.Remove(shortFound, _shortName.Length), this);
+                    if (shortFound == 0 || shortFound == token.Length - _shortTypeName.Length){
+                        return new AddressNameToken(token.Remove(shortFound, _shortTypeName.Length), this);
                     }
                     else{
                         return null;
                     }
                 }
-                int longFound = token.IndexOf(_longName, StringComparison.OrdinalIgnoreCase);
+                int longFound = token.IndexOf(_longTypeName, StringComparison.OrdinalIgnoreCase);
                 if (longFound != -1){
-                    if (longFound == 0 || longFound == token.Length - _longName.Length){
-                        return new AddressNameToken(token.Remove(longFound, _longName.Length), this);
+                    if (longFound == 0 || longFound == token.Length - _longTypeName.Length){
+                        return new AddressNameToken(token.Remove(longFound, _longTypeName.Length), this);
                     }
                     else{
                         return null;
@@ -65,21 +65,33 @@ public class AddressNameFormatting {
 
     public string FormatLong(string toponym){
         if (_positioning == BEFORE){
-            return _longName + " " + toponym;
+            return _longTypeName + " " + toponym;
         }
         if (_positioning == AFTER){
-            return toponym + " " + _longName;
+            return toponym + " " + _longTypeName;
         }
         return string.Empty;
     }
      public string FormatShort(string toponym){
         if (_positioning == BEFORE){
-            return _shortName + " " + toponym;
+            return _shortTypeName + " " + toponym;
         }
         if (_positioning == AFTER){
-            return toponym + " " + _shortName;
+            return toponym + " " + _shortTypeName;
         }
         return string.Empty;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj.GetType() != typeof(AddressNameFormatting)){
+            return false;
+        }
+        var toCompare = (AddressNameFormatting)obj;
+        return 
+            toCompare._longTypeName == this._longTypeName &&
+            toCompare._shortTypeName == this._shortTypeName &&
+            toCompare._positioning == this._positioning;
     }
 
 

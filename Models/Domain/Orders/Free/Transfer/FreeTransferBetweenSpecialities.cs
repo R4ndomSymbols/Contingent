@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -22,16 +23,16 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         var result = await MapBase(orderDTO,created);
         return result;
     }
-    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id){
-        var created = new FreeTransferBetweenSpecialitiesOrder(id);
-        var result = await MapFromDbBase(id,created);
-        return result;
+    public static QueryResult<FreeTransferBetweenSpecialitiesOrder?> Create(int id, NpgsqlDataReader reader)
+    {
+        var order = new FreeTransferBetweenSpecialitiesOrder(id);
+        return MapParticialFromDbBase(reader, order);
     }
 
 
     public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, StudentGroupChangeMoveDTO? moves){
         var created = new FreeTransferBetweenSpecialitiesOrder(id); 
-        var result = await MapFromDbBaseForConduction(id, created);
+        var result = MapFromDbBaseForConduction(created);
         if (result.IsFailure){
             return result;
         }
@@ -72,7 +73,7 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         }
         // проверка на конечный момент времени, без учета альтернативной истории
         foreach (var move in _moves){
-            var currentStudentGroup = await StudentHistory.GetCurrentStudentGroup(move.Student);
+            var currentStudentGroup = move.Student.History.GetCurrentGroup();
             var conditionsSatisfied = 
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn   
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear; 

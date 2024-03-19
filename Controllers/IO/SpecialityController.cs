@@ -63,9 +63,20 @@ public class SpecialityController : Controller{
     }
 
     [HttpGet]
-    [Route("specialities/suggest/{query?}")]
-    public async Task<JsonResult> GetSuggestions(string? query){
-        return Json(await SpecialityModel.GetSuggestions(query, null));
-    }
-
+    [Route("specialities/about/{query?}")]
+    public IActionResult ViewSpeciality(string? query){
+        if(int.TryParse(query, out int id)){
+            var got = SpecialityModel.GetById(id, null).Result;
+            if (got!=null){
+                return View(@"Views/Observe/Speciality.cshtml", new SpecialityOutDTO(got));
+            }
+            else{
+                return View(@"Views/Shared/Error.cshtml", "Специальности с таким id не существует");
+            }
+            
+        }
+        else{
+            return View(@"Views/Shared/Error.cshtml", "Недопустимый id специальности");
+        }
+    } 
 }

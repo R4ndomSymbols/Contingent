@@ -4,10 +4,23 @@ namespace StudentTracking.Models.Domain.Address;
 public class Apartment : IAddressPart
 {
     public const int ADDRESS_LEVEL = 7;
+    private static List<Apartment> _duplicationBuffer;
+    static Apartment(){
+        _duplicationBuffer = new List<Apartment>();
+    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"квартира"),
         new Regex(@"кв\u002E"),
     };
+
+    private static IEnumerable<Apartment> GetDuplicates(Apartment apartment){
+        return _duplicationBuffer.Where(
+            a => a._parentBuilding.Equals(apartment._parentBuilding)
+            && a._apartmentName.Equals(apartment._apartmentName)
+            && apartment._apartmentType == a._apartmentType
+        );
+    }
+    
     public static readonly IReadOnlyDictionary<ApartmentTypes, AddressNameFormatting> Names = new Dictionary<ApartmentTypes, AddressNameFormatting>(){
         {ApartmentTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {ApartmentTypes.Apartment, new AddressNameFormatting("кв.", "Квартира", AddressNameFormatting.BEFORE)},
@@ -34,13 +47,21 @@ public class Apartment : IAddressPart
         get => (int)_apartmentType;
     }
 
-    private Apartment(int id)
+    private Apartment(int id, Building parent, ApartmentTypes type, AddressNameToken name)
     {
         _id = id;
+        _parentBuilding = parent;
+        _apartmentType = type;
+        _apartmentName = name;
     }
-    protected Apartment()
+    private Apartment(Building parent, ApartmentTypes type, AddressNameToken name)
     {
         _id = Utils.INVALID_ID;
+        _parentBuilding = parent;
+        _apartmentType = type;
+        _apartmentName = name;
+        _duplicationBuffer.Add(this);
+        
     }
     public static Result<Apartment?> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
@@ -67,30 +88,30 @@ public class Apartment : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Apartment?>.Success(new Apartment(first.AddressPartId){
-                    _parentBuilding = parent, 
-                    _apartmentType = (ApartmentTypes)first.ToponymType,
-                    _apartmentName = new AddressNameToken(first.AddressName, Names[(ApartmentTypes)first.ToponymType])
-                });
+                return Result<Apartment?>.Success(new Apartment(first.AddressPartId,
+                    parent, 
+                    (ApartmentTypes)first.ToponymType,
+                    new AddressNameToken(first.AddressName, Names[(ApartmentTypes)first.ToponymType])
+                ));
             }
         }
         
-        var got = new Apartment(){
-            _parentBuilding = parent,
-            _apartmentType = apartmentType,
-            _apartmentName = foundApartment,
-        };
+        var got = new Apartment(
+            parent,
+            apartmentType,
+            foundApartment
+        );
         return Result<Apartment?>.Success(got);
     }
     public static Apartment? Create(AddressRecord from, Building parent){
         if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null){
             return null;
         } 
-        return new Apartment(from.AddressPartId){
-            _apartmentType = (ApartmentTypes)from.ToponymType,
-            _parentBuilding = parent,
-            _apartmentName = new AddressNameToken(from.AddressName, Names[(ApartmentTypes)from.ToponymType])
-        };
+        return new Apartment(from.AddressPartId,
+            parent,
+            (ApartmentTypes)from.ToponymType,
+            new AddressNameToken(from.AddressName, Names[(ApartmentTypes)from.ToponymType])
+        );
     }
     public async Task Save(ObservableTransaction? scope = null)
     {
@@ -99,6 +120,11 @@ public class Apartment : IAddressPart
         if (_id == Utils.INVALID_ID){
             _id = await AddressModel.SaveRecord(this, scope);
         }
+        var duplicates = GetDuplicates(this);
+        foreach(var d in duplicates){
+            d._id = this._id;
+        }
+        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
     public override bool Equals(object? other)
     {

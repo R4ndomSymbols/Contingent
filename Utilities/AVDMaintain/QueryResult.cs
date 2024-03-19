@@ -1,6 +1,7 @@
+
 namespace Utilities;
 
-public class QueryResult<T> {
+public class QueryResult<T> : IResult {
     
     private bool _found;
     private T _resultObject;
@@ -16,6 +17,10 @@ public class QueryResult<T> {
         }
     }
 
+    public bool IsSuccess => _found;
+
+    public bool IsFailure => !_found;
+
     private QueryResult(){
 
     }
@@ -28,8 +33,16 @@ public class QueryResult<T> {
     }
     public static QueryResult<T> NotFound(){
         return new QueryResult<T>{_found = false};
-    }  
+    }
 
+    public object? GetResultObject()
+    {
+        return _resultObject;
+    }
 
+    public IReadOnlyCollection<ValidationError>? GetErrors()
+    {
+        return new List<ValidationError>();
+    }
 }
 

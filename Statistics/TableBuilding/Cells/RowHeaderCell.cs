@@ -7,7 +7,6 @@ public class RowHeaderCell<T> {
     private RowHeaderCell<T>? _parent;
     // прямые потомки (находнятся на уровень ниже)
     private List<RowHeaderCell<T>> _children;
-
     public Filter<T> NodeFilter {get; private set;}
     public string Name { get; private set;}
     public bool IsOnlyStructural { get; private init; }
@@ -27,16 +26,17 @@ public class RowHeaderCell<T> {
         _children = new List<RowHeaderCell<T>>();
         if (nodeFilter is null){
             IsOnlyStructural = true;
-            NodeFilter = Filter<T>.Empty;
+            NodeFilter = _parent.NodeFilter;
         }
         else {
             IsOnlyStructural = false;
-            NodeFilter = nodeFilter.Include(_parent.NodeFilter); 
+            NodeFilter = nodeFilter.Include(_parent.NodeFilter);
         }
     }
 
     // корень
     public RowHeaderCell(){
+        Name = "";
         _parent = null;
         NodeFilter = Filter<T>.Empty;
         _children = new List<RowHeaderCell<T>>();
@@ -46,9 +46,8 @@ public class RowHeaderCell<T> {
     private void AddChild(RowHeaderCell<T> child)
     {
         child._parent = this;
-        _children.Add(child);
-        
-    } 
+        _children.Add(child);   
+    }
 }
 
 public interface IContsraintTree {

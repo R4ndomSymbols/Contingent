@@ -545,6 +545,23 @@ public class AddressModel
             toMap._apartmentPart = Apartment.Create(foundSingle, toMap._buildingPart);
         }
     }
+
+    public bool Contains(IAddressPart? part){
+        if (part is null){
+            return false;
+        }
+        IAddressPart?[] parts = {
+                _apartmentPart,
+                _buildingPart,
+                _streetPart,
+                _settlementPart,
+                _settlementAreaPart,
+                _districtPart,
+                _subjectPart
+        };
+        return parts.Any(x => part.Equals(x));
+    }
+
 }
 internal class AddressPartPointer
 {

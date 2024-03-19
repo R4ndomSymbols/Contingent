@@ -7,7 +7,9 @@ var identityIncludedPostfix = "_inc_id";
 var identityExcludedPostfix = "_ex_id";
 var currentGroupFlag = false;
 var studentPinnedGroupInputPostfix = "_n_group"
-var groupPolicy
+var groupPolicy;
+var groupSearchLockCount = 0;
+var groupSearchFunc = null;
 // здесь хранятся все студенты
 // pinned - свойство, отвечающее за прикрепленность
 var students = [];
@@ -15,22 +17,35 @@ var students = [];
 const invalidGroupId = "invalid_g"
 
 $(document).ready(function () {
-    $.ajax({
-        type: "GET",
-        url: "/studentflow/inorder/" + String($("#current_order").prop("value")),
-        dataType: "json",
-        success: function (response) {
-            $.each(response, function (index, elem) {
-                if (elem["groupId"] === null) {
-                    elem["groupId"] = undefined
+    + String($("#current_order").prop("value")),
+        $.ajax({
+            type: "POST",
+            url: "/students/search/query",
+            data: JSON.stringify(
+                {
+                    Name: $("#fullname_filter").val(),
+                    GroupName: $("#group_filter").val(),
+                    Source: {
+                        OrderId: Number($("#current_order").prop("value")),
+                        OrderMode: "OnlyIncluded"
+                    },
+                    PageSize: 30,
+                    GlobalOffset: 0
                 }
-                $("#students_in_order").append(
-                    `
+            ),
+            dataType: "json",
+            success: function (response) {
+                $.each(response, function (index, elem) {
+                    if (elem["groupId"] === null) {
+                        elem["groupId"] = undefined
+                    }
+                    $("#students_in_order").append(
+                        `
                     <tr> 
-                        <td id = ${elem["studentId"]}>
+                        <td>
                             ${elem["studentFullName"]}
                         </td>
-                        <td id = "${elem["groupId"]}">
+                        <td>
                             ${elem["groupName"]}
                         </td>
                         <td>
@@ -38,14 +53,13 @@ $(document).ready(function () {
                         </td>
                     </tr>
                     `
-                );
-            });
-        }
-    });
+                    );
+                });
+            }
+        });
     $("#close_order").on("click", function () {
         closeOrder();
     });
-
     groupPolicy = String($("#current_order").attr("group_behaviour"))
 });
 
@@ -53,8 +67,20 @@ $("#find_students").on("click", function () {
     document.getElementById("students_not_in_order").innerHTML = "";
     students = students.filter((x) => x.pinned);
     $.ajax({
-        type: "GET",
-        url: "/studentflow/notinorder/" + String($("#current_order").prop("value")),
+        type: "POST",
+        url: "/students/search/query",
+        data: JSON.stringify(
+            {
+                Name: $("#fullname_filter").val(),
+                GroupName: $("#group_filter").val(),
+                Source: {
+                    OrderId: Number($("#current_order").prop("value")),
+                    OrderMode: "OnlyExcluded"
+                },
+                PageSize: 30,
+                GlobalOffset: 0
+            }
+        ),
         success: function (studentsJSON) {
             $.each(studentsJSON, function (i, val) {
                 if (!isStudentPinned(val["studentId"])) {
@@ -173,9 +199,31 @@ function excludeStudent(student) {
     $("#" + student["studentId"] + includePostfix).on("click", function () { includeStudent(student) });
 }
 
+function registerSheduledGroupSearch(searchFunc) {
+    groupSearchLockCount += 1;
+    var promise = new Promise(
+        (resolve, reject) =>
+            {
+                let now = groupSearchLockCount;
+                setTimeout(
+                    () => {
+                        if (now != groupSearchLockCount) {
+                            resolve();
+                        }
+                        else {
+                            searchFunc();
+                            resolve();
+                        }
+                    }, 400)
+            }
+    )
+}
+
+
+
 function findGroupsAndSetAutoComplete(student) {
     var inputName = String(student.studentId) + studentPinnedGroupInputPostfix
-    $("#" + inputName).on("keyup", function () {
+    var request = () => {
         var searchText = $("#" + inputName).val()
         if (String(searchText).length < 3) {
             return
@@ -205,7 +253,11 @@ function findGroupsAndSetAutoComplete(student) {
                 });
             }
         });
-    })
+    }
+
+    $("#" + inputName).on("keyup", function () {
+        registerSheduledGroupSearch(request);
+    });
 }
 
 $("#save_changes").on("click", function () {
@@ -218,7 +270,7 @@ $("#save_changes").on("click", function () {
         success: function (response) {
             alert("Сохранение прошло успешно")
         },
-        error: function(response){
+        error: function (response) {
             alert("Сохранение провалилось (ошибка в данных или закрытый приказ)");
         }
     });
@@ -241,7 +293,7 @@ function getOrderJsonData() {
         case "FreeEnrollmentWithTransfer":
         case "FreeReenrollment":
         case "FreeTransferBetweenSpecialities":
-            result = 
+            result =
             {
                 Moves: mainModel.map(
                     (x) => {
@@ -252,10 +304,10 @@ function getOrderJsonData() {
                     }
                 )
             }
-        break;
+            break;
         case "FreeDeductionWithGraduation":
         case "FreeDeductionWithAcademicDebt":
-        case "FreeDeductionWithOwnDesire":    
+        case "FreeDeductionWithOwnDesire":
             result = {
                 Students: mainModel.map(
                     x => x.id
@@ -268,7 +320,7 @@ function getOrderJsonData() {
     return result
 }
 
-function closeOrder(){
+function closeOrder() {
     $.ajax({
         type: "GET",
         url: "/orders/close/" + $("#current_order").attr("value"),

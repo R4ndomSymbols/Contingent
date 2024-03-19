@@ -58,8 +58,8 @@ function fillPage(studentsFound) {
 function buildSearchQuery(offset) {
     var json = JSON.stringify(
         {
-            Name: $("#name_input").attr("value"),
-            GroupName: $("#group_input").attr("value"),
+            Name: $("#name_input").val(),
+            GroupName: $("#group_input").val(),
             PageSize: 20,
             GlobalOffset: offset
         }

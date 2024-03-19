@@ -131,7 +131,7 @@ public class TableColumnHeader<T> {
             if (found is not null){
                 return;
             } 
-            if (cell.Placement.X == x){
+            if (cell.Placement.X == x && !cell.HasAnyChildren){
                 found = cell;
             }
         };

@@ -12,9 +12,13 @@ public class SpecialityOutDTO {
     public int CourseCount {get; set; }
     public int EducationalLevelIn {get; set; }
     public int EducationalLevelOut {get; set; }
+    public string EducationalLevelInName {get; set; }
+    public string EducationalLevelOutName {get; set; }
     public int TeachingDepth {get; set;}
+    public string TeachingDepthName {get; set;}
     public string FullName {get; set;}
     public int ProgramType { get; set; }
+    public string ProgramTypeName {get; set;}
 
     public SpecialityOutDTO(SpecialityModel model)
     {   
@@ -27,8 +31,12 @@ public class SpecialityOutDTO {
         CourseCount = model.CourseCount;
         EducationalLevelIn = (int)model.EducationalLevelIn.LevelCode;
         EducationalLevelOut = (int)model.EducationalLevelOut.LevelCode;
+        EducationalLevelInName = model.EducationalLevelIn.RussianName;
+        EducationalLevelOutName = model.EducationalLevelOut.RussianName;
         FullName = FgosCode + " " + FgosName + " / " + Qualification;
         ProgramType = (int)model.ProgramType.Type;
+        ProgramTypeName = model.ProgramType.Name;
+        TeachingDepthName = model.TeachingLevel.RussianName;
     }
 
     public SpecialityOutDTO(){

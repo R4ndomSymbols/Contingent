@@ -1,3 +1,4 @@
+using System.Globalization;
 using Npgsql;
 using StudentTracking.Models;
 
@@ -12,9 +13,14 @@ public static class Utils {
     public const int INVALID_ID = 0;
     public const int ORG_CREATION_YEAR = 1972; 
 
-    public static string FormatDateTime(DateTime? date){
+    public static string FormatDateTime(DateTime? date, bool expand = false){
         var correctDate = date == null ? DateTime.Now : (DateTime)date;
-
+        if (expand){
+            return string.Format("{0} {1} {2}", 
+            correctDate.Day, 
+            correctDate.ToString("MMMM", CultureInfo.CreateSpecificCulture("ru")), 
+            correctDate.Year.ToString() + " года");
+        }
         return string.Format("{0}.{1}.{2}", correctDate.Day, correctDate.Month, correctDate.Year);
     }
     public static DateTime ParseDate(string? date){
@@ -134,29 +140,6 @@ public static class Utils {
             return resultCourseCount;
         }
     }
-
-    public static T? ExtractSafeNullable<T>(NpgsqlDataReader r, string parameterName) where T : class
-    {
-        var extracted = r[parameterName];
-        if (extracted.GetType() != typeof(T)){
-            return null;
-        }
-        else {
-            return (T)extracted;
-        }
-    }
-    public static T? ExtractSafeValueType<T>(NpgsqlDataReader r, string parameterName) where T : class
-    {
-        var extracted = r[parameterName];
-        if (extracted.GetType() != typeof(T)){
-            return null;
-        }
-        else {
-            return (T)extracted;
-        }
-    }
-
-
 
 }
 

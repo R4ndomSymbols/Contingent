@@ -85,7 +85,7 @@ public class StudentFlowController : Controller
 
 
     [HttpGet]
-    [Route("/studentflow/notinorder/{query?}")]
+    [Route("/studentflow/notinorder")]
     public async Task<IActionResult> FilterStudents(string query)
     {
 
@@ -143,7 +143,7 @@ public class StudentFlowController : Controller
             if(student is null){
                 return BadRequest("такого студента не существует");
             }
-            var history = (await StudentHistory.Create(student)).History;
+            var history = student.History.History;
             List<StudentHistoryMoveDTO> moves = new();
 
             for(int i = 0; i < history.Count; i++){

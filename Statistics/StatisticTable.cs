@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace StudentTracking.Statistics;
@@ -77,7 +78,7 @@ public class StatisticTable<M> {
             bodyHTML.Append(row.ToString());
         }
         return 
-        "<table class = \"tableStats\">" 
+        "<table class = \"table\" >" 
         + thead
         + "<tbody>" + bodyHTML + "</tbody>"
         + "</table>";  

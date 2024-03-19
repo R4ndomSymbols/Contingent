@@ -5,7 +5,7 @@ public class ColumnHeaderCell<T> {
 
     private ColumnHeaderCell<T>? _parent;
     private List<ColumnHeaderCell<T>> _children;
-    public Filter<T> NodeFilter {get; private init; }
+    public Filter<T> NodeFilter {get; set;}
     private CellPlacement _placement;
     public bool IsFixed {get; private init;}
     public string Name {get; set; }
@@ -21,23 +21,24 @@ public class ColumnHeaderCell<T> {
     public IReadOnlyList<ColumnHeaderCell<T>> Children => _children;
     public bool HasAnyChildren => _children.Any();
     public bool IsRoot => _parent is null;
-    public bool IsOnlyStructural => NodeFilter is null; 
+
     // колонка с фильтром
-    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, Filter<T>? nodeFilter = null) : this(name, parent, false){
-        if (nodeFilter is not null){
-            NodeFilter = nodeFilter.Include(parent.NodeFilter);
+    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, Filter<T>? nodeFilter = null) 
+    : this(name, parent, false){
+        if (nodeFilter is null){
+            NodeFilter = Filter<T>.Empty.Include(_parent.NodeFilter);
         }
         else{
-            NodeFilter = Filter<T>.Empty;
+            NodeFilter = nodeFilter.Include(_parent.NodeFilter);
         }
-        
     }
-     public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, CellPlacement permanent, Filter<T>? nodeFilter = null) : this(name, parent, true){
-        if (nodeFilter is not null){
-            NodeFilter = nodeFilter.Include(parent.NodeFilter);
+    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, CellPlacement permanent, Filter<T>? nodeFilter = null) 
+    : this(name, parent, true){
+        if (nodeFilter is null){
+            NodeFilter = Filter<T>.Empty.Include(_parent.NodeFilter);
         }
         else{
-            NodeFilter = Filter<T>.Empty;
+            NodeFilter = nodeFilter.Include(_parent.NodeFilter);
         }
         _placement = permanent;
     }

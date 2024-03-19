@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -9,11 +10,11 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
 {
     private StudentGroupNullifyMoveList _debtHolders;
 
-    public FreeDeductionWithAcademicDebtOrder() : base() {
+    protected FreeDeductionWithAcademicDebtOrder() : base() {
     
     }
 
-    public FreeDeductionWithAcademicDebtOrder(int id) : base (id){
+    protected FreeDeductionWithAcademicDebtOrder(int id) : base (id){
     
     }
 
@@ -23,15 +24,15 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         return result;
     }
 
-    public static async Task<Result<FreeDeductionWithAcademicDebtOrder?>> Create(int id) {
-        var fromDb = new FreeDeductionWithAcademicDebtOrder(id);
-        var result = await MapFromDbBase(id,fromDb);
-        return result;    
+    public static QueryResult<FreeDeductionWithAcademicDebtOrder?> Create(int id, NpgsqlDataReader reader)
+    {
+        var order = new FreeDeductionWithAcademicDebtOrder(id);
+        return MapParticialFromDbBase(reader, order);
     }
 
     public static async Task<Result<FreeDeductionWithAcademicDebtOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto){
         var fromDb = new FreeDeductionWithAcademicDebtOrder(id);
-        var result = await MapFromDbBaseForConduction(id, fromDb);
+        var result = MapFromDbBaseForConduction(fromDb);
         if (result.IsFailure){
             return result;
         }
