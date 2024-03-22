@@ -73,7 +73,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         }
         foreach (var i in _graduates)
         {
-            var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student.Id);
+            var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student);
             var group = aggregate?.GroupTo;
             if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid())
             {

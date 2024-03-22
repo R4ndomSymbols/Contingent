@@ -1,5 +1,7 @@
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Flow.History;
+using StudentTracking.Models.Domain.Orders;
 using StudentTracking.Statistics;
 
 namespace StudentTracking.Models.Infrastruture;
@@ -39,7 +41,7 @@ public class SearchHelper{
         if (!string.IsNullOrEmpty(query.GroupName))
         {
             var normalized = query.GroupName.Trim();
-            if (normalized.Length >= 3)
+            if (normalized.Length >= 2)
             {
                 filter.Include(
                 new Filter<StudentFlowRecord>(
@@ -59,12 +61,33 @@ public class SearchHelper{
             return null;
         }
         if (dto.OrderId != null && dto.OrderMode != null){
-            if (dto.OrderMode == StudentHistory.OrderRelationMode.OnlyExcluded.ToString()){
-                return () => StudentHistory.GetRecordsForOrder(dto.OrderId, StudentHistory.OrderRelationMode.OnlyExcluded);
+            if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyExcluded.ToString()){
+                return () => {
+                    var order = Order.GetOrderById(dto.OrderId.Value).Result.ResultObject;
+                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
+                    new HistoryExtractSettings{
+                        ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyExcluded),
+                        ExtractLastState = true,
+                        ExtractGroups = true,
+                        ExtractStudents = true,
+                        ExtractOrders = false
+                    });
+                };
             }
-            else if (dto.OrderMode == StudentHistory.OrderRelationMode.OnlyIncluded.ToString()){
-                return () => StudentHistory.GetRecordsForOrder(dto.OrderId, StudentHistory.OrderRelationMode.OnlyIncluded);
-            }
+            else if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyIncluded.ToString()){
+                return () => {
+                    var order = Order.GetOrderById(dto.OrderId.Value).Result.ResultObject;
+                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
+                    new HistoryExtractSettings{
+                        ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyIncluded),
+                        ExtractLastState = false,
+                        ExtractOrders = false,
+                        ExtractStudentUnique = true,
+                        ExtractGroups = true,
+                        ExtractStudents = true
+                    });
+                };
+            };
         }
         return null;
     }

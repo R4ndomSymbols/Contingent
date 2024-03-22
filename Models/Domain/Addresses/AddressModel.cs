@@ -106,7 +106,7 @@ public class AddressModel
         {
             return new List<string>();;
         }
-        var split = request.Split(',');
+        var split = request.Split(',').Select(x => x.Trim()).Where(x => x != string.Empty).ToArray();
         var address = new AddressModel();
         AddressPartPointer found = new AddressPartPointer();
         ProcessSubject(0, address, split, found);
@@ -215,6 +215,18 @@ public class AddressModel
         var found = await FindRecords(new QueryLimits(0, 200), filter, param, scope);
         return found;
     }
+    public static IEnumerable<AddressRecord> FindByAddressLevel(int addressLevel){
+        var param = new SQLParameterCollection();
+        var p1 = param.Add<int>(addressLevel);
+        var filter = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("address_level", "address_hierarchy"),
+                p1,
+                WhereCondition.Relations.Equal));
+        var found = FindRecords(new QueryLimits(0, 200), filter, param, null).Result;
+        return found;
+    }
+
     private static async Task<IEnumerable<AddressRecord>> FindRecords(QueryLimits limits, ComplexWhereCondition? condition = null, SQLParameterCollection? parameters = null, ObservableTransaction? scope = null)
     {
         var mapper = new Mapper<AddressRecord>(
@@ -347,16 +359,12 @@ public class AddressModel
         if (result.IsSuccess)
         {
             built._districtPart = result.ResultObject;
-            stopPoint.PointTo = built._districtPart;  
-            if (built._districtPart.DistrictType == District.DistrictTypes.MunicipalTerritory ||
-                built._districtPart.DistrictType == District.DistrictTypes.CityTerritory){
-                built._settlementAreaPart = null;
-                err = ProcessSettlement(pointer + 1, built, parts, stopPoint, scope);
-            }
-            else{
+            stopPoint.PointTo = built._districtPart;
+            err = ProcessSettlement(pointer + 1, built, parts, stopPoint, scope);
+            if (err.Any()){
                 err = ProcessSettlementArea(pointer + 1, built, parts, stopPoint, scope);
             }
-            return err;
+            return err;  
         }
         else{
             return result.Errors;
@@ -470,7 +478,7 @@ public class AddressModel
         }
     }
     // секция методов, восстанавливающих адрес из списка
-    public static void ProcessSubject(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessSubject(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == FederalSubject.ADDRESS_LEVEL);
         if (found.Any())
@@ -480,7 +488,7 @@ public class AddressModel
             ProcessDistrict(records, toMap);
         }
     }
-    public static void ProcessDistrict(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessDistrict(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == District.ADDRESS_LEVEL);
         if (found.Any())
@@ -491,7 +499,7 @@ public class AddressModel
             ProcessSettlement(records, toMap);
         }
     }
-    public static void ProcessSettlementArea(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessSettlementArea(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL);
         if (found.Any())
@@ -500,7 +508,7 @@ public class AddressModel
             toMap._settlementAreaPart = SettlementArea.Create(foundSingle, toMap._districtPart);
         }
     }
-    public static void ProcessSettlement(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessSettlement(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL);
         if (found.Any())
@@ -517,7 +525,7 @@ public class AddressModel
             ProcessStreet(records, toMap);
         }
     }
-    public static void ProcessStreet(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessStreet(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == Street.ADDRESS_LEVEL);
         if (found.Any())
@@ -527,7 +535,7 @@ public class AddressModel
             ProcessBuilding(records, toMap);
         }
     }
-    public static void ProcessBuilding(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessBuilding(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == Building.ADDRESS_LEVEL);
         if (found.Any())
@@ -536,7 +544,7 @@ public class AddressModel
             toMap._buildingPart = Building.Create(foundSingle, toMap._streetPart);
         }
     }
-    public static void ProcessApartment(IEnumerable<AddressRecord> records, AddressModel toMap)
+    private static void ProcessApartment(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
         var found = records.Where(rec => rec.AddressLevelCode == Apartment.ADDRESS_LEVEL);
         if (found.Any())

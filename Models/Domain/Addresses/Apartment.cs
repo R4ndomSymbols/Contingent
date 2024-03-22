@@ -9,8 +9,8 @@ public class Apartment : IAddressPart
         _duplicationBuffer = new List<Apartment>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"квартира"),
-        new Regex(@"кв\u002E"),
+        new Regex(@"квартира", RegexOptions.IgnoreCase),
+        new Regex(@"кв\u002E", RegexOptions.IgnoreCase),
     };
 
     private static IEnumerable<Apartment> GetDuplicates(Apartment apartment){
@@ -22,7 +22,6 @@ public class Apartment : IAddressPart
     }
     
     public static readonly IReadOnlyDictionary<ApartmentTypes, AddressNameFormatting> Names = new Dictionary<ApartmentTypes, AddressNameFormatting>(){
-        {ApartmentTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {ApartmentTypes.Apartment, new AddressNameFormatting("кв.", "Квартира", AddressNameFormatting.BEFORE)},
     };
     public enum ApartmentTypes
@@ -71,7 +70,7 @@ public class Apartment : IAddressPart
         AddressNameToken? foundApartment = null;
         ApartmentTypes apartmentType = ApartmentTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundApartment = pair.Value.ExtractToken(addressPart); 
+            foundApartment = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundApartment is not null){
                 apartmentType = pair.Key;
                 break;

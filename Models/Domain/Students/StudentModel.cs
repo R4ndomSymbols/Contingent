@@ -106,7 +106,7 @@ public class StudentModel
     public StudentHistory History {
         get {
             if (_history is null){
-                _history = StudentHistory.Create(this).Result;
+                _history = StudentHistory.Create(this);
             }
             return _history;
         }
@@ -119,8 +119,8 @@ public class StudentModel
         _russianCitizenshipId = null;
     }
  
-    public static Mapper<StudentModel> GetMapper(bool includeAddresses, Column? source, JoinSection.JoinType join = JoinSection.JoinType.InnerJoin){ 
-        var russianCitizenshipMapper = RussianCitizenship.GetMapper(new Column("rus_citizenship_id", "students"), includeAddresses, JoinSection.JoinType.LeftJoin);
+    public static Mapper<StudentModel> GetMapper((bool actual, bool legal) includeAddresses, Column? source, JoinSection.JoinType join = JoinSection.JoinType.InnerJoin){ 
+        var russianCitizenshipMapper = RussianCitizenship.GetMapper(new Column("rus_citizenship_id", "students"), includeAddresses.legal, JoinSection.JoinType.LeftJoin);
         var usedCols = new List<Column>(){
                 new Column("id", "idstd", "students"),
                 new Column("snils", "students"),
@@ -147,7 +147,7 @@ public class StudentModel
                     _snils = (string)reader["snils"],
                     _inn = (string)reader["inn"],
                     _actualAddressId = (int)reader["actual_address"],
-                    _actualAddress = includeAddresses ? AddressModel.GetAddressById((int)reader["actual_address"]).Result : null,
+                    _actualAddress = includeAddresses.actual ? AddressModel.GetAddressById((int)reader["actual_address"]).Result : null,
                     _dateOfBirth = (DateTime)reader["date_of_birth"],
                     _gender = (Genders.GenderCodes)reader["gender"],
                     _gradeBookNumber = (string)reader["grade_book_number"],
@@ -292,7 +292,7 @@ public class StudentModel
     // по умолчанию возвращает только уникальных студентов
     public static async Task<IReadOnlyCollection<StudentModel>> FindUniqueStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? additionalParameters = null){
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        var mapper = GetMapper(false, null);
+        var mapper = GetMapper((false,false), null);
         var buildResult = SelectQuery<StudentModel>.Init("students", new Column("id", "students"))
         .AddMapper(mapper)
         .AddJoins(mapper.PathTo.AppendJoin(additionalJoins))

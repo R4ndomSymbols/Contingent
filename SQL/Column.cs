@@ -21,12 +21,12 @@ public class Column : IQueryPart{
         TableName = tableName;
         _strategy = () => TableName + "." + Name;
     }
-    public Column(string funcName, string name, string tableName, string aliasForFunc){
+    public Column(string funcName, string name, string tableName, string? aliasForFunc){
         FuncName = funcName;
         Name = name;
         Alias = aliasForFunc;
         TableName = tableName;
-        _strategy = () => FuncName + "(" + TableName + "." + Name + ")" + " AS " + Alias; 
+        _strategy = () => FuncName + "(" + TableName + "." + Name + ")" + (aliasForFunc is not null ? (" AS " + Alias) : " "); 
     }
     public string AsSQLText()
     {

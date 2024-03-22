@@ -67,7 +67,7 @@ public class FreeReenrollmentOrder : FreeContingentOrder
             return baseCheck;
         }
         foreach (var move in _enrollers){
-            var history = await StudentHistory.Create(move.Student);
+            var history = StudentHistory.Create(move.Student);
             if (history.GetLastRecord()?.ByOrder?.GetOrderTypeDetails().Type != OrderTypes.FreeDeductionWithOwnDesire
             || move.GroupTo.SponsorshipType.IsPaid()
             ){

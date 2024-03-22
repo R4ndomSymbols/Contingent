@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
+using StudentTracking.Models.Domain.Flow.History;
 using StudentTracking.SQL;
 using Utilities;
 
@@ -34,6 +35,21 @@ public class GroupController : Controller{
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
         }
     }
+    [HttpGet]
+    [Route("groups/view/{query}")]
+    public async Task<IActionResult> ViewGroup(string query){
+        if(int.TryParse(query, out int id)){
+            var got = await GroupModel.GetGroupById(id, null);
+            if(got == null){
+                return View(@"Views/Shared/Error.cshtml", "Группы с таким id не существует" );
+            }
+            return View(@"Views/Observe/Group.cshtml", new GroupOutDTO(got)); 
+        }
+        else{
+            return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
+        }
+    }
+
 
     [HttpPost]
     [Route("/groups/addsequence")]
@@ -102,4 +118,32 @@ public class GroupController : Controller{
         }
         return Json(dtos);
     }
+
+    [HttpPost]
+    [Route("/groups/history")]
+    public async Task<IActionResult> GetHistory(){
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync();
+        GroupHistoryQueryDTO? deserialized; 
+        try {
+            deserialized = JsonSerializer.Deserialize<GroupHistoryQueryDTO>(body);
+        }
+        catch (Exception e){
+            return BadRequest("Неверный формат JSON");
+        }
+        if (deserialized is null){
+            return BadRequest("Неверный формат JSON");
+        }
+        var groupResult = await GroupModel.GetGroupById(deserialized.Id);
+        if (groupResult is not null){
+            var groupHistory = new GroupHistory(groupResult);
+            if (Utils.TryParseDate(deserialized.OnDate)){
+                var date = Utils.ParseDate(deserialized.OnDate);
+                var toReturn = groupHistory.GetStateOnDate(date);
+                return Json(toReturn.Select(x => new InGroupRelation(x.Student, x.ByOrder)));
+            }
+        }
+        return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("history", "Валидация параметров запроса истории не увенчалась успехом"))));
+    }
 }
+

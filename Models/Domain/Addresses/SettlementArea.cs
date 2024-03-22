@@ -10,10 +10,9 @@ public class SettlementArea : IAddressPart
         _duplicationBuffer = new List<SettlementArea>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"поселение"),
+        new Regex(@"поселение", RegexOptions.IgnoreCase),
     };
     public static readonly IReadOnlyDictionary<SettlementAreaTypes, AddressNameFormatting> Names = new Dictionary<SettlementAreaTypes, AddressNameFormatting>(){
-        {SettlementAreaTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {SettlementAreaTypes.CitySettlement, new AddressNameFormatting("г.п.", "Городское поселение", AddressNameFormatting.BEFORE)},
         {SettlementAreaTypes.CountysideDistrict, new AddressNameFormatting("с.п.", "Сельское поселение", AddressNameFormatting.BEFORE)},
     };
@@ -70,7 +69,7 @@ public class SettlementArea : IAddressPart
         AddressNameToken? foundSettlementArea = null;
         SettlementAreaTypes settlementAreaType = SettlementAreaTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundSettlementArea = pair.Value.ExtractToken(addressPart); 
+            foundSettlementArea = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundSettlementArea is not null){
                 settlementAreaType = pair.Key;
                 break;

@@ -9,14 +9,14 @@ public class Street : IAddressPart
         _duplicationBuffer = new List<Street>();
     } 
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"улица"),
-        new Regex(@"набережная"),
-        new Regex(@"проспект"),
-        new Regex(@"тупик"),
-        new Regex(@"аллея"),
-        new Regex(@"площадь"),
-        new Regex(@"проезд"),
-        new Regex(@"шоссе"),
+        new Regex(@"улица", RegexOptions.IgnoreCase),
+        new Regex(@"набережная", RegexOptions.IgnoreCase),
+        new Regex(@"проспект",RegexOptions.IgnoreCase),
+        new Regex(@"тупик",RegexOptions.IgnoreCase),
+        new Regex(@"аллея", RegexOptions.IgnoreCase),
+        new Regex(@"площадь", RegexOptions.IgnoreCase),
+        new Regex(@"проезд",RegexOptions.IgnoreCase),
+        new Regex(@"шоссе",RegexOptions.IgnoreCase),
     };
 
     private IEnumerable<Street> GetDuplicates(Street street){
@@ -28,7 +28,6 @@ public class Street : IAddressPart
     }
 
     public static readonly IReadOnlyDictionary<StreetTypes, AddressNameFormatting> Names = new Dictionary<StreetTypes, AddressNameFormatting>(){
-        {StreetTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {StreetTypes.Street, new AddressNameFormatting("ул.", "Улица", AddressNameFormatting.BEFORE)},
         {StreetTypes.Embankment, new AddressNameFormatting("наб.", "Набережная", AddressNameFormatting.BEFORE)},
         {StreetTypes.Avenue, new AddressNameFormatting("пр-кт", "Проспект", AddressNameFormatting.BEFORE)},
@@ -85,7 +84,7 @@ public class Street : IAddressPart
         AddressNameToken? foundStreet = null;
         StreetTypes streetType = StreetTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundStreet = pair.Value.ExtractToken(addressPart); 
+            foundStreet = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundStreet is not null){
                 streetType = pair.Key;
                 break;

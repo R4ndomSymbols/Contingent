@@ -2,6 +2,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
+using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Flow.History;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.SQL;
 
@@ -113,4 +115,32 @@ public class OrderController : Controller{
         
         return BadRequest(new ErrorsDTO(new ValidationError("Такого приказа не существует"))); 
     }
+    [HttpGet]
+    [Route("/orders/history/{query?}")]
+    public async Task<IActionResult> GetStudentsInOrder(string query)
+    {
+        if (!int.TryParse(query, out int id))
+        {
+            return BadRequest("Неверный id");
+        }
+        int convertedId = int.Parse(query);
+        var orderResult = await Order.GetOrderById(convertedId);
+        if (orderResult.IsFailure)
+        {
+            return BadRequest("Несуществующий id");
+        }
+        var order = orderResult.ResultObject;
+        var found = new OrderHistory(order);
+        var studentMovesHitoryRecords = new List<StudentHistoryMoveDTO>();
+        foreach (var record in found.History){
+            var history = StudentHistory.Create(record.Student);
+            var byAnchor = history.GetByOrder(order);
+            var previous = history.GetClosestBefore(order);
+            studentMovesHitoryRecords.Add(new StudentHistoryMoveDTO(record.Student, byAnchor?.GroupTo, previous?.GroupTo, order));
+        }
+        return Json(studentMovesHitoryRecords);
+
+    }
+
+    
 }

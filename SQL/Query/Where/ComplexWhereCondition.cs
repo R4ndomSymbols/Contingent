@@ -9,6 +9,18 @@ public class ComplexWhereCondition : IQueryPart{
     private bool _isGroup;
     private Func<string> _strategy;
     private bool _isTreeHead;
+    private bool _isEmpty;
+
+    public bool IsEmpty => _isEmpty;
+
+    public static ComplexWhereCondition Empty => new ComplexWhereCondition(); 
+
+    private ComplexWhereCondition(){
+        _isEmpty = true;
+        _isTreeHead = false;
+        _strategy = () => "";
+    }
+
 
     public enum  ConditionRelation {
         AND = 1,
@@ -18,6 +30,7 @@ public class ComplexWhereCondition : IQueryPart{
         _facaded = single;
         _strategy = () => _facaded.AsSQLText();
         _isTreeHead = true;
+        _isEmpty = false;
     }
 
     public ComplexWhereCondition(WhereCondition left, WhereCondition right, ConditionRelation relation, bool isGroup = false)
@@ -27,6 +40,10 @@ public class ComplexWhereCondition : IQueryPart{
     }
 
     public ComplexWhereCondition(ComplexWhereCondition left, ComplexWhereCondition right, ConditionRelation relation, bool isGroup = false){
+        if (left._isEmpty || right._isEmpty){
+            throw new Exception("Нельзя использовать пустой фильтр в конструкторе");
+        }
+        
         _isGroup = isGroup;
         _left = left;
         _right = right;
@@ -40,21 +57,20 @@ public class ComplexWhereCondition : IQueryPart{
             }
             return result;
         };
+        _isEmpty = false;
     }
 
-    public static ComplexWhereCondition? Unite(ConditionRelation op, IEnumerable<ComplexWhereCondition?>? toUnite){
-        if (toUnite is null){
-            return null;
+    public ComplexWhereCondition Unite(ConditionRelation op, ComplexWhereCondition? next, bool endGroup = false){
+        if (_isEmpty){
+            if (next is null){
+                return this;    
+            }
+            return next;
         }
-        var filtered = toUnite.Where(x => x is not null);
-        if (!filtered.Any()){
-            return null;
+        if (next is null || next._isEmpty){
+            return this;
         }
-        var head = toUnite.First();
-        foreach(var next in toUnite.Skip(1)){
-            head = new ComplexWhereCondition(head, next, op);
-        }
-        return head;
+        return new ComplexWhereCondition(this, next, op, endGroup);
     }
 
     public IEnumerable<Column> GetAllRestrictedColumns(){

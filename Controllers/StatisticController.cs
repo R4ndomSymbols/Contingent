@@ -33,6 +33,9 @@ public class StatisticController : Controller
             case "speciality":
             table = new GenericSpeciality();
             break;
+            case "legalAddress":
+            table = new AddressTable();
+            break;
         }
         if (table is null){
             return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");

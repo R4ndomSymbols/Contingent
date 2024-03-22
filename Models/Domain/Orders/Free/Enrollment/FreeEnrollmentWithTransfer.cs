@@ -75,7 +75,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         }
         foreach (var rec in _toEnroll)
         {
-            var history = await StudentHistory.Create(rec.Student);
+            var history = StudentHistory.Create(rec.Student);
             var groupCheck = await rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student);
             if (history.IsStudentEnlisted() || !groupCheck)
             {

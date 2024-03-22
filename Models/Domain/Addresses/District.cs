@@ -11,11 +11,10 @@ public class District : IAddressPart
         _duplicationBuffer = new List<District>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"округ"),
-        new Regex(@"район")
+        new Regex(@"округ", RegexOptions.IgnoreCase),
+        new Regex(@"район", RegexOptions.IgnoreCase)
     };
     public static readonly IReadOnlyDictionary<DistrictTypes, AddressNameFormatting> Names = new Dictionary<DistrictTypes, AddressNameFormatting>(){
-        {DistrictTypes.NotMentioned, new AddressNameFormatting("Нет", "Не указано", AddressNameFormatting.AFTER)},
         {DistrictTypes.CityTerritory, new AddressNameFormatting("г.о.", "Городской округ", AddressNameFormatting.AFTER)},
         {DistrictTypes.MunicipalDistrict, new AddressNameFormatting("м.р-н", "Муниципальный район", AddressNameFormatting.AFTER)},
         {DistrictTypes.MunicipalTerritory, new AddressNameFormatting("м.о.", "Муниципальный округ", AddressNameFormatting.AFTER)},
@@ -73,7 +72,7 @@ public class District : IAddressPart
         AddressNameToken? foundDistrict = null;
         DistrictTypes subjectType = DistrictTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundDistrict = pair.Value.ExtractToken(addressPart); 
+            foundDistrict = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundDistrict is not null){
                 subjectType = pair.Key;
                 break;

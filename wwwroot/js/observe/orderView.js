@@ -1,7 +1,7 @@
 $(document).ready(function () {
     $.ajax({
         type: "GET",
-        url: "/studentflow/studentsByOrder/" + String($("#order_info").attr("order_id")),
+        url: "/orders/history/" + String($("#order_info").attr("order_id")),
         dataType: "JSON",
         success: function (response) {
             var tableHtml = "";

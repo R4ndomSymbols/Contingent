@@ -8,9 +8,9 @@
     <h1 class="display-4">Статистика</h1>
     <p class="text-center" style="font-size:30px">
         За период с 
-        @Utils.FormatDateTime(StudentHistory.CurrentPeriodStartDate, true)
+        @Utils.FormatDateTime(FlowHistory.CurrentPeriodStartDate, true)
         по
-        @Utils.FormatDateTime(StudentHistory.CurrentPeriodEndDate, true)
+        @Utils.FormatDateTime(FlowHistory.CurrentPeriodEndDate, true)
     </p>
 </div>
 <div class="d-flex flex-column">
@@ -23,6 +23,11 @@
         <li>
             <a href="~/statistics/speciality">
                 Студенты по специальностям
+            </a>
+        </li>
+        <li>
+            <a href="~/statistics/legalAddress">
+                Студенты по прописке
             </a>
         </li>
     </ul>

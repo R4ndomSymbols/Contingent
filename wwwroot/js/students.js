@@ -6,7 +6,7 @@ var addresses = [];
 var selectedTags = [];
 var tags = [];
 var lock = false;
-var timeoutPromise
+var addressSearchLockCount = 0;
 
 $(document).ready(function () {
     $.ajax({
@@ -26,56 +26,66 @@ $(document).ready(function () {
     });
 });
 
-function checkTimeout() {
-    if (lock){
-        return false;
-    }
-    lock = true;
-    timeoutPromise = new Promise(
-        (resolve) => setTimeout(
-            () => {
-                lock = false;
-                resolve("resolved")
-            }, 1000)
+function registerSheduledAddressSearch(searchFunc) {
+    addressSearchLockCount += 1;
+    var promise = new Promise(
+        (resolve, reject) =>
+            {
+                let now = addressSearchLockCount;
+                setTimeout(
+                    () => {
+                        if (now != addressSearchLockCount) {
+                            resolve();
+                        }
+                        else {
+                            searchFunc();
+                            resolve();
+                        }
+                    }, 400)
+            }
     )
-    return true;
 }
 
 $("#ActualAddress").on("keyup", function () {
-    if (!checkTimeout()){
-        return;
-    }
-    var address = $("#ActualAddress").val();
-    if (address.length > 3) {
-        $.ajax({
-            type: "GET",
-            url: "/addresses/suggest/" + address,
-            dataType: "JSON",
-            success: function (response) {
-                $("#ActualAddress").autocomplete({
-                    source: response.map(x => address + " " + x)
-                });
-            }
-        });
-    }
+    registerSheduledAddressSearch(function() {
+        var address = $("#ActualAddress").val();
+        if (address.slice(-1) != " "){
+            return;
+        }
+        if (address.length > 3) {
+            $.ajax({
+                type: "GET",
+                url: "/addresses/suggest/" + address,
+                dataType: "JSON",
+                success: function (response) {
+                    $("#ActualAddress").autocomplete({
+                        source: response.map(x => address + " " + x)
+                    });
+                }
+            });
+        }
+    });
+    
 });
 $("#LegalAddress").on("keyup", function () {
-    if (!checkTimeout()){
-        return;
-    }
-    var address = $("#LegalAddress").val();
-    if (address.length > 3) {
-        $.ajax({
-            type: "GET",
-            url: "/addresses/suggest/" + address,
-            dataType: "JSON",
-            success: function (response) {
-                $("#LegalAddress").autocomplete({
-                    source: response.map(x => address + " " + x)
-                });
-            }
-        });
-    }
+    registerSheduledAddressSearch(function() {
+        var address = $("#LegalAddress").val();
+        if (address.slice(-1) != " "){
+            return;
+        }
+        if (address.length > 3) {
+            $.ajax({
+                type: "GET",
+                url: "/addresses/suggest/" + address,
+                dataType: "JSON",
+                success: function (response) {
+                    $("#LegalAddress").autocomplete({
+                        source: response.map(x => address + " " + x)
+                    });
+                }
+            });
+        }
+    })
 });
 
 $("#about").click(function () {

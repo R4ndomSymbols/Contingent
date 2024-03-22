@@ -65,7 +65,7 @@ public class StudentSearchController : Controller
         {   
             maxOffset = query.GlobalOffset + pageOffset;
             var limits = new QueryLimits(0, query.PageSize, maxOffset);
-            var found = StudentHistory.GetLastRecordsForManyStudents(limits);
+            var found = StudentHistory.GetLastRecordsForManyStudents(limits, (false, false));
             if (!found.Any())
             {
                 break;

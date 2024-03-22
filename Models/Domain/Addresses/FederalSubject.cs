@@ -14,11 +14,11 @@ public class FederalSubject : IAddressPart
 
     public const int ADDRESS_LEVEL = 1;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"республик(а|и)"),
-        new Regex(@"(федеральн|город)"),
-        new Regex(@"кра(й|я)"),
-        new Regex(@"округ(и|а)"),
-        new Regex(@"област(ь|и)")
+        new Regex(@"республик(а|и)",RegexOptions.IgnoreCase),
+        new Regex(@"(федеральн|город)",RegexOptions.IgnoreCase),
+        new Regex(@"кра(й|я)",RegexOptions.IgnoreCase),
+        new Regex(@"округ(и|а)",RegexOptions.IgnoreCase),
+        new Regex(@"област(ь|и)",RegexOptions.IgnoreCase)
     };
 
     private int _id;
@@ -62,7 +62,6 @@ public class FederalSubject : IAddressPart
     }
 
     public static readonly IReadOnlyDictionary<FederalSubjectTypes, AddressNameFormatting> Names = new Dictionary<FederalSubjectTypes, AddressNameFormatting>(){
-        {FederalSubjectTypes.NotMentioned, new AddressNameFormatting("Нет", "Не указано", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.Republic, new AddressNameFormatting("респ.", "Республика", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.FederalCity, new AddressNameFormatting("г.ф.з.", "Город федерального значения", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.Edge, new AddressNameFormatting("край", "Край", AddressNameFormatting.BEFORE)},
@@ -81,7 +80,7 @@ public class FederalSubject : IAddressPart
         AddressNameToken? found = null;
         FederalSubjectTypes subjectType = FederalSubjectTypes.NotMentioned;  
         foreach (var pair in Names){
-            found = pair.Value.ExtractToken(addressPart); 
+            found = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (found is not null){
                 subjectType = pair.Key;
                 break;

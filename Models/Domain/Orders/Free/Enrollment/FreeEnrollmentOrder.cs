@@ -76,7 +76,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         
         foreach (var stm in _moves.Moves){
 
-            var history = await StudentHistory.Create(stm.Student); 
+            var history = StudentHistory.Create(stm.Student); 
             var targetGroup = stm.GroupTo;
             var validMove =  
                 history.IsStudentNotRecorded() &&

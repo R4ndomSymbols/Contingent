@@ -7,8 +7,8 @@ public class Building : IAddressPart
 
     private static List<Building> _duplicationBuffer;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"дом"),
-        new Regex(@"д\u002E"),
+        new Regex(@"дом", RegexOptions.IgnoreCase),
+        new Regex(@"д\u002E", RegexOptions.IgnoreCase),
     };
     static Building(){
         _duplicationBuffer = new List<Building>();
@@ -22,7 +22,6 @@ public class Building : IAddressPart
     } 
 
     public static readonly IReadOnlyDictionary<BuildingTypes, AddressNameFormatting> Names = new Dictionary<BuildingTypes, AddressNameFormatting>(){
-        {BuildingTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {BuildingTypes.Building, new AddressNameFormatting("д.", "Дом", AddressNameFormatting.BEFORE)},
     };
     public enum BuildingTypes
@@ -69,7 +68,7 @@ public class Building : IAddressPart
         AddressNameToken? foundBuilding = null;
         BuildingTypes buildingType = BuildingTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundBuilding = pair.Value.ExtractToken(addressPart); 
+            foundBuilding = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundBuilding is not null){
                 buildingType = pair.Key;
                 break;

@@ -38,7 +38,7 @@ public class GenericSpeciality : ITable
             (StudentFlowRecord s) => s.GroupTo?.EducationProgram,
             verticalHeader
         );
-        var source = StudentHistory.GetLastRecordsForManyStudents(new SQL.QueryLimits(0, 2000));
+        var source = StudentHistory.GetLastRecordsForManyStudents(new SQL.QueryLimits(0, 2000), (false, false));
         _model = new StatisticTable<StudentFlowRecord>(
             verticalHeader,
             horizontalHeader,

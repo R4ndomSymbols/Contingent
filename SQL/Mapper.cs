@@ -5,7 +5,9 @@ namespace StudentTracking.SQL;
 
 public class Mapper<T> : Mapper, IQueryPart {
 
-    private Func<NpgsqlDataReader, QueryResult<T>> _map;
+    private Func<NpgsqlDataReader, QueryResult<T>>? _map;
+    // метод, замещающий маппинг с целью оптимизации
+    private Func<QueryResult<T>>? _replacer;
     private List<Column> _columns;
     public override JoinSection PathTo {get; protected set;}
     public override IReadOnlyCollection<Column> Columns 
@@ -14,11 +16,21 @@ public class Mapper<T> : Mapper, IQueryPart {
     }
     public Mapper (Func<NpgsqlDataReader, QueryResult<T>> map, IReadOnlyCollection<Column> mappedColumns){
         _map = map;
+        _replacer = null;
         _columns = mappedColumns.ToList();
+        PathTo = new JoinSection();
+    }
+    public Mapper (Func<QueryResult<T>> replacer){
+        _map = null;
+        _replacer = replacer;
+        _columns = new List<Column>();
         PathTo = new JoinSection();
     }
 
     public QueryResult<T> Map(NpgsqlDataReader reader){
+        if (_replacer is not null){
+            return _replacer.Invoke();
+        }
         return _map.Invoke(reader);
     }
 

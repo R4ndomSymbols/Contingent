@@ -79,7 +79,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
 
         foreach(var move in _moves.Moves){
     
-            var history = await StudentHistory.Create(move.Student);
+            var history = StudentHistory.Create(move.Student);
             var currentGroup = history.GetCurrentGroup();
             if (currentGroup is null || currentGroup.SponsorshipType.IsPaid() || currentGroup.CourseOn == currentGroup.EducationProgram.CourseCount){
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Студент числится в группе, для которой невозможно проведение данного приказа"));

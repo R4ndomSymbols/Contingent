@@ -12,10 +12,10 @@ public class Settlement : IAddressPart
         _duplicationBuffer = new List<Settlement>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
-        new Regex(@"город"),
-        new Regex(@"поселок"),
-        new Regex(@"село\s"),
-        new Regex(@"деревня"),
+        new Regex(@"город",RegexOptions.IgnoreCase),
+        new Regex(@"поселок",RegexOptions.IgnoreCase),
+        new Regex(@"село\s",RegexOptions.IgnoreCase),
+        new Regex(@"деревня",RegexOptions.IgnoreCase),
     };
 
     private static IEnumerable<Settlement> GetDuplicates(Settlement settlement){
@@ -30,12 +30,12 @@ public class Settlement : IAddressPart
     }
      
     public static readonly IReadOnlyDictionary<SettlementTypes, AddressNameFormatting> Names = new Dictionary<SettlementTypes, AddressNameFormatting>(){
-        {SettlementTypes.NotMentioned, new AddressNameFormatting("нет", "Не указано", AddressNameFormatting.BEFORE)},
         {SettlementTypes.City, new AddressNameFormatting("г.", "Город", AddressNameFormatting.BEFORE)},
         {SettlementTypes.Town, new AddressNameFormatting("пгт.", "Поселок городского типа", AddressNameFormatting.BEFORE)},
         {SettlementTypes.Village, new AddressNameFormatting("с.", "Село", AddressNameFormatting.BEFORE)},
         {SettlementTypes.SmallVillage, new AddressNameFormatting("д.", "Деревня", AddressNameFormatting.BEFORE)},
         {SettlementTypes.TinyVillage, new AddressNameFormatting("п.", "Поселок", AddressNameFormatting.BEFORE)},
+        {SettlementTypes.WorkVillage, new AddressNameFormatting("р.п.", "Рабочий поселок", AddressNameFormatting.BEFORE)},
     };
     public enum SettlementTypes
     {
@@ -45,6 +45,7 @@ public class Settlement : IAddressPart
         Village = 3, // село 
         SmallVillage = 4, // деревня
         TinyVillage = 5, // поселок
+        WorkVillage = 6
     }
     private int _id;
     private SettlementArea? _parentSettlementArea;
@@ -96,15 +97,15 @@ public class Settlement : IAddressPart
     }
 
     // проверка на тип родителя
-    public static Result<Settlement?> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
+    public static Result<Settlement?> Create(string addressPart, District? parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',') || parent is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
         AddressNameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundSettlement = pair.Value.ExtractToken(addressPart); 
+            foundSettlement = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundSettlement is not null){
                 settlementType = pair.Key;
                 break;
@@ -142,13 +143,13 @@ public class Settlement : IAddressPart
     // отличия между ними в валидации иерархии, добавить потом
     public static Result<Settlement?> Create(string addressPart, SettlementArea parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',') || parent is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
         }
         AddressNameToken? foundSettlement = null;
         SettlementTypes settlementType = SettlementTypes.NotMentioned;  
         foreach (var pair in Names){
-            foundSettlement = pair.Value.ExtractToken(addressPart); 
+            foundSettlement = pair.Value.ExtractToken(addressPart, Restrictions); 
             if (foundSettlement is not null){
                 settlementType = pair.Key;
                 break;

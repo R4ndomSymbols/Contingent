@@ -4,6 +4,7 @@ using Utilities;
 using Utilities.Validation;
 using StudentTracking.SQL;
 using StudentTracking.Controllers.DTO.In;
+using System.Data.SqlTypes;
 
 namespace StudentTracking.Models;
 
@@ -442,6 +443,22 @@ public class GroupModel
             throw new Exception("Запрос не может быть несконструирован");
         }
         return await buildResult.ResultObject.Execute(conn, limits);
+    }
+
+    public static async Task<IReadOnlyCollection<GroupModel>> FindGroupsByName(string? name){
+        if (name == string.Empty || string.IsNullOrWhiteSpace(name) || name.Length < 2){
+            return await FindGroups(new QueryLimits(0,50));
+        }
+        var parameters = new SQLParameterCollection();
+        var p1 = parameters.Add<string>(name.ToLower()+"%");
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("lower", "group_name", "educational_group", null),
+                p1,
+                WhereCondition.Relations.Like
+            )
+        );
+        return await FindGroups(new QueryLimits(0,50), additionalConditions: where, addtitionalParameters: parameters);
     }
     
     public GroupModel Copy(){

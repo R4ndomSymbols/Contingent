@@ -35,15 +35,11 @@ public static class TemplateHeaders{
         return new TableRowHeader<T>(rootNode, vertical, false);
     }
 
-    public static TableRowHeader<T> GetAddressRowHeader<T>(
+    public static RowHeaderCell<T> GetAddressRowHeader<T>(
         Func<T, AddressModel?> getter,
         IEnumerable<IAddressPart> cellAddresses,
-        TableColumnHeader<T> header,
         RowHeaderCell<T>? root = null
     ){
-        if (header is null){
-            throw new Exception("Горизотальная шапка таблицы должна быть указана");
-        }
         var rootNode = root ?? new RowHeaderCell<T>();
         foreach (var address in cellAddresses){
             var addr = address;
@@ -63,7 +59,7 @@ public static class TemplateHeaders{
                 ) 
             );
         }
-        return new TableRowHeader<T>(rootNode, header, false);
+        return rootNode;
     }
 
     public static ColumnHeaderCell<T> GetBaseCourseHeader<T>(

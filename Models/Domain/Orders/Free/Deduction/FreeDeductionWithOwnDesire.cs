@@ -70,7 +70,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
             return res;
         }
         foreach (var graduate in _toDeduct){
-            if (!await StudentHistory.IsStudentEnlisted(graduate.Student)){
+            if (!graduate.Student.History.IsStudentEnlisted()){
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
             }
         }

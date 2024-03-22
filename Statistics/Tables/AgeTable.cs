@@ -210,7 +210,7 @@ public class AgeTable : ITable
                 ageFilter
             );
         }
-        var found = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000));
+        var found = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000), (false, false));
         var verticalHeader = new TableColumnHeader<StudentFlowRecord>(verticalRoot, true);
         var horizontalHeader = new TableRowHeader<StudentFlowRecord>(horizontalRoot, verticalHeader, true);
         _model = new StatisticTable<StudentFlowRecord>(verticalHeader, horizontalHeader, found, "Характеристика контингента");

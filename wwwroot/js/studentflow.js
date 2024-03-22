@@ -8,8 +8,9 @@ var identityExcludedPostfix = "_ex_id";
 var currentGroupFlag = false;
 var studentPinnedGroupInputPostfix = "_n_group"
 var groupPolicy;
-var groupSearchLockCount = 0;
-var groupSearchFunc = null;
+var addressSearchLockCount = 0;
+var lastGroupSearchText = "";
+
 // здесь хранятся все студенты
 // pinned - свойство, отвечающее за прикрепленность
 var students = [];
@@ -199,15 +200,15 @@ function excludeStudent(student) {
     $("#" + student["studentId"] + includePostfix).on("click", function () { includeStudent(student) });
 }
 
-function registerSheduledGroupSearch(searchFunc) {
-    groupSearchLockCount += 1;
+function registerSheduledAddressSearch(searchFunc) {
+    addressSearchLockCount += 1;
     var promise = new Promise(
         (resolve, reject) =>
             {
-                let now = groupSearchLockCount;
+                let now = addressSearchLockCount;
                 setTimeout(
                     () => {
-                        if (now != groupSearchLockCount) {
+                        if (now != addressSearchLockCount) {
                             resolve();
                         }
                         else {
@@ -221,14 +222,14 @@ function registerSheduledGroupSearch(searchFunc) {
 
 
 
-function findGroupsAndSetAutoComplete(student) {
-    var inputName = String(student.studentId) + studentPinnedGroupInputPostfix
-    var request = () => {
-        var searchText = $("#" + inputName).val()
+function findGroupsAndSetAutoComplete(student) { 
+    let inputName = String(student.studentId) + studentPinnedGroupInputPostfix
+    let request = (elem) => {
+        let searchText = elem.val()
         if (String(searchText).length < 3) {
             return
         }
-        var groupsAvailable = [];
+        let groupsAvailable = [];
         $.ajax({
             type: "GET",
             url: "/groups/find/" + searchText,
@@ -242,21 +243,30 @@ function findGroupsAndSetAutoComplete(student) {
                         }
                     )
                 });
-                $("#" + inputName).autocomplete({
+                elem.autocomplete({
                     source: groupsAvailable,
                     select: function (event, ui) {
-                        $("#" + inputName).val(ui.item.label)
-                        $("#" + inputName).attr("group_id", ui.item.value)
+                        elem.val(ui.item.label)
+                        elem.attr("group_id", ui.item.value)
                         student.nextGroup = ui.item.value;
                         event.preventDefault();
                     }
                 });
+                elem.autocomplete("search");
             }
         });
     }
 
     $("#" + inputName).on("keyup", function () {
-        registerSheduledGroupSearch(request);
+        let element = $("#" + inputName); 
+        let searchTextGlobal = element.val();
+        if (String(searchTextGlobal) === String(lastGroupSearchText)){
+            return;
+        }   
+        else{
+            lastGroupSearchText = searchTextGlobal;
+        }
+        registerSheduledAddressSearch(function(){ request(element) });
     });
 }
 
