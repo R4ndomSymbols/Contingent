@@ -4,12 +4,8 @@ $(document).ready(function () {
         $.ajax({
             type: "POST",
             url: "/orders/search/find",
-            data: JSON.stringify(
-                {
-                    SearchText: "void"
-                }
-            ),
-            dataType: "JSON",
+            data: getSearchRequestData(),
+            contentType: "application/json",
             success: function (response) {
                 table = document.getElementById("search_results");
                 table.innerHTML = "";
@@ -23,37 +19,44 @@ $(document).ready(function () {
                             <td>
                         `;
                     card+= `
-                    <div class="row">
-                            <a href="${value.orderViewLink}">Детали</a>
-                    </div>
+                    <div class="d-flex flex-row">
+                            <a class="mx-2" href="${value.orderViewLink}">Детали</a>
                     `
                     if (value.orderModifyLink != null){
                         card += 
                         `
-                        <div class="row">
-                                <a href="${value.orderModifyLink}">Изменить</a>
-                        </div>
+                        <a class="mx-2" href="${value.orderModifyLink}">Изменить</a>
                         `
                     }
                     if (value.orderFlowLink != null){
                         card += 
                         `
-                        <div class="row">
-                                <a href="${value.orderFlowLink}">Движение</a>
-                        </div>
+                            <a class="mx-2" href="${value.orderFlowLink}">Движение</a>
                         `
                     }
                     if (value.orderCloseLink != null){
                         card += 
                         `
-                        <div class="row">
-                                <a href="${value.orderCloseLink}">Закрыть</a>
-                        </div>
+                            <a class="mx-2" href="${value.orderCloseLink}">Закрыть</a>
                         `
                     }
+                    card+="</div>"
                     table.innerHTML += card
                 });
             }
         });
     });
 });
+
+
+function getSearchRequestData(){
+    let type = Number($("#order_type").val())
+    let year = Number($("#order_date").val())
+    return JSON.stringify(
+        {
+            SearchText: $("#order_name").val(),
+            Year: year === -1 ? null : year,
+            Type: type === -1 ? null : year
+        }
+    )
+}

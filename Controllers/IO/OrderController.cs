@@ -84,23 +84,6 @@ public class OrderController : Controller{
     }
 
     [HttpGet]
-    [Route("/orders/search")]
-    public IActionResult GetSearchPage(){
-        return View(@"Views/Search/Orders.cshtml", new List<OrderSearchDTO>());
-    }
-    [HttpPost]
-    [Route("/orders/search/find")]
-    public async Task<JsonResult> GetOrdersByFilters(){
-        using var stream = new StreamReader(Request.Body);
-        var parameters = JsonSerializer.Deserialize<OrderSearchParamentersDTO>(await stream.ReadToEndAsync());
-        var result = await Order.FindOrders(new QueryLimits(0,20));
-        List<OrderSearchDTO> cards = new List<OrderSearchDTO>();
-        foreach (Order o in result){
-            cards.Add(new OrderSearchDTO(o));
-        }
-        return Json(cards);
-    }
-    [HttpGet]
     [Route("/orders/close/{id?}")]
     public async Task<IActionResult> CloseOrder(string id){
         

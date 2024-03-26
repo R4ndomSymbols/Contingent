@@ -51,7 +51,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        await SaveBase(scope);
+        await base.Save(scope);
     }
 
     // условия приказа о зачислении

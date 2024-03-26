@@ -75,7 +75,11 @@ public class WhereCondition : IQueryPart{
         IsNot = 4,
         Like = 5,
         In = 6,
-        InArray = 7
+        InArray = 7,
+        Less = 8,
+        Bigger = 9,
+        LessOrEqual = 10,
+        BiggerOrEqual = 11
     }
 
     private Dictionary<Relations, string> _sqlRelations = new Dictionary<Relations, string>(){
@@ -85,6 +89,10 @@ public class WhereCondition : IQueryPart{
         {Relations.IsNot, "IS NOT"},
         {Relations.Like, "LIKE"},
         {Relations.In, "IN"},
-        {Relations.InArray, "= ANY"}
+        {Relations.InArray, "= ANY"},
+        {Relations.Less, "<"},
+        {Relations.Bigger, ">"},
+        {Relations.LessOrEqual, "<="},
+        {Relations.BiggerOrEqual, ">="}
     };
 }

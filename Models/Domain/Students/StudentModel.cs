@@ -177,8 +177,15 @@ public class StudentModel
         }
         var model = new StudentModel();
         var errors = new List<ValidationError?>();
+        StudentModel? modelInDatabase = null; 
         if (dto.Id != null){
-            model._id = (int)dto.Id;    
+            model._id = (int)dto.Id;
+            modelInDatabase = GetStudentById(model._id).Result;
+            errors.IsValidRule(
+                modelInDatabase is not null,
+                "Несуществующий id модели",
+                nameof(Id)
+            );   
         }
  
         var addressResult = AddressModel.Create(dto.PhysicalAddress, scope);
@@ -274,7 +281,10 @@ public class StudentModel
         )){
             model._giaDemoExamMark = dto.GiaDemoExamMark is null ? null : int.Parse(dto.GiaDemoExamMark);
         }
-        if (errors.IsValidRule(
+        if (modelInDatabase is not null){
+            model._paidAgreementType = modelInDatabase._paidAgreementType;
+        } 
+        else if (errors.IsValidRule(
             PaidEduAgreement.TryGetByTypeCode(dto.PaidAgreementType),
             message: "Неверно указан тип договора о платном обучении",
             propName: nameof(PaidAgreement)
@@ -452,10 +462,12 @@ public class StudentModel
     public async Task Update(ObservableTransaction? scope = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory(); 
+        // полное обновление, по идее, невозможно, поэтому используется сокращенная форма
+        // для обеспечения непротиворечивости истории студента
         var cmdText = "UPDATE public.students " +
 	    " SET snils=@p1, inn=@p2, actual_address=@p3, date_of_birth=@p4, rus_citizenship_id=@p5, " +
         " gender=@p6, grade_book_number=@p7, target_education_agreement=@p8, gia_mark=@p9, " +
-        " gia_demo_exam_mark=@p10, paid_education_agreement=@p11, admission_score=@p12 " +
+        " gia_demo_exam_mark=@p10, admission_score=@p11" + // ", paid_education_agreement=@p12 " +
 	    " WHERE id = @p13";
         NpgsqlCommand cmd;
         if (scope is null){
@@ -474,8 +486,8 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter("p9", _giaMark is null ? DBNull.Value : (int)_giaMark));
         cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark is null ? DBNull.Value : (int)_giaDemoExamMark));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType.AgreementType));
-        cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
+        cmd.Parameters.Add(new NpgsqlParameter<decimal>("p11", _admissionScore));
+         // cmd.Parameters.Add(new NpgsqlParameter<int>("p12", (int)_paidAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p13", (int)_id));
         using (cmd){
             await cmd.ExecuteNonQueryAsync();

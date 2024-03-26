@@ -3,13 +3,18 @@ namespace StudentTracking.SQL;
 public class OrderByCondition : IQueryPart
 {
 
-    private Column _restrictedColumn;
-    private OrderByTypes _type;
+    private List<(Column col, OrderByTypes type)> _restrictedColumns;
+    private OrderByCondition(){
+        _restrictedColumns = new List<(Column, OrderByTypes)>();
+    }
 
-    public OrderByCondition(Column restricted, OrderByTypes type)
+    public OrderByCondition(Column restricted, OrderByTypes type) : this()
     {
-        _restrictedColumn = restricted;
-        _type = type;
+        AddColumn(restricted, type);
+    }
+
+    public void AddColumn(Column restricted, OrderByTypes type){
+        _restrictedColumns.Add((restricted, type));
     }
 
     public enum OrderByTypes
@@ -19,19 +24,7 @@ public class OrderByCondition : IQueryPart
     }
     public string AsSQLText()
     {
-        string orderType;
-        switch (_type)
-        {
-            case OrderByTypes.ASC:
-                orderType = "ASC";
-                break;
-            case OrderByTypes.DESC:
-                orderType = "DESC";
-                break;
-            default:
-                throw new Exception("Не определен тип сортировки");
 
-        }
-        return "ORDER BY " + _restrictedColumn.AsSQLText() + " " + orderType;
+        return "ORDER BY " + string.Join(",", _restrictedColumns.Select(by => " " + by.col.AsSQLText() + " " + by.type.ToString()));
     }
 }

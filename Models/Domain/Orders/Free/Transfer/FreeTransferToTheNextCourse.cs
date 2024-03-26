@@ -63,7 +63,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        await SaveBase(scope);
+        await base.Save(scope);
     }
     // приказ о переводе с одного курса на другой
     // группы должны быть бесплатными 

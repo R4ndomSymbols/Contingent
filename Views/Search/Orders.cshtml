@@ -1,55 +1,95 @@
-@using StudentTracking.Controllers.DTO.Out; 
+@using StudentTracking.Controllers.DTO.Out;
+@using StudentTracking.Models.Domain.Orders.OrderData;
 
 @model IReadOnlyCollection<OrderSearchDTO>;
 
-<div class="col 11 row">
-    <button class="btn btn-primary" id="find_orders">
-        Поиск приказов
-    </button>
+<div class="container">
+    <div class="row mb-2">
+        <div class="d-flex flex-column">
+            <h5>
+                Название приказа
+            </h5>
+            <div class="d-flex">
+                <input type="text" id="order_name" class="flex-fill">
+                <button class="btn btn-primary ml-1" id="find_orders">
+                    Поиск приказов
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <div class="row mb-2">
+        <div class="d-flex flex-column">
+            <h5>
+                Тип приказа
+            </h5>
+            <select id="order_type">
+                <option value="-1" selected>Любой</option>
+                @foreach (var t in OrderTypeInfo.GetAllTypes())
+                {
+                    <option value="@((int)t.Type)">@t.OrderTypeName</option>
+                }
+            </select>
+        </div>
+        <div class="d-flex flex-column col-2">
+            <h5>
+                Год приказа
+            </h5>
+            <select id="order_date">
+                <option value="-1" selected>Любой</option>
+                @for (int i = DateTime.Now.Year; i >= 2010; i--)
+                {
+                    <option value="@i">@i</option>
+                }
+            </select>
+        </div>
+    </div>
 
+    <div class="row mb-2">
+        <table class="table">
+            <thead>
+                <th scope="col">Номер</th>
+                <th scope="col">Название</th>
+                <th scope="col">Дата приказа</th>
+                <th scope="col">Вступление в силу</th>
+                <th scope="col">Действия</th>
+            </thead>
+            <tbody id="search_results">
+                @foreach (var card in Model)
+                {
+                    <tr>
+                        <th scope="row">@card.OrderOrgId</th>
+                        <td>@card.OrderFullName</td>
+                        <td>@card.OrderSpecifiedDate</td>
+                        <td>@card.OrderEffectiveDate</td>
+                        <td>
+                            <div class="row">
+                                <a href="@card.OrderViewLink">Детали</a>
+                            </div>
+                            @if (card.OrderModifyLink != null && !card.IsClosed)
+                            {
+                                <div class="row">
+                                    <a href="@card.OrderModifyLink">Изменить</a>
+                                </div>
+                            }
+                            @if (card.OrderFlowLink != null && !card.IsClosed)
+                            {
+                                <div class="row">
+                                    <a href="@card.OrderFlowLink">Движение</a>
+                                </div>
+                            }
+                            @if (card.OrderCloseLink != null && !card.IsClosed)
+                            {
+                                <div class="row">
+                                    <a href="@card.OrderCloseLink">Закрыть</a>
+                                </div>
+                            }
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<div class="col-11 row">
-    <table class="table">
-        <thead>
-            <th scope="col">Номер</th>
-            <th scope="col">Название</th>
-            <th scope="col">Дата приказа</th>
-            <th scope="col">Вступление в силу</th>
-            <th scope="col">Действия</th>
-        </thead>
-        <tbody id = "search_results">
-            @foreach(var card in Model){
-                <tr>
-                    <th scope="row">@card.OrderOrgId</th>
-                    <td>@card.OrderFullName</td>
-                    <td>@card.OrderSpecifiedDate</td>
-                    <td>@card.OrderEffectiveDate</td>
-                    <td>
-                        <div class="row">
-                            <a href="@card.OrderViewLink">Детали</a>
-                        </div>
-                        @if(card.OrderModifyLink!=null && !card.IsClosed){
-                            <div class="row">
-                                <a href="@card.OrderModifyLink">Изменить</a>
-                            </div>
-                        }
-                        @if(card.OrderFlowLink!=null && !card.IsClosed){
-                            <div class="row">
-                                <a href="@card.OrderFlowLink">Движение</a>
-                            </div>
-                        }
-                        @if(card.OrderCloseLink!=null && !card.IsClosed){
-                            <div class="row">
-                                <a href="@card.OrderCloseLink">Закрыть</a>
-                            </div>
-                        }
-                        
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
-<script src="~/js/orderSearch.js"></script>
+<script src="~/js/search/orders.js"></script>

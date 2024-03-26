@@ -266,7 +266,7 @@ public class RussianCitizenship : ICitizenship
             }
         }
 
-        if (_id != null){
+        if (_id is not null){
             await Update(scope);
             return ResultWithoutValue.Success();
         }

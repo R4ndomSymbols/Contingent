@@ -23,9 +23,9 @@ public class SpecialityController : Controller{
             return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO()); 
         }
         else if(int.TryParse(query, out int id)){
-            var got = SpecialityModel.GetById(id, null);
+            var got = SpecialityModel.GetById(id, null).Result;
             if (got!=null){
-                return View(@"Views/Modify/SpecialityModify.cshtml", got);
+                return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO(got));
             }
             else{
                 return View(@"Views/Shared/Error.cshtml", "Специальности с таким id не существует");

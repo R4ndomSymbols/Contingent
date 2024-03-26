@@ -1,3 +1,4 @@
+using StudentTracking.Models.Domain.Orders.Infrastructure;
 using Utilities;
 
 
@@ -8,7 +9,9 @@ public abstract class FreeContingentOrder : Order
     public override string OrderOrgId {
         get => _orderNumber + "-" + "к";
     }
-    
+
+    protected override OrderSequentialGuardian SequentialGuardian => FreeOrderSequentialGuardian.Instance;
+
     protected FreeContingentOrder() : base()
     {
 
@@ -32,6 +35,18 @@ public abstract class FreeContingentOrder : Order
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override async Task Save(ObservableTransaction? scope) 
+    {
+        await SaveBase(scope);
+        SequentialGuardian.Insert(this);
+        SequentialGuardian.Save();
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return base.Equals(obj);
     }
 
 

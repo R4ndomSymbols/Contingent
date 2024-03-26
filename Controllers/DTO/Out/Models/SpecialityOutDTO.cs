@@ -3,7 +3,7 @@ using StudentTracking.Models;
 namespace StudentTracking.Controllers.DTO.Out;
 public class SpecialityOutDTO {
     
-    public int Id {get; set;}
+    public int? Id {get; set;}
     public string FgosCode {get; set;}
     public string FgosName {get; set; }
     public string Qualification {get; set; }

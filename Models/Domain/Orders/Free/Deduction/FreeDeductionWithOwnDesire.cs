@@ -54,7 +54,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        await SaveBase();
+        await base.Save(scope);
     }
 
     protected override OrderTypes GetOrderType()

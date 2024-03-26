@@ -52,9 +52,9 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         return ConductBase(_moves.ToRecords(this));
     }
 
-    public override Task Save(ObservableTransaction? scope)
+    public async override Task Save(ObservableTransaction? scope)
     {
-        return SaveBase();
+        await base.Save(scope);
     }
 
     protected override OrderTypes GetOrderType()

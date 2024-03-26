@@ -6,6 +6,8 @@ using StudentTracking.Controllers.DTO.In;
 using System.Text.Json;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
+using System.Net;
+using StudentTracking.Models.Domain.Orders.Infrastructure;
 
 namespace StudentTracking.Models.Domain.Orders;
 
@@ -20,6 +22,8 @@ public abstract class Order
     protected string _orderDisplayedName;
     protected OrderConductionStatus _conductionStatus;
     protected bool _isClosed;
+    // время создания приказа пользователем
+    protected DateTime _creationTimestamp;
 
     public int Id
     {
@@ -43,7 +47,7 @@ public abstract class Order
     public int OrderNumber
     {
         get => _orderNumber;
-        private set
+        internal set
         {
             _orderNumber = value;
         }
@@ -62,6 +66,10 @@ public abstract class Order
         get => _orderDisplayedName;
         private set => _orderDisplayedName = value;
     }
+
+    public DateTime OrderCreationDate => _creationTimestamp;
+
+    protected abstract OrderSequentialGuardian SequentialGuardian { get; }
 
     public static Mapper<Order> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
     {
@@ -126,6 +134,7 @@ public abstract class Order
                 new Column("name", "orders"),
                 new Column("type", "orders"),
                 new Column("serial_number", "orders"),
+                new Column("creation_timestamp", "orders")
 
             }
         );
@@ -134,7 +143,6 @@ public abstract class Order
         }
         return mapper;
     }
-
     protected Order()
     {
         _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
@@ -197,8 +205,8 @@ public abstract class Order
             return Result<T>.Failure(errors);
         }
         else
-        {
-            model._orderNumber = await RequestNextNumber(model);
+        {   model._creationTimestamp = DateTime.Now;
+            model._orderNumber = model.SequentialGuardian.GetSequentialIndex(model);
             return Result<T>.Success(model);
         }
     }
@@ -223,6 +231,7 @@ public abstract class Order
         }
         model._orderDisplayedName = (string)reader["name"];
         model._orderNumber = (int)reader["serial_number"];
+        model._creationTimestamp = (DateTime)reader["creation_timestamp"];
         return QueryResult<T?>.Found(model);
         
     }
@@ -264,40 +273,7 @@ public abstract class Order
     public abstract Task ConductByOrder();
     public abstract Task Save(ObservableTransaction? scope);
     protected abstract OrderTypes GetOrderType();
-    protected static async Task<int> RequestNextNumber(Order order)
-    {
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
-        DateTime lowest = new DateTime(order._specifiedDate.Year, 1, 1);
-        DateTime highest = new DateTime(order._specifiedDate.Year, 12, 31);
-
-        string cmdText = "SELECT MAX(serial_number) AS current_max FROM public.orders WHERE " +
-        "specified_date >= @p1 AND specified_date <= @p2";
-        NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p1", lowest));
-        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p2", highest));
-        await using (conn)
-        await using (cmd)
-        {
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return 1;
-            }
-            await reader.ReadAsync();
-            if (reader["current_max"].GetType() == typeof(DBNull))
-            {
-                return 1;
-            }
-            else
-            {
-                var next = (int)reader["current_max"];
-                next++;
-                return next;
-            }
-        }
-    }
-    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null)
+    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
@@ -305,7 +281,9 @@ public abstract class Order
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
         .AddWhereStatement(filter)
-        .AddOrderByStatement(new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC))
+        .AddOrderByStatement(orderBy is null ? 
+            new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC)
+            : orderBy)
         .AddParameters(additionalParams)
         .Finish();
         if (result.IsFailure)
@@ -366,8 +344,8 @@ public abstract class Order
     {
         NpgsqlConnection? conn = await Utils.GetAndOpenConnectionFactory();
         string cmdText = "INSERT INTO public.orders( " +
-        " specified_date, effective_date, serial_number, org_id, type, name, description, is_closed) " +
-        " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8) RETURNING id";
+        " specified_date, effective_date, serial_number, org_id, type, name, description, is_closed, creation_timestamp) " +
+        " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9) RETURNING id";
         NpgsqlCommand cmd;
         if (scope is null)
         {
@@ -393,6 +371,7 @@ public abstract class Order
             cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _orderDescription));
         }
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p8", _isClosed));
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p9", _creationTimestamp));
 
         await using (conn)
         await using (cmd)
@@ -608,27 +587,29 @@ public abstract class Order
         }
     }
 
-    public async Task<IReadOnlyCollection<StudentModel>> GetStudentsByOrder()
-    {
-        if (_conductionStatus == OrderConductionStatus.ConductionNotAllowed)
-        {
-            throw new Exception("Невозможно получить студентов с приказа, где проведение запрещено");
+    public static IReadOnlyCollection<Order> FindWithinRangeSortedByTime(DateTime start, DateTime end, OrderByCondition.OrderByTypes orderBy = OrderByCondition.OrderByTypes.ASC){
+        if (end < start){
+            throw new ArgumentException();
         }
-        var joins = new JoinSection()
-        .AppendJoin(
-            JoinSection.JoinType.LeftJoin,
-            new Column("id", "students"),
-            new Column("student_id", "student_flow")
-        );
         var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add(_id);
+        var startP = parameters.Add<DateTime>(start);
+        var endP = parameters.Add<DateTime>(end);
         var where = new ComplexWhereCondition(
             new WhereCondition(
-                new Column("order_id", "student_flow"),
-                p1,
-                WhereCondition.Relations.Equal));
-        // лимита не должно быть
-        return await StudentModel.FindUniqueStudents(new QueryLimits(0, 1000), joins, where, parameters);
+                new Column("specified_date", "orders"),
+                startP, 
+                WhereCondition.Relations.BiggerOrEqual),
+            new WhereCondition(
+                new Column("specified_date", "orders"),
+                endP,
+                WhereCondition.Relations.LessOrEqual
+                ), ComplexWhereCondition.ConditionRelation.AND
+            );
+        var orderByClause = new OrderByCondition(new Column("specified_date", "orders"), orderBy);
+        orderByClause.AddColumn(
+            new Column("creation_timestamp", "orders"), orderBy
+        );
+        return FindOrders(new QueryLimits(0, 500), additionalParams: parameters, filter: where, orderBy: orderByClause).Result;
     }
 
     public override bool Equals(object? obj)

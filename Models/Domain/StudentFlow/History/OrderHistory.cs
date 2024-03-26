@@ -27,7 +27,19 @@ public class OrderHistory{
             }
         );
         return found.ToList();
+    }
 
+    public static Order? GetAbsoluteLastOrder(){
+        var orderBy = new OrderByCondition(
+            new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC
+        );
+        orderBy.AddColumn(new Column("creation_timestamp", "orders"), OrderByCondition.OrderByTypes.DESC);
+        
+        var found = Order.FindOrders(
+            new QueryLimits(0,1),
+            orderBy: orderBy
+        ).Result; 
+        return found.FirstOrDefault();
     }
 
 }

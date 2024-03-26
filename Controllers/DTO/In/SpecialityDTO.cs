@@ -4,6 +4,9 @@ namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
 public class SpecialityDTO {
+
+    public int? Id {get; set;}
+
     [JsonInclude]
     public string FgosCode {get; set;}
     [JsonInclude]
@@ -27,7 +30,11 @@ public class SpecialityDTO {
 
     public SpecialityDTO()
     {
-        
+        FgosCode = "";
+        FgosName = "";
+        Qualification = "";
+        FgosPrefix = "";
+        QualificationPostfix = null;
     }
 
 }

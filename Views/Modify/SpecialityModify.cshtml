@@ -7,151 +7,197 @@
 }
 
 <div class="container">
-    <div class="d-flex flex-row">
-        <h5 class="col-1 mx-0">Код ФГОС</h5>
-    </div>
-
-    <div class="d-flex flex-row">
+    <div class="d-flex flex-column">
+        <h5 class="my-1">Код ФГОС</h5>
         <input id="FgosCode" class="col-1" value="@Model.FgosCode" />
-    </div>
-    <div class="d-flex flex-row">
-        <div class="col-6">
+        <div class="my-1">
             <small class="accent_color" id="FgosCode_err">
 
             </small>
         </div>
     </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-9 mx-0">Название ФГОС</h5>
-    </div>
 
-    <div class="d-flex flex-row">
-        <input id="FgosName" class="col-9" value="@Model.FgosName" />
-    </div>
-    <div class="d-flex flex-row">
-        <div class="col-6">
+    <div class="d-flex flex-column">
+        <h5 class="my-1">Название ФГОС</h5>
+        <input id="FgosName" value="@Model.FgosName" />
+        <div class="my-1 text-left">
             <small class="accent_color" id="FgosName_err">
 
             </small>
         </div>
     </div>
 
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Квалификация</h5>
-        <div class="col-1 mx-0"></div>
-        <h5 class="col-2 mx-0">Количество курсов</h5>
-    </div>
-    <div class="d-flex flex-row">
-        <input id="Qualification" class="col-5" value="@Model.Qualification"/>
-        <div class="col-1 mx-0"></div>
-        <select id = "CourseCount" class="col-2">
-            @foreach(var i in Enumerable.Range(1,6)){
-                if (i == Model.CourseCount){
-                    <option value="@i" selected> @i.ToString() </option>
-                }
-                else{
-                    <option value="@i">@i.ToString() </option>
-                }
-            }
-        </select>
-    </div>
-    <div class="d-flex flex-row">
-        <div class="col-5">
-            <small class="accent_color" id="Qualification_err">
-
-            </small>
-        </div>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Префикс имени группы (ФГОС)</h5>
-        <div class="col-1 mx-0"></div>
-        <h5 class="col-5 mx-0">Постфикс имени группы (квалификация)</h5>
-    </div>
-    <div class="d-flex flex-row">
-        <input id="FgosPrefix" class="col-2" value="@Model.FgosPrefix"/>
-        <div class="col-4 mx-0"></div>
-        <input id="QualificationPostfix" class="col-2" value="@Model.QualificationPostfix"/>
-    </div>
-    <div class="d-flex flex-row">
-        <div class="col-5">
-            <small class="accent_color" id="FgosPrefix_err">
-
-            </small>
+    <div class="row">
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-left">Квалификация</h5>
+            <input id="Qualification" class="my-1" value="@Model.Qualification" />
+            <div class="text-left">
+                <small class="accent_color" id="Qualification_err"></small>
+            </div>
         </div>
         <div class="col-1"></div>
-        <div class="col-5">
-            <small class="accent_color" id="QualificationPostfix_err">
-
-            </small>
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-left">Количество курсов</h5>
+            @if (Model.Id is null)
+            {
+                <select id="CourseCount" class="my-1">
+                    @foreach (var i in Enumerable.Range(1, 6))
+                    {
+                        if (i == Model.CourseCount)
+                        {
+                            <option value="@i" selected> @i.ToString() </option>
+                        }
+                        else
+                        {
+                            <option value="@i">@i.ToString() </option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <p class="text-right my-1">@Model.CourseCount</p>
+            }
         </div>
     </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Необходимый уровень образования</h5>
-        <div class="col-1 mx-0"></div>
-        <h5 class="col-5 mx-0">Уровень образования после освоения программы</h5>
-    </div>
-    <div class="d-flex flex-row">
-         <select id = "EducationalLevelIn" class="col-5">
-            @foreach(var i in LevelOfEducation.ListOfLevels){
-                var level = (int)i.LevelCode;
-                if (level == Model.EducationalLevelIn){
-                    <option value="@level" selected> @i.RussianName </option>
-                }
-                else{
-                    <option value="@level">@i.RussianName </option>
-                }
+
+
+    <div class="row">
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-left">Префикс имени группы (ФГОС)</h5>
+            @if (Model.Id is null)
+            {
+                <input id="FgosPrefix" value="@Model.FgosPrefix" />
             }
-        </select>
-        <div class="col-1 mx-0"></div>
-        <select id = "EducationalLevelOut" class="col-5">
-             @foreach(var i in LevelOfEducation.ListOfLevels){
-                var level = (int)i.LevelCode;
-                if (level == Model.EducationalLevelOut){
-                    <option value="@level" selected> @i.RussianName </option>
-                }
-                else{
-                    <option value="@level">@i.RussianName </option>
-                }
+            else
+            {
+                <p>@Model.FgosPrefix</p>
             }
-        </select>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Уровень образовательной программы</h5>
-    </div>
-    <div class="d-flex flex-row">
-         <select id = "TeachingLevel" class="col-5">
-            @foreach(var i in TeachingDepth.Levels){
-                int code = (int)i.Level; 
-                if (code == Model.TeachingDepth){
-                    <option value="@code" selected> @i.RussianName </option>
-                }
-                else{
-                    <option value="@code">@i.RussianName </option>
-                }
+            <div class="my-1">
+                <small class="accent_color" id="FgosPrefix_err">
+
+                </small>
+            </div>
+        </div>
+        <div class="col-1"></div>
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-right">Постфикс имени группы (квалификация)</h5>
+            @if (Model.Id is null)
+            {
+                <input id="QualificationPostfix" value="@Model.QualificationPostfix" />
             }
-        </select>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Уровень программы подготовки</h5>
-    </div>
-    <div class="d-flex flex-row">
-         <select id = "ProgramType" class="col-5">
-            @foreach(var i in TrainingProgram.Types){
-                int code = (int)i.Type; 
-                if (code == Model.ProgramType){
-                    <option value="@code" selected> @i.Name </option>
-                }
-                else{
-                    <option value="@code">@i.Name </option>
-                }
+            else
+            {
+                <p>@Model.QualificationPostfix</p>
             }
-        </select>
+            <div class="my-1">
+                <small class="accent_color" id="QualificationPostfix_err">
+
+                </small>
+            </div>
+        </div>
     </div>
-    <input type="hidden" id="Id" value="@Model.Id"/>
-    <button id="save">
-        Сохранить
-    </button>
+
+    <div class="row">
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-right">Необходимый уровень образования</h5>
+            @if (Model.Id is null)
+            {
+                <select id="EducationalLevelIn" class="my-1">
+                    @foreach (var i in LevelOfEducation.ListOfLevels)
+                    {
+                        var level = (int)i.LevelCode;
+                        if (level == Model.EducationalLevelIn)
+                        {
+                            <option value="@level" selected> @i.RussianName </option>
+                        }
+                        else
+                        {
+                            <option value="@level">@i.RussianName </option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <p>@Model.EducationalLevelInName</p>
+            }
+
+        </div>
+        <div class="col-1"></div>
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-rigth">Уровень образования после освоения программы</h5>
+            @if (Model.Id is null)
+            {
+                <select id="EducationalLevelOut" class="my-1">
+                    @foreach (var i in LevelOfEducation.ListOfLevels)
+                    {
+                        var level = (int)i.LevelCode;
+                        if (level == Model.EducationalLevelOut)
+                        {
+                            <option value="@level" selected> @i.RussianName </option>
+                        }
+                        else
+                        {
+                            <option value="@level">@i.RussianName </option>
+                        }
+                    }
+                </select>
+            }
+            else {
+                <p>@Model.EducationalLevelOutName</p>
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-right">Уровень образовательной программы</h5>
+            <select id="TeachingLevel" class="my-1">
+                @foreach (var i in TeachingDepth.Levels)
+                {
+                    int code = (int)i.Level;
+                    if (code == Model.TeachingDepth)
+                    {
+                        <option value="@code" selected> @i.RussianName </option>
+                    }
+                    else
+                    {
+                        <option value="@code">@i.RussianName </option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-1"></div>
+        <div class="d-flex flex-column col-5">
+            <h5 class="text-right">Уровень программы подготовки</h5>
+            <select id="ProgramType" class="my-1">
+                @foreach (var i in TrainingProgram.Types)
+                {
+                    int code = (int)i.Type;
+                    if (code == Model.ProgramType)
+                    {
+                        <option value="@code" selected> @i.Name </option>
+                    }
+                    else
+                    {
+                        <option value="@code">@i.Name </option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row my-1">
+        @if(Model.Id is not null){
+            <div id="id_section" spec_id="@Model.Id" />
+        }
+        <button id="save" class="my-1">
+            Сохранить
+        </button>
+    </div>
 </div>
 
+
 <script src="~/js/site.js"></script>
-<script src="~/js/specialities.js"></script>
+<script src="~/js/modify/specialities.js"></script>

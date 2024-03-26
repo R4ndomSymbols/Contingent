@@ -52,9 +52,9 @@ public class FreeTransferToFreeGroupOrder : FreeContingentOrder
         return ConductBase(_moves.ToRecords(this));
     }
     // проведение приказа должно аннулировать договор о платном обучении студента
-    public override Task Save(ObservableTransaction? scope)
+    public async override Task Save(ObservableTransaction? scope)
     {
-        return SaveBase();
+        await base.Save(scope);
     }
 
     protected override OrderTypes GetOrderType()

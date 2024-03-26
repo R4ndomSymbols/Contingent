@@ -1,3 +1,4 @@
+using StudentTracking.Models.Domain.Orders.Infrastructure;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
 
@@ -7,7 +8,7 @@ namespace StudentTracking.Models.Domain.Orders;
 public sealed class EmptyOrder : Order
 {
     public override string OrderOrgId {
-        get => _orderNumber.ToString() + "-TEMP";
+        get => "[Не может быть определен на данный момент]";
     }
     private EmptyOrder(){
         _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
@@ -20,6 +21,8 @@ public sealed class EmptyOrder : Order
     }
 
     public static EmptyOrder Empty => new EmptyOrder();
+
+    protected override OrderSequentialGuardian SequentialGuardian => throw new NotImplementedException();
 
     public override Task ConductByOrder()
     {

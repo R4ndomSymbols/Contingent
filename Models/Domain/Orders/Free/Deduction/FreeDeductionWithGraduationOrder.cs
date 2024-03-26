@@ -61,7 +61,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        await SaveBase(scope);
+        await base.Save(scope);
     }
 
     internal override async Task<ResultWithoutValue> CheckConductionPossibility()

@@ -110,7 +110,40 @@ public class SearchHelper{
         }
         return filter;
         
-    }        
+    }
+
+    public Filter<Order> GetFilterForOrder(OrderSearchParamentersDTO? dto){
+        var filter = Filter<Order>.Empty;
+        if (dto is null){
+            return filter;
+        }
+        if (!string.IsNullOrEmpty(dto.SearchText)){
+            var normalized = dto.SearchText.Trim().ToLower();
+            if (normalized.Length >= 3){
+                filter = filter.Include(
+                    new Filter<Order>(
+                        (source) => source.Where(o => o.OrderDisplayedName.Contains(normalized, StringComparison.OrdinalIgnoreCase))
+                    )
+                );
+            }
+        }
+        if (dto.Year is not null){
+            filter = filter.Include(
+                new Filter<Order>(
+                    (source) => source.Where(o => o.SpecifiedDate.Year == dto.Year)
+                )
+            );
+        }
+        if (dto.Type is not null){
+            filter = filter.Include(
+                new Filter<Order>(
+                    (source) => source.Where(o => (int)o.GetOrderTypeDetails().Type == dto.Type)
+                )
+            );
+        }
+        return filter;
+    }
+
 
 
 }

@@ -174,7 +174,7 @@ $("#save").click(function () {
     var giaMark = $("#GiaMark").val();
     var giaDemMark = $("#GiaDemoExamMark").val();
     var patr = $("#Patronymic").val();
-
+    var paid = $("#PaidAgreementType");
     $.ajax({
         type: "POST",
         url: "/students/addcomplex",
@@ -188,7 +188,7 @@ $("#save").click(function () {
             Snils: $("#Snils").val(),
             Inn: $("#Inn").val(),
             TargetAgreementType: Number($("#TargetAgreementType").val()),
-            PaidAgreementType: Number($("#PaidAgreementType").val()),
+            PaidAgreementType: paid.length === 0 ? -1 : paid.val(),
             AdmissionScore: $("#AdmissionScore").val(),
             GiaMark: giaMark == "" ? null : giaMark,
             GiaDemoExamMark:  giaDemMark == "" ? null : giaDemMark,

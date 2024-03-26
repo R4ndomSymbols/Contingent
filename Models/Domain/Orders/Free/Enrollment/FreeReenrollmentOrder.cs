@@ -51,7 +51,7 @@ public class FreeReenrollmentOrder : FreeContingentOrder
 
     public override async Task Save(ObservableTransaction? scope)
     {
-        await SaveBase(); 
+        await base.Save(scope);
     }
 
     protected override OrderTypes GetOrderType()

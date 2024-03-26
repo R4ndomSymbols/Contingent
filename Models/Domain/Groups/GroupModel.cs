@@ -275,7 +275,7 @@ public class GroupModel
                 cmd = new NpgsqlCommand(cmdText, conn);
             }
             currentGroup._courseOn = i;
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", currentGroup._educationProgram.Id));
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)currentGroup._educationProgram.Id));
             cmd.Parameters.Add(new NpgsqlParameter<int>("p2", currentGroup._courseOn));
             cmd.Parameters.Add(new NpgsqlParameter<string>("p3", currentGroup.GroupName));
             cmd.Parameters.Add(new NpgsqlParameter<int>("p4", (int)currentGroup._groupSponsorsip.TypeOfSponsorship));
@@ -365,7 +365,7 @@ public class GroupModel
         {
             cmd = new NpgsqlCommand(cmdText, conn);
         }
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", spec.Id));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)spec.Id));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)sp.TypeOfSponsorship));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p3", (int)gef.FormatType));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p4", creationYear));
