@@ -28,8 +28,7 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         return MapParticialFromDbBase(reader, order);
     }
     public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId, StudentGroupChangeMoveDTO? dto){
-        var model = new FreeReenrollmentOrder(orderId);
-        var orderResult = MapFromDbBaseForConduction(model);
+        var orderResult = MapFromDbBaseForConduction<FreeReenrollmentOrder>(orderId);
         if (orderResult.IsFailure)
         {
             return orderResult;

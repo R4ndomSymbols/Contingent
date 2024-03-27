@@ -29,7 +29,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     }
     public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto){
         var model = new FreeEnrollmentOrder(id);
-        var result = MapFromDbBaseForConduction(model);
+        var result = MapFromDbBaseForConduction<FreeEnrollmentOrder>(id);
         if (result.IsFailure){
             return result.RetraceFailure<FreeEnrollmentOrder>();
         }

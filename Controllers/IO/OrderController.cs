@@ -21,17 +21,17 @@ public class OrderController : Controller{
     
     [HttpGet]
     [Route("/orders/modify/{query}")]
-    public async Task<IActionResult> ProcessOrder(string query){
+    public IActionResult ProcessOrder(string query){
         if (query == "new"){
             return View(@"Views/Modify/OrderModify.cshtml", EmptyOrder.Empty); 
         }
         else if(int.TryParse(query, out int id)){
-            var result = await Order.GetOrderById(id);
-            if (result.IsSuccess){
-                return View(@"Views/Modify/OrderModify.cshtml", result.ResultObject);
+            var order = Order.GetOrderById(id);
+            if (order is not null){
+                return View(@"Views/Modify/OrderModify.cshtml", order);
             }
             else{
-                return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
+                return View(@"Views/Shared/Error.cshtml", "Приказа не существует");
             }
             
         }
@@ -40,20 +40,16 @@ public class OrderController : Controller{
         }
     }
     [HttpGet]
-    [Route("/orders/view/{query}")]
-    public async Task<IActionResult> ViewOrder(string query){
-        if(int.TryParse(query, out int id)){
-            var result = await Order.GetOrderById(id);
-            if (result.IsSuccess){
-                return View(@"Views/Observe/Order.cshtml", new OrderSearchDTO(result.ResultObject));
-            }
-            else{
-                return View(@"Views/Shared/Error.cshtml", result.Errors?.First()?.ToString() ?? "");
-            }
+    [Route("/orders/view/{id:int?}")]
+    public IActionResult ViewOrder(int id){
+        
+        var order = Order.GetOrderById(id);
+        if (order is not null){
+            return View(@"Views/Observe/Order.cshtml", new OrderSearchDTO(order));
         }
         else{
-            return View(@"Views/Shared/Error.cshtml", "Недопустимый id приказа");
-        }
+            return View(@"Views/Shared/Error.cshtml", "Такого приказа не существует");
+        }  
     }
     
     [HttpPost]
@@ -62,7 +58,7 @@ public class OrderController : Controller{
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
             var built = await Order.Build(body);
-            if (built.IsSuccess){
+            if (built.IsSuccess && built.ResultObject is not null){
                 var order = built.ResultObject; 
                 await order.Save(null);
                 return Ok(Json(new {OrderId = order.Id}).Value);
@@ -84,44 +80,34 @@ public class OrderController : Controller{
     }
 
     [HttpGet]
-    [Route("/orders/close/{id?}")]
-    public async Task<IActionResult> CloseOrder(string id){
+    [Route("/orders/close/{id:int?}")]
+    public IActionResult CloseOrder(int? id){
         
-        if (int.TryParse(id, out int parsed)){
-            var result = await Order.GetOrderById(parsed);
-            if (result.IsFailure){
-                return BadRequest(new ErrorsDTO(result.Errors));
-            }
-            await result.ResultObject.Close();
-            return Ok();
+        var order = Order.GetOrderById(id);
+        if (order is null){
+            return BadRequest("Неверно указан id приказа");
         }
-        
-        return BadRequest(new ErrorsDTO(new ValidationError("Такого приказа не существует"))); 
+        order.Close();
+        return Ok();
     }
     [HttpGet]
-    [Route("/orders/history/{query?}")]
-    public async Task<IActionResult> GetStudentsInOrder(string query)
+    [Route("/orders/history/{id?}")]
+    public IActionResult GetStudentsInOrder(int? id)
     {
-        if (!int.TryParse(query, out int id))
-        {
-            return BadRequest("Неверный id");
-        }
-        int convertedId = int.Parse(query);
-        var orderResult = await Order.GetOrderById(convertedId);
-        if (orderResult.IsFailure)
+        var order = Order.GetOrderById(id);
+        if (order is null)
         {
             return BadRequest("Несуществующий id");
-        }
-        var order = orderResult.ResultObject;
+        };
         var found = new OrderHistory(order);
-        var studentMovesHitoryRecords = new List<StudentHistoryMoveDTO>();
+        var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();
         foreach (var record in found.History){
             var history = StudentHistory.Create(record.Student);
             var byAnchor = history.GetByOrder(order);
-            var previous = history.GetClosestBefore(order);
-            studentMovesHitoryRecords.Add(new StudentHistoryMoveDTO(record.Student, byAnchor?.GroupTo, previous?.GroupTo, order));
+            var previous = history.GetClosestBefore(order.EffectiveDate);
+            studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.Student, byAnchor?.GroupTo, previous?.GroupTo, order));
         }
-        return Json(studentMovesHitoryRecords);
+        return Json(studentMovesHistoryRecords);
 
     }
 

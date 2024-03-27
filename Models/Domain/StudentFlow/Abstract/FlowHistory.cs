@@ -1,3 +1,4 @@
+using Npgsql;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.SQL;
 using Utilities;
@@ -81,7 +82,7 @@ public static class FlowHistory
                 () => QueryResult<StudentModel>.Found(queryParameters.ExtractByStudent)
             );
             studentMapper.PathTo.AppendJoin(
-                JoinSection.JoinType.FullJoin,
+                queryParameters.IncludeNotRegisteredStudents ? JoinSection.JoinType.FullJoin : JoinSection.JoinType.LeftJoin,
                 new Column("student_id", alias),
                 new Column("id", "students")
             );
@@ -274,6 +275,22 @@ public static class FlowHistory
         return GetHistoryAggregate(limits: limits, queryParameters: settings).Result;
     }
 
+    public static void DeleteRecords(IEnumerable<int> ids){
+        if (!ids.Any()){
+            return;
+        }
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        string cmdText = "DELETE FROM student_flow WHERE id = ANY(@p1)";
+        var cmd = new NpgsqlCommand(cmdText, conn);
+        var p = new NpgsqlParameter();
+        p.ParameterName = "p1";
+        p.Value = ids.ToArray();
+        p.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
+        cmd.Parameters.Add(p);
+        using (cmd){
+            cmd.ExecuteNonQuery();
+        }
+    }
 
 
     public enum OrderRelationMode

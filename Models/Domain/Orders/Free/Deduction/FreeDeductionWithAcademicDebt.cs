@@ -32,7 +32,7 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
 
     public static async Task<Result<FreeDeductionWithAcademicDebtOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto){
         var fromDb = new FreeDeductionWithAcademicDebtOrder(id);
-        var result = MapFromDbBaseForConduction(fromDb);
+        var result = MapFromDbBaseForConduction<FreeDeductionWithAcademicDebtOrder>(id);
         if (result.IsFailure){
             return result;
         }

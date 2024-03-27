@@ -15,7 +15,7 @@ public class StudentGroupNullifyMove {
     public static async Task<Result<StudentGroupNullifyMove?>> Create(int studentId){
         var student = await StudentModel.GetStudentById(studentId);
         if (student is null){
-            return Result<StudentGroupNullifyMove>.Failure(new ValidationError("Студент, указанный в dto, не существует"));
+            return Result<StudentGroupNullifyMove>.Failure(new ValidationError("Указанного студента не существует"));
         }
         return Result<StudentGroupNullifyMove>.Success(new StudentGroupNullifyMove(student));
     }
@@ -33,7 +33,7 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
     public static async Task<Result<StudentGroupNullifyMoveList?>> Create(IEnumerable<int>? ids){
         var list = new List<StudentGroupNullifyMove>();
         if (ids is null || !ids.Any()){
-            return Result<StudentGroupNullifyMoveList>.Failure(new ValidationError("Список DTO студентов пустой или не указан")); 
+            return Result<StudentGroupNullifyMoveList>.Failure(new ValidationError("Список студентов пустой или не указан")); 
         }
         foreach (int id in ids){
             var result = await StudentGroupNullifyMove.Create(id);

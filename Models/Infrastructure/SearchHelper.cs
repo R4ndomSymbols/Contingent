@@ -61,9 +61,12 @@ public class SearchHelper{
             return null;
         }
         if (dto.OrderId != null && dto.OrderMode != null){
+            var order = Order.GetOrderById(dto.OrderId.Value);
+            if (order is null){
+                return null;
+            }
             if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyExcluded.ToString()){
                 return () => {
-                    var order = Order.GetOrderById(dto.OrderId.Value).Result.ResultObject;
                     return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
                     new HistoryExtractSettings{
                         ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyExcluded),
@@ -76,7 +79,6 @@ public class SearchHelper{
             }
             else if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyIncluded.ToString()){
                 return () => {
-                    var order = Order.GetOrderById(dto.OrderId.Value).Result.ResultObject;
                     return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
                     new HistoryExtractSettings{
                         ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyIncluded),

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using StudentTracking.Models.Domain.Flow.History;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.SQL;
 using Utilities;
@@ -12,19 +13,19 @@ namespace StudentTracking.Models.Domain.Flow;
 
 public class StudentHistory
 {
-    private List<StudentFlowRecord> _history;
+    private HistoryByOrderEffectiveDate _history;
     private StudentModel _byStudent;
-    public IReadOnlyList<StudentFlowRecord> History => _history;
+    public HistoryByOrderEffectiveDate History => _history;
     private StudentHistory()
     {
-
+        
     }
 
     public static StudentHistory Create(StudentModel student)
     {
         var result = new StudentHistory();
         result._byStudent = student;
-        result._history = GetHistory(student);
+        result._history = new HistoryByOrderEffectiveDate(GetHistory(result._byStudent));
         return result;
     }
 
@@ -70,115 +71,42 @@ public class StudentHistory
 
     public StudentFlowRecord? GetClosestBefore(DateTime anchor)
     {
-        TimeSpan minDiff = TimeSpan.MaxValue;
-        int indexOfClosest = -1;
-        for (int i = 0; i < _history.Count; i++)
-        {
-            var effDate = _history[i].ByOrder.EffectiveDate;
-            if (effDate < anchor)
-            {
-                var diff = anchor - effDate;
-                if (diff < minDiff)
-                {
-                    indexOfClosest = i;
-                }
-            }
-        }
-        if (indexOfClosest == -1)
-        {
-            return null;
-        }
-        else
-        {
-            return _history[indexOfClosest];
-        }
+        return _history.GetClosestBefore(anchor);
     }
-    public StudentFlowRecord? GetClosestAfter(Order order)
-    {
-        if (order is null)
-        {
-            throw new ArgumentNullException(nameof(order));
-        }
-        return GetClosestAfter(order.EffectiveDate);
-    }
-    public StudentFlowRecord? GetClosestBefore(Order order)
-    {
-        if (order is null)
-        {
-            throw new ArgumentNullException(nameof(order));
-        }
-        return GetClosestBefore(order.EffectiveDate);
-    }
+
     public StudentFlowRecord? GetClosestAfter(DateTime anchor)
     {
-        TimeSpan minDiff = TimeSpan.MaxValue;
-        int indexOfClosest = -1;
-        for (int i = 0; i < _history.Count; i++)
-        {
-            var effDate = _history[i].ByOrder.EffectiveDate;
-            if (effDate > anchor)
-            {
-                var diff = anchor - effDate;
-                if (diff < minDiff)
-                {
-                    indexOfClosest = i;
-                }
-            }
-        }
-        if (indexOfClosest == -1)
-        {
-            return null;
-        }
-        else
-        {
-            return _history[indexOfClosest];
-        }
+        return _history.GetClosestAfter(anchor);
     }
 
     public StudentFlowRecord? GetLastRecord()
     {
-        StudentFlowRecord? last = null;
-        DateTime max = DateTime.MinValue;
-        for (int i = 0; i < _history.Count; i++)
-        {
-            if (_history[i].ByOrder.EffectiveDate > max)
-            {
-                last = _history[i];
-                max = last.ByOrder.EffectiveDate;
-            }
+        if (!_history.Any()){
+            return null;
         }
-        return last;
+        return _history.Last();
 
+    }
+
+    public void RevertHistory(Order startingPoint){
+        List<int> _toRemove = new();
+        _history.RemoveOlderOrEqualThan(startingPoint, (rec) => _toRemove.Add((int)rec.Record.Id));
+        FlowHistory.DeleteRecords(_toRemove);        
     }
 
     // получает всю историю студента в приказах
     // история отсортирована по дате регистрации приказа
-    private static List<StudentFlowRecord> GetHistory(StudentModel byStudent)
+    private static IEnumerable<StudentFlowRecord> GetHistory(StudentModel byStudent)
     {
-        var comparison = new Comparison<StudentFlowRecord>(
-            (left, right) =>{
-                if (left.ByOrder.EffectiveDate < right.ByOrder.EffectiveDate){
-                    return -1;
-                }
-                else if (left.ByOrder.EffectiveDate == right.ByOrder.EffectiveDate){
-                    return 0;
-                }
-                else{
-                    return 1;
-                }
-            }
-        ); 
-
         var found = FlowHistory.GetRecordsByFilter(
             new QueryLimits(0,50),
             new HistoryExtractSettings{
                 ExtractByStudent = byStudent,
                 ExtractGroups = true,
                 ExtractOrders = true,
+                IncludeNotRegisteredStudents = false
             }
         ).ToList(); 
-        found.Sort(comparison);
-        
         return found;
     }
 

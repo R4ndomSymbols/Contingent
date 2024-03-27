@@ -5,7 +5,7 @@ public class ErrorsDTO {
 
     public IReadOnlyCollection<ErrorDTO> Errors {get; private init; }
 
-    public ErrorsDTO(IReadOnlyCollection<ValidationError> errors){
+    public ErrorsDTO(IReadOnlyCollection<ValidationError?>? errors){
         if (errors is null){
             throw new ArgumentNullException(nameof(errors) + " не может иметь значение null");
         }

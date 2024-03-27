@@ -44,7 +44,7 @@ public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>{
     public static async Task<Result<StudentToGroupMoveList?>> Create(IEnumerable<StudentMoveDTO>? dtos){
         var list = new List<StudentToGroupMove>();
         if (dtos is null || dtos.Count() < 1){
-            return Result<StudentToGroupMoveList?>.Failure(new ValidationError("Источник данных (dto) должен быть указан и иметь ненулевую длину"));
+            return Result<StudentToGroupMoveList?>.Failure(new ValidationError("Не указано ни одной записи для проведения"));
         }
         foreach (var dto in dtos){
             var result = await StudentToGroupMove.Create(dto);

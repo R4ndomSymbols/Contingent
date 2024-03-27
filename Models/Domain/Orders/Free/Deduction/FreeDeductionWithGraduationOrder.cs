@@ -26,7 +26,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto)
     {
         var model = new FreeDeductionWithGraduationOrder(id);
-        var result = MapFromDbBaseForConduction(model);
+        var result = MapFromDbBaseForConduction<FreeDeductionWithGraduationOrder>(id);
         if (result.IsFailure)
         {
             return result;

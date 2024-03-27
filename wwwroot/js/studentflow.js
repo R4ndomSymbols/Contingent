@@ -14,6 +14,9 @@ var lastGroupSearchText = "";
 // здесь хранятся все студенты
 // pinned - свойство, отвечающее за прикрепленность
 var students = [];
+// студенты, числящиеся в приказе
+// removed - свойство, отвечающее за удаление
+var studentsInOrder = [];
 
 const invalidGroupId = "invalid_g"
 
@@ -34,12 +37,14 @@ $(document).ready(function () {
                     GlobalOffset: 0
                 }
             ),
-            dataType: "json",
+            contentType: "application/json",
             success: function (response) {
                 $.each(response, function (index, elem) {
+                    studentsInOrder.push(elem);
                     if (elem["groupId"] === null) {
                         elem["groupId"] = undefined
                     }
+                    let stdId = String(elem["studentId"])
                     $("#students_in_order").append(
                         `
                     <tr> 
@@ -49,12 +54,24 @@ $(document).ready(function () {
                         <td>
                             ${elem["groupName"]}
                         </td>
-                        <td>
-                            Нет
+                        <td id ="${stdId + identityExcludedPostfix}">
+                            <button id ="${stdId + excludePostfix}">
+                                Исключить
+                            </button>
                         </td>
                     </tr>
                     `
-                    );
+                    ); 
+                    $("#" + stdId + excludePostfix).on("click", function () {
+                        this.remove();
+                       $("#" + stdId + identityExcludedPostfix).append(
+                            "<p>Будет исключен<p>"
+                       )
+                       let found = studentsInOrder.find((std) => std.studentId === Number(stdId));
+                       if (found !== undefined){
+                            found.removed = true;
+                       }
+                    });
                 });
             }
         });
@@ -278,12 +295,29 @@ $("#save_changes").on("click", function () {
         data: JSON.stringify(obj),
         contentType: "application/json",
         success: function (response) {
-            alert("Сохранение прошло успешно")
+            alert("Сохранение новых студентов прошло успешно")
         },
-        error: function (response) {
-            alert("Сохранение провалилось (ошибка в данных или закрытый приказ)");
+        error: function (response, a,b) {
+            var err = (JSON.parse(response.responseText)).Errors[0].MessageForUser;
+            alert("Сохранение провалилось: \n " + err);
         }
     });
+
+    $.each(studentsInOrder, function (indexInArray, valueOfElement) {   
+        if (valueOfElement.removed){
+            $.ajax({
+                type: "DELETE",
+                url: "/studentflow/revert/" + String($("#current_order").prop("value")) + "/" + String(valueOfElement.studentId),
+                success: function (response) {},
+                error: function(xhr, a,b) {
+                    alert("Студент не был удален из приказа")
+                }
+            });  
+        }     
+    });
+  
+
+
 });
 
 function getOrderJsonData() {
@@ -293,7 +327,8 @@ function getOrderJsonData() {
         (x) => {
             return {
                 id: x.studentId,
-                newGroup: x.nextGroup
+                newGroup: x.nextGroup,
+                name: x.studentFullName
             }
         });
 
@@ -307,6 +342,10 @@ function getOrderJsonData() {
             {
                 Moves: mainModel.map(
                     (x) => {
+                        if (x.newGroup === undefined){
+                            alert("У студента " + x.name + " не указана группа")
+                        }
+
                         return {
                             StudentId: x.id,
                             GroupToId: x.newGroup
@@ -338,9 +377,6 @@ function closeOrder() {
             alert("Приказ успешно закрыт")
         }
     });
-
-
-
 }
 
 

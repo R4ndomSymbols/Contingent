@@ -8,6 +8,9 @@ using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using System.Net;
 using StudentTracking.Models.Domain.Orders.Infrastructure;
+using StudentTracking.Models.Domain.Flow.History;
+using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
 
 namespace StudentTracking.Models.Domain.Orders;
 
@@ -120,7 +123,8 @@ public abstract class Order
                         result = FreeTransferBetweenSpecialitiesOrder.Create(id, reader);
                         break;
                 }
-                if (result is null){
+                if (result is null)
+                {
                     return QueryResult<Order>.NotFound();
                 }
                 return QueryResult<Order>.Found((Order)result.GetResultObject());
@@ -138,21 +142,35 @@ public abstract class Order
 
             }
         );
-        if (source is not null){
-            mapper.PathTo.AddHead(joinType,source, new Column("id", "orders"));
+        if (source is not null)
+        {
+            mapper.PathTo.AddHead(joinType, source, new Column("id", "orders"));
         }
         return mapper;
     }
     protected Order()
     {
         _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
+        _orderDisplayedName = "Не указано";
     }
     protected Order(int id)
     {
         _id = id;
+        _orderDisplayedName = "Не указано";
         _conductionStatus = OrderConductionStatus.ConductionNotValidated;
     }
-
+    private static bool TryParseOrderType(int orderType)
+    {
+        try
+        {
+            var type = (OrderTypes)orderType;
+            return true;
+        }
+        catch (InvalidCastException)
+        {
+            return false;
+        }
+    }
     protected static async Task<Result<T?>> MapBase<T>(OrderDTO? source, T model) where T : Order
     {
 
@@ -205,7 +223,8 @@ public abstract class Order
             return Result<T>.Failure(errors);
         }
         else
-        {   model._creationTimestamp = DateTime.Now;
+        {
+            model._creationTimestamp = DateTime.Now;
             model._orderNumber = model.SequentialGuardian.GetSequentialIndex(model);
             return Result<T>.Success(model);
         }
@@ -233,80 +252,16 @@ public abstract class Order
         model._orderNumber = (int)reader["serial_number"];
         model._creationTimestamp = (DateTime)reader["creation_timestamp"];
         return QueryResult<T?>.Found(model);
-        
-    }
 
-    protected static Result<T?> MapFromDbBaseForConduction<T>(T model) where T : Order
+    }
+    protected static Result<T?> MapFromDbBaseForConduction<T>(int id) where T : Order
     {
-        var got = GetOrderById(model._id).Result;
-        if (got.IsFailure || got.ResultObject.IsClosed)
+        var got = GetOrderById(id);
+        if (got is null || got.IsClosed)
         {
             return Result<T>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения, либо приказа не существует"));
         }
-        return Result<T>.Success((T?)got.ResultObject);
-    }
-
-    // этот метод должен по умолчанию менять статус приказа, без его вызова
-    // приказ не может получить статус готового к проведению
-    internal abstract Task<ResultWithoutValue> CheckConductionPossibility();
-    internal virtual async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck)
-    {
-        // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
-        // для закрытых приказов проведение невозможно
-        if (await StudentHistory.IsAnyStudentInNotClosedOrder(toCheck))
-        {
-            return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
-        }
-        foreach(var s in toCheck){
-            var record = s.History.GetLastRecord(); 
-            if (record is not null && record.ByOrder._effectiveDate > this._effectiveDate){
-                ResultWithoutValue.Failure(new OrderValidationError("Приказ не является хронологически последовательным для одного или нескольких студентов"));
-            }
-        }
-        return ResultWithoutValue.Success();
-    }
-
-    public OrderTypeInfo GetOrderTypeDetails()
-    {
-        return OrderTypeInfo.GetByType(GetOrderType());
-    }
-    public abstract Task ConductByOrder();
-    public abstract Task Save(ObservableTransaction? scope);
-    protected abstract OrderTypes GetOrderType();
-    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null)
-    {
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-        var mapper = GetMapper(null);
-        var result = SelectQuery<Order>.Init("orders")
-        .AddMapper(mapper)
-        .AddJoins(additionalJoins)
-        .AddWhereStatement(filter)
-        .AddOrderByStatement(orderBy is null ? 
-            new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC)
-            : orderBy)
-        .AddParameters(additionalParams)
-        .Finish();
-        if (result.IsFailure)
-        {
-            throw new Exception("Запрос сгенерирован неверно");
-        }
-        var query = result.ResultObject;
-        return await query.Execute(conn, limits);
-    }
-
-    public static async Task<bool> IsOrderExists(int id)
-    {
-        var conn = await Utils.GetAndOpenConnectionFactory();
-        string cmtText = "SELECT EXISTS(SELECT id FROM orders WHERE id = @p1)";
-        NpgsqlCommand cmd = new NpgsqlCommand(cmtText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-        using (conn)
-        using (cmd)
-        {
-            using var reader = cmd.ExecuteReader();
-            reader.Read();
-            return (bool)reader["exists"];
-        }
+        return Result<T>.Success((T?)got);
     }
     protected async Task ConductBase(IEnumerable<StudentFlowRecord> records)
     {
@@ -339,7 +294,7 @@ public abstract class Order
 
         _conductionStatus = OrderConductionStatus.Conducted;
     }
-
+    protected abstract OrderTypes GetOrderType();
     protected async Task SaveBase(ObservableTransaction? scope = null)
     {
         NpgsqlConnection? conn = await Utils.GetAndOpenConnectionFactory();
@@ -382,13 +337,62 @@ public abstract class Order
             return;
         }
     }
-
-    // получение приказа по Id независимо от типа
-
-    public static async Task<Result<Order?>> GetOrderById(int id)
+    // этот метод должен по умолчанию менять статус приказа, без его вызова
+    // приказ не может получить статус готового к проведению
+    internal abstract Task<ResultWithoutValue> CheckConductionPossibility();
+    internal virtual async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck)
     {
+        // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
+        // для закрытых приказов проведение невозможно
+        if (await StudentHistory.IsAnyStudentInNotClosedOrder(toCheck))
+        {
+            return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов зарегистрированы в незакрытом приказе"));
+        }
+        foreach (var s in toCheck)
+        {
+            var record = s.History.GetLastRecord();
+            if (record is not null && record.ByOrder._effectiveDate > this._effectiveDate)
+            {
+                ResultWithoutValue.Failure(new OrderValidationError("Приказ не является хронологически последовательным для одного или нескольких студентов"));
+            }
+        }
+        return ResultWithoutValue.Success();
+    }
+
+    public OrderTypeInfo GetOrderTypeDetails()
+    {
+        return OrderTypeInfo.GetByType(GetOrderType());
+    }
+    public abstract Task ConductByOrder();
+    public abstract Task Save(ObservableTransaction? scope);
+    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null)
+    {
+        using var conn = await Utils.GetAndOpenConnectionFactory();
+        var mapper = GetMapper(null);
+        var result = SelectQuery<Order>.Init("orders")
+        .AddMapper(mapper)
+        .AddJoins(additionalJoins)
+        .AddWhereStatement(filter)
+        .AddOrderByStatement(orderBy is null ?
+            new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC)
+            : orderBy)
+        .AddParameters(additionalParams)
+        .Finish();
+        if (result.IsFailure)
+        {
+            throw new Exception("Запрос сгенерирован неверно");
+        }
+        var query = result.ResultObject;
+        return await query.Execute(conn, limits);
+    }
+    // получение приказа по Id независимо от типа
+    public static Order? GetOrderById(int? id)
+    {
+        if (id is null){
+            return null;
+        }
         var paramCollection = new SQLParameterCollection();
-        var p1 = paramCollection.Add(id); 
+        var p1 = paramCollection.Add((int)id);
         var where = new ComplexWhereCondition(
             new WhereCondition(
                 new Column("id", "orders"),
@@ -396,15 +400,16 @@ public abstract class Order
                 WhereCondition.Relations.Equal
             )
         );
-        var found = await FindOrders(
-            new QueryLimits(0,1), 
+        var found = FindOrders(
+            new QueryLimits(0, 1),
             filter: where,
             additionalParams: paramCollection
-        );
-        if (found.Any()){
-             return Result<Order?>.Success(found.First());
+        ).Result;
+        if (found.Any())
+        {
+            return found.First();
         }
-        return Result<Order?>.Failure(new OrderValidationError("Приказ не может быть получен из базы данных"));
+        return null;
     }
 
     public static async Task<Result<Order?>> GetOrderForConduction(int id, string conductionDataDTO)
@@ -559,36 +564,35 @@ public abstract class Order
             return Result<Order?>.Failure(result.GetErrors());
         }
     }
-
-    private static bool TryParseOrderType(int orderType)
-    {
-        try
-        {
-            var type = (OrderTypes)orderType;
-            return true;
-        }
-        catch (InvalidCastException)
-        {
-            return false;
-        }
-    }
-
-    public async Task Close()
+    public void Close()
     {
         if (!_isClosed)
         {
-            using var conn = await Utils.GetAndOpenConnectionFactory();
-            var cmdText = "UPDATE orders SET is_closed = true WHERE id = @p1";
-            var cmd = new NpgsqlCommand(cmdText, conn);
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
-            await cmd.ExecuteNonQueryAsync();
-            cmd.Dispose();
-            _isClosed = true;
+            SetOpenCloseState(true);
         }
     }
 
-    public static IReadOnlyCollection<Order> FindWithinRangeSortedByTime(DateTime start, DateTime end, OrderByCondition.OrderByTypes orderBy = OrderByCondition.OrderByTypes.ASC){
-        if (end < start){
+    private void Open(){
+        if (_isClosed){
+            SetOpenCloseState(false);
+        }
+    }
+
+    private void SetOpenCloseState(bool closed){
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        var cmdText = "UPDATE orders SET is_closed = @p2 WHERE id = @p1";
+        var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
+        cmd.Parameters.Add(new NpgsqlParameter<bool>("p2", closed));
+        cmd.ExecuteNonQuery();
+        cmd.Dispose();
+        _isClosed = closed;
+    }
+
+    public static IReadOnlyCollection<Order> FindWithinRangeSortedByTime(DateTime start, DateTime end, OrderByCondition.OrderByTypes orderBy = OrderByCondition.OrderByTypes.ASC)
+    {
+        if (end < start)
+        {
             throw new ArgumentException();
         }
         var parameters = new SQLParameterCollection();
@@ -597,7 +601,7 @@ public abstract class Order
         var where = new ComplexWhereCondition(
             new WhereCondition(
                 new Column("specified_date", "orders"),
-                startP, 
+                startP,
                 WhereCondition.Relations.BiggerOrEqual),
             new WhereCondition(
                 new Column("specified_date", "orders"),
@@ -612,6 +616,24 @@ public abstract class Order
         return FindOrders(new QueryLimits(0, 500), additionalParams: parameters, filter: where, orderBy: orderByClause).Result;
     }
 
+    public virtual void RevertAllConducted(){
+        var history = new OrderHistory(this);
+        foreach (var rec in history.History){
+            var student = rec.Student;
+            if (student is null){
+                throw new Exception("Студент в истории должен быть указан");
+            }
+            student.History.RevertHistory(this);
+            Open();
+        }
+    }
+    public virtual void RevertConducted(IEnumerable<StudentModel> student){
+        foreach (var std in student){
+            var history = std.History;
+            history.RevertHistory(this);
+        }
+
+    }
     public override bool Equals(object? obj)
     {
         if (obj is null || obj is not Order)
@@ -620,6 +642,9 @@ public abstract class Order
         }
         return ((Order)obj)._id == this._id;
     }
+
+    
+
 
 
 }

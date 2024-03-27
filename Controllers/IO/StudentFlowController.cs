@@ -4,6 +4,8 @@ using StudentTracking.Models.Domain.Orders;
 using Utilities.Validation;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models;
+using System.Text.Json;
 namespace StudentTracking.Controllers;
 public class StudentFlowController : Controller
 {
@@ -14,23 +16,20 @@ public class StudentFlowController : Controller
     {
         _logger = logger;
     }
+    // страница проведения приказов
     [HttpGet]
-    [Route("/studentflow/{id?}")]
-    public async Task<IActionResult> GetMainPage(string id)
+    [Route("/studentflow/{id:int?}")]
+    public IActionResult GetMainPage(int? id)
     {
-        if (!int.TryParse(id, out int parsed))
+        var order = Order.GetOrderById(id);
+        if (order is null)
         {
-            return BadRequest("Id не распознан");
+            return BadRequest("Id приказа указан неверно");
         }
-        var order = await Order.GetOrderById(int.Parse(id));
-        if (order.IsFailure)
-        {
-            return BadRequest();
-        }
-        var card = new OrderSearchDTO(order.ResultObject);
+        var card = new OrderSearchDTO(order);
         return View(@"Views/Processing/StudentFlow.cshtml", card);
     }
-
+    // сохранение результатов
     [HttpPost]
     [Route("/studentflow/save/{id?}")]
     public async Task<IActionResult> SaveFlowChanges(string id)
@@ -42,44 +41,75 @@ public class StudentFlowController : Controller
         }
         using (var stream = new StreamReader(Request.Body))
         {
-            var jsonString =  await stream.ReadToEndAsync();
-            var result = await Order.GetOrderForConduction(orderId, jsonString);
-            if (result.IsSuccess)
+            var jsonString = await stream.ReadToEndAsync();
+            try
             {
-                var order = result.ResultObject;
-                await order.ConductByOrder();
-                
-                return Ok();
+                var result = await Order.GetOrderForConduction(orderId, jsonString);
+                if (result.IsSuccess)
+                {
+                    var order = result.ResultObject;
+                    await order.ConductByOrder();
+                    return Ok();
+                }
+                else
+                {
+                    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(result.Errors)));
+                }
             }
-            else
-            {
-                return BadRequest(result.Errors?.ErrorsToString() ?? "");
+            catch (Exception e){
+                return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("GENERAL","Произошла непредвиденная ошибка"))));
             }
         }
     }
+    // получение истории студента
     [HttpGet]
-    [Route("/studentflow/history/{id?}")]
-    public async Task<IActionResult> GetHistory(string id){
-        if (int.TryParse(id, out int parsed)){
-            var student = await StudentModel.GetStudentById(parsed);
-            if(student is null){
-                return BadRequest("такого студента не существует");
-            }
-            var history = student.History.History;
-            List<StudentHistoryMoveDTO> moves = new();
+    [Route("/studentflow/history/{id:int?}")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
 
-            for(int i = 0; i < history.Count; i++){
-                moves.Add(new StudentHistoryMoveDTO(
-                    student,
-                    history[i].GroupTo,
-                    (i == 0) ? null : history[i-1].GroupTo,
-                    history[i].ByOrder
-                ));
+        var student = await StudentModel.GetStudentById(id);
+        if (student is null)
+        {
+            return BadRequest("такого студента не существует");
+        }
+        var history = student.History.History;
+        List<StudentHistoryMoveDTO> moves = new();
+        GroupModel? previous = null;
+        foreach (var rec in history)
+        {
+
+            moves.Add(new StudentHistoryMoveDTO(
+                student,
+                rec.GroupTo,
+                previous,
+                rec.ByOrder
+            ));
+            previous = rec.GroupTo;
+
+        }
+        return Json(moves);
+    }
+    // удаление истории студента в приказа либо всей истории приказа
+    [HttpDelete]
+    [Route("/studentflow/revert/{orderId:int}/{studentId:int?}")]
+    public IActionResult DeleteFlowRecords(int orderId, int? studentId)
+    {
+        var order = Order.GetOrderById(orderId);
+        if (order is null)
+        {
+            return BadRequest("Id приказа указан неверно");
+        }
+        if (studentId is not null)
+        {
+            var student = StudentModel.GetStudentById(studentId).Result;
+            if (student is null)
+            {
+                return BadRequest("Id студента указан неверно");
             }
-            return Json(moves);
+            order.RevertConducted(new StudentModel[] { student });
+            return Ok();
         }
-        else {
-            return BadRequest("id студента указан неверно");
-        }
+        order.RevertAllConducted();
+        return Ok();
     }
 }

@@ -31,8 +31,7 @@ public class FreeTransferToFreeGroupOrder : FreeContingentOrder
 
 
     public static async Task<Result<FreeTransferToFreeGroupOrder?>> Create(int id, StudentGroupChangeMoveDTO moves){
-        var created = new FreeTransferToFreeGroupOrder(id); 
-        var result = MapFromDbBaseForConduction(created);
+        var result = MapFromDbBaseForConduction<FreeTransferToFreeGroupOrder>(id);
         if (result.IsFailure){
             return result;
         }

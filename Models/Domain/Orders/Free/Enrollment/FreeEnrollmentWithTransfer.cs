@@ -33,8 +33,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 
     public static async Task<Result<FreeEnrollmentWithTransferOrder?>> Create(int id, StudentGroupChangeMoveDTO? data)
     {
-        var created = new FreeEnrollmentWithTransferOrder(id);
-        var result = MapFromDbBaseForConduction(created);
+        var result = MapFromDbBaseForConduction<FreeEnrollmentWithTransferOrder>(id);
         if (result.IsFailure)
         {
             return result;
@@ -42,7 +41,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         var dtoParseResult = await StudentToGroupMoveList.Create(data);
         if (dtoParseResult.IsFailure)
         {
-            return dtoParseResult.Retrace(created);
+            return dtoParseResult.Retrace(result.ResultObject);
         }
         var order = result.ResultObject;
         order._toEnroll = dtoParseResult.ResultObject;

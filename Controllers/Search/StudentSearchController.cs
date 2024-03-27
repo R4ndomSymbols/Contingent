@@ -21,6 +21,7 @@ public class StudentSearchController : Controller
     {
         _logger = logger;
     }
+    // головное меню поиска
     [HttpGet]
     [Route("/students/search/menu")]
     public IActionResult FindStudentsMainPage()
@@ -28,29 +29,25 @@ public class StudentSearchController : Controller
         return View(@"Views/Search/Students.cshtml", new object());
 
     }
+    // поиск студента по паратетрам из тела запроса
     [HttpPost]
     [Route("students/search/query")]
-    public async Task<JsonResult> FindStudents()
+    public IActionResult FindStudents()
     {
-        using var stream = new StreamReader(Request.Body);
-        StudentSearchQueryDTO? query = null;
-        try
-        {
-            var text = await stream.ReadToEndAsync();
-            query = JsonSerializer.Deserialize<StudentSearchQueryDTO>(text);
+        var stream = new StreamReader(Request.Body);
+        StudentSearchQueryDTO? dto = null;
+        try {
+            dto = JsonSerializer.Deserialize<StudentSearchQueryDTO>(stream.ReadToEndAsync().Result);
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return Json(new ErrorsDTO(new ValidationError(nameof(FindStudents), e.Message)));
+        catch (Exception e){
+            return BadRequest(e.Message);
         }
-        if (query is null)
-        {
-            return Json(new ErrorsDTO(new ValidationError(nameof(FindStudents), "Запрос не может быть пустым")));
+        if (dto is null){
+            return BadRequest("Неверный формат данных");
         }
         var search = new SearchHelper();
-        var source = search.GetSource(query.Source);
-        var filter = search.GetFilter(query);
+        var source = search.GetSource(dto.Source);
+        var filter = search.GetFilter(dto);
 
         if (source!=null){
             var found = filter.Execute(source.Invoke());
@@ -61,18 +58,18 @@ public class StudentSearchController : Controller
         var result = new List<StudentFlowRecord>();
         int pageOffset = 0;
         int maxOffset = 0;
-        while (result.Count < query.PageSize)
+        while (result.Count < dto.PageSize)
         {   
-            maxOffset = query.GlobalOffset + pageOffset;
-            var limits = new QueryLimits(0, query.PageSize, maxOffset);
+            maxOffset = dto.GlobalOffset + pageOffset;
+            var limits = new QueryLimits(0, dto.PageSize, maxOffset);
             var found = StudentHistory.GetLastRecordsForManyStudents(limits, (false, false));
             if (!found.Any())
             {
                 break;
             }
             result.AddRange(filter.Execute(found));
-            pageOffset+=query.PageSize;
+            pageOffset+=dto.PageSize;
         }
-        return Json(result.Take(query.PageSize).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo, maxOffset)));
+        return Json(result.Take(dto.PageSize).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo, maxOffset)));
     }      
 }
