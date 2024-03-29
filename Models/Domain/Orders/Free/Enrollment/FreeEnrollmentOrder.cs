@@ -14,20 +14,20 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
     protected FreeEnrollmentOrder() : base()
     {
-        
+        _moves = StudentToGroupMoveList.Empty;
     }
     protected FreeEnrollmentOrder(int id) : base(id)
     {
-        
+        _moves = StudentToGroupMoveList.Empty;
     }
 
-    public static async Task<Result<FreeEnrollmentOrder?>> Create(OrderDTO? order){
+    public static Result<FreeEnrollmentOrder> Create(OrderDTO? order){
         
         var created = new FreeEnrollmentOrder();
-        var valResult = await MapBase(order,created);
+        var valResult = MapBase(order,created);
         return valResult;
     }
-    public static async Task<Result<FreeEnrollmentOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto){
+    public static async Task<Result<FreeEnrollmentOrder>> Create(int id, StudentGroupChangeMovesDTO? dto){
         var model = new FreeEnrollmentOrder(id);
         var result = MapFromDbBaseForConduction<FreeEnrollmentOrder>(id);
         if (result.IsFailure){
@@ -39,8 +39,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
             return dtoAsModelResult.RetraceFailure<FreeEnrollmentOrder>();
         }
         order._moves = dtoAsModelResult.ResultObject;
-        var checkResult = await order.CheckConductionPossibility();
-        return checkResult.Retrace(order); 
+        return result;
     }
 
     public static QueryResult<FreeEnrollmentOrder?> Create (int id, NpgsqlDataReader reader){
@@ -67,20 +66,15 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     // нет проверки на совпадение даты, спросить у предст. предметной области
     
      
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
-    {
-        var baseCheck = await base.CheckBaseConductionPossibility(_moves.Select(x => x.Student));
-        if (baseCheck.IsFailure){
-            return baseCheck;
-        }
-        
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    {   
         foreach (var stm in _moves.Moves){
 
             var history = StudentHistory.Create(stm.Student); 
             var targetGroup = stm.GroupTo;
             var validMove =  
                 history.IsStudentNotRecorded() &&
-                await targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student)&&
+                targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student)&&
                 targetGroup.SponsorshipType.IsFree(); 
             if (!validMove){
                 return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления"));
@@ -95,9 +89,14 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         return OrderTypes.FreeEnrollment;
     }
 
-    public override async Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        await ConductBase(_moves.ToRecords(this));
+        var result = base.CheckConductionPossibility(_moves.Select(x => x.Student));
+        if (result.IsFailure){
+            return result;
+        }
+        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 }
 

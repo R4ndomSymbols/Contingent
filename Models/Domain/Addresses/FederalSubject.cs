@@ -71,7 +71,7 @@ public class FederalSubject : IAddressPart
     };
     // кода у субъекта не будет
     // метод одновременно ищет и в базе адресов
-    public static Result<FederalSubject?> Create(string addressPart, ObservableTransaction? searchScope = null){
+    public static Result<FederalSubject> Create(string addressPart, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации указан неверно"));
@@ -97,7 +97,7 @@ public class FederalSubject : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<FederalSubject?>.Success(new FederalSubject(first.AddressPartId,
+                return Result<FederalSubject>.Success(new FederalSubject(first.AddressPartId,
                     (FederalSubjectTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(FederalSubjectTypes)first.ToponymType])
                 ));
@@ -105,7 +105,7 @@ public class FederalSubject : IAddressPart
         }
         
         var got = new FederalSubject(subjectType,found);
-        return Result<FederalSubject?>.Success(got);
+        return Result<FederalSubject>.Success(got);
     }
 
     public static FederalSubject? Create(AddressRecord source){

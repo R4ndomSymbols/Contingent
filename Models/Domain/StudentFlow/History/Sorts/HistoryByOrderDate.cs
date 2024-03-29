@@ -56,7 +56,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory{
     public StudentFlowRecord? GetClosestBefore(DateTime dateTime){
         StudentFlowRecord? toReturn = null;
         for(int i = _history.Count-1; i >= 0; i--){
-            if (_history[i].ByOrder.EffectiveDate < dateTime){
+            if (_history[i].OrderNullRestict.EffectiveDate < dateTime){
                 toReturn = _history[i];
                 break;
             }
@@ -66,7 +66,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory{
     public StudentFlowRecord? GetClosestAfter(DateTime dateTime){
         StudentFlowRecord? toReturn = null;
         for(int i = 0; i < _history.Count; i++){
-            if (_history[i].ByOrder.EffectiveDate > dateTime){
+            if (_history[i].OrderNullRestict.EffectiveDate > dateTime){
                 toReturn = _history[i];
                 break;
             }

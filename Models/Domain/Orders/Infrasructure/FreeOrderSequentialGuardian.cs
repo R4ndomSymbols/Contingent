@@ -54,7 +54,7 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
             return 1;
         }
         // если приказ уже есть, то возвращается он же
-        if (_foundFree.Any(o => o.Equals(toInsert)))
+        if (_foundFree.Any(o => o.order.Equals(toInsert)))
         {
             return toInsert.OrderNumber;
         }
@@ -77,10 +77,6 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
         var sequentialIndex = GetSequentialIndex(toInsert);
         if (_foundFree.Any(o => o.order.Equals(toInsert)))
         {
-            Console.WriteLine(
-                string.Join("\n", _foundFree.Select(x => x.order.Id + " " + x.bias + " " + x.order.OrderCreationDate.ToString()))
-            );
-            Console.WriteLine("Вставка: " + toInsert.Id);
             return;
         }
         _foundFree.Insert(sequentialIndex - 1, ((FreeContingentOrder)toInsert, 0));
@@ -93,7 +89,7 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
     public override void Save()
     {
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
-        var cmdText = "UPDATE orders SET serial_number = @p1 WHERE id = @p2";
+        var cmdText = "UPDATE orders SET serial_number = @p1, org_id = @p3 WHERE id = @p2";
         for (int i = 0; i < _foundFree.Count; i++)
         {
             if (_foundFree[i].order.Id == Utils.INVALID_ID)
@@ -105,12 +101,14 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
                 using var cmd = new NpgsqlCommand(cmdText, conn);
                 // новый индекс приказа - складывается из текущего положения, единицы и смещения
                 var newNumber = i + _foundFree[i].bias;
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", newNumber));
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _foundFree[i].order.Id));
-                cmd.ExecuteNonQuery();
-                _foundFree[i] = (_foundFree[i].order, 0);
                 // по идее, так быть не должно, но я не вижу другого способа инкапсулировать смену состояния
                 _foundFree[i].order.OrderNumber = newNumber;
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", newNumber));
+                cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _foundFree[i].order.Id));
+                cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _foundFree[i].order.OrderOrgId));
+                cmd.ExecuteNonQuery();
+                _foundFree[i] = (_foundFree[i].order, 0);
+                
             }
         }
         SetSource(_yearStart, _yearEnd);

@@ -64,7 +64,7 @@ public class District : IAddressPart
             district._parentFederalSubject.Equals(d._parentFederalSubject)
         );
     }
-    public static Result<District?> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null){
+    public static Result<District> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня указано неверно"));
@@ -89,7 +89,7 @@ public class District : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<District?>.Success(new District(first.AddressPartId,
+                return Result<District>.Success(new District(first.AddressPartId,
                      parent, 
                      (DistrictTypes)first.ToponymType,
                      new AddressNameToken(first.AddressName, Names[(DistrictTypes)first.ToponymType])
@@ -102,7 +102,7 @@ public class District : IAddressPart
             subjectType,
             foundDistrict
         );
-        return Result<District?>.Success(got);
+        return Result<District>.Success(got);
     }
     public static District? Create(AddressRecord source, FederalSubject parent){
         
@@ -144,7 +144,9 @@ public class District : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var foundUntyped = AddressModel.FindRecords(_id).Result;
-        return foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL).Select(rec => (IAddressPart)Settlement.Create(rec, this))
+        return 
+        foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL)
+        .Select(rec => Settlement.Create(rec, this))
         .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)));
     }
 

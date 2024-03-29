@@ -76,6 +76,14 @@ public class SpecialityModel
     private SpecialityModel()
     {
         _id = null;
+        _fgosCode = "";
+        _fgosName = "";
+        _qualification = "";
+        _groupNameFgosPrefix = "";
+        _levelIn = LevelOfEducation.None;
+        _levelOut = LevelOfEducation.None;
+        _teachingDepth = TeachingDepth.None;
+        _trainingProgram = TrainingProgram.None;
     }
 
     public static Mapper<SpecialityModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
@@ -121,7 +129,7 @@ public class SpecialityModel
         return mapper;
     }
 
-    public static Result<SpecialityModel?> Build(SpecialityDTO dto)
+    public static Result<SpecialityModel> Build(SpecialityDTO dto)
     {
         if (dto is null)
         {
@@ -463,10 +471,10 @@ public class SpecialityModel
         return result;
     }
 
-    public async Task<bool> IsStudentAllowedByEducationLevel(StudentModel student)
+    public bool IsStudentAllowedByEducationLevel(StudentModel student)
     {
-        var levels = await StudentEducationalLevelRecord.GetByOwner(student);
-        return levels.Any(x => x.Level.Weight >= _levelIn.Weight);
+        var levels = StudentEducationalLevelRecord.GetByOwner(student).Result;
+        return levels.Any(x => x.Level >= _levelIn);
     }
 
     public static IEnumerable<SpecialityModel> GetAll()

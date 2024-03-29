@@ -76,7 +76,7 @@ public class Street : IAddressPart
         _streetName = name;
         _duplicationBuffer.Add(this);
     }
-    public static Result<Street?> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null){
+    public static Result<Street> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не указан или указан неверно"));
@@ -101,7 +101,7 @@ public class Street : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Street?>.Success(new Street(first.AddressPartId,
+                return Result<Street>.Success(new Street(first.AddressPartId,
                     parent, 
                     (StreetTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(StreetTypes)first.ToponymType])
@@ -114,7 +114,7 @@ public class Street : IAddressPart
              streetType,
              foundStreet
         );
-        return Result<Street?>.Success(got);
+        return Result<Street>.Success(got);
     }
     public static Street Create(AddressRecord source, Settlement parent){
         return new Street(source.AddressPartId,

@@ -11,19 +11,19 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     private StudentGroupNullifyMoveList _graduates;
     protected FreeDeductionWithGraduationOrder() : base()
     {
-
+        _graduates = StudentGroupNullifyMoveList.Empty;
     }
     protected FreeDeductionWithGraduationOrder(int id) : base(id)
     {
-
+        _graduates = StudentGroupNullifyMoveList.Empty;
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(OrderDTO? order)
+    public static Result<FreeDeductionWithGraduationOrder> Create(OrderDTO? order)
     {
         var created = new FreeDeductionWithGraduationOrder();
-        var valResult = await MapBase(order, created);
+        var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto)
+    public static async Task<Result<FreeDeductionWithGraduationOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto)
     {
         var model = new FreeDeductionWithGraduationOrder(id);
         var result = MapFromDbBaseForConduction<FreeDeductionWithGraduationOrder>(id);
@@ -38,8 +38,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
             return dtoAsModelResult.RetraceFailure<FreeDeductionWithGraduationOrder>();
         }
         order._graduates = dtoAsModelResult.ResultObject;
-        var conductionCheck = await order.CheckConductionPossibility();
-        return conductionCheck.Retrace(order);
+        return result;
     }
 
     public static QueryResult<FreeDeductionWithGraduationOrder?> Create(int id, NpgsqlDataReader reader)
@@ -49,9 +48,15 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     }
 
 
-    public override async Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        await ConductBase(_graduates.ToRecords(this));
+        var result = base.CheckConductionPossibility(_graduates.Select(x => x.Student));
+        if (result.IsFailure)
+        {
+            return result;
+        }
+        ConductBase(_graduates.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     protected override OrderTypes GetOrderType()
@@ -64,13 +69,8 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         await base.Save(scope);
     }
 
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        var check = await base.CheckBaseConductionPossibility(_graduates.ToStudentCollection());
-        if (check.IsFailure)
-        {
-            return check;
-        }
         foreach (var i in _graduates)
         {
             var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student);
@@ -80,7 +80,6 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
                 return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

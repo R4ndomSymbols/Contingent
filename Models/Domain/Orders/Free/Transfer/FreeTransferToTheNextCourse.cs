@@ -14,20 +14,20 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     private StudentToGroupMoveList _moves;
     protected FreeTransferToTheNextCourseOrder() : base()
     {
-
+        _moves = StudentToGroupMoveList.Empty;
     }
     protected FreeTransferToTheNextCourseOrder(int id) : base(id)
     {
-
+        _moves = StudentToGroupMoveList.Empty;
     }
 
-    public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(OrderDTO? order)
+    public static Result<FreeTransferToTheNextCourseOrder> Create(OrderDTO? order)
     {
         var created = new FreeTransferToTheNextCourseOrder();
-        var valResult = await MapBase(order,created);
+        var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<FreeTransferToTheNextCourseOrder?>> Create(int id, StudentGroupChangeMoveDTO? dto)
+    public static async Task<Result<FreeTransferToTheNextCourseOrder>> Create(int id, StudentGroupChangeMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<FreeTransferToTheNextCourseOrder>(id);
         if (result.IsFailure)
@@ -35,13 +35,13 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
             return result;
         }
         var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
-        if (dtoAsModelResult.IsFailure){
-            return Result<FreeTransferToTheNextCourseOrder?>.Failure(dtoAsModelResult.Errors);
+        if (dtoAsModelResult.IsFailure)
+        {
+            return dtoAsModelResult.RetraceFailure<FreeTransferToTheNextCourseOrder>();
         }
-        var order = result.ResultObject; 
+        var order = result.ResultObject;
         order._moves = dtoAsModelResult.ResultObject;
-        var conductionStatus = await order.CheckConductionPossibility();
-        return conductionStatus.Retrace(order);
+        return result;
     }
 
     public static QueryResult<FreeTransferToTheNextCourseOrder?> Create(int id, NpgsqlDataReader reader)
@@ -50,14 +50,20 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         return MapParticialFromDbBase(reader, order);
     }
 
-    public override async Task ConductByOrder()
-    {   
-        await ConductBase(_moves.ToRecords(this));
+    public override ResultWithoutValue ConductByOrder()
+    {
+        var checkResult = base.CheckConductionPossibility(_moves.Select(x => x.Student));
+        if (checkResult.IsFailure)
+        {
+            return checkResult;
+        }
+        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     protected override OrderTypes GetOrderType()
     {
-        return  OrderTypes.FreeNextCourseTransfer;
+        return OrderTypes.FreeTransferNextCourse;
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -69,26 +75,34 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     // одинаковая последовательность
     // отличия в курсе строго 1
 
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        var baseCheck = await base.CheckBaseConductionPossibility(_moves.Select(x => x.Student));
-        if (baseCheck.IsFailure){
-            return baseCheck;
-        }
+        foreach (var move in _moves.Moves)
+        {
 
-        foreach(var move in _moves.Moves){
-    
             var history = StudentHistory.Create(move.Student);
             var currentGroup = history.GetCurrentGroup();
-            if (currentGroup is null || currentGroup.SponsorshipType.IsPaid() || currentGroup.CourseOn == currentGroup.EducationProgram.CourseCount){
-                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Студент числится в группе, для которой невозможно проведение данного приказа"));
+            if (currentGroup is null)
+            {
+                return ResultWithoutValue.Failure(
+                    new OrderValidationError(
+                        string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", move.Student.GetName())
+                    )
+                );
             }
             var targetGroup = move.GroupTo;
-            if (targetGroup.SponsorshipType.IsPaid() || targetGroup.CourseOn - currentGroup.CourseOn != 1 || currentGroup.HistoricalSequenceId != targetGroup.HistoricalSequenceId){
-                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves), "Текущая группа и целевая группа несовместны в рамках данного приказа"));
-            }    
+            if (
+                currentGroup.SponsorshipType.IsPaid() || currentGroup.CourseOn == currentGroup.EducationProgram.CourseCount
+                || targetGroup.SponsorshipType.IsPaid() || targetGroup.CourseOn - currentGroup.CourseOn != 1 || currentGroup.HistoricalSequenceId != targetGroup.HistoricalSequenceId)
+            {
+                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves),
+                    string.Format(
+                        "Студента {0} невозможно перевести на следующий курс({1} => {2})",
+                            move.Student.GetName(), currentGroup.GroupName, move.GroupTo.GroupName
+                        ))
+                    );
+            }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

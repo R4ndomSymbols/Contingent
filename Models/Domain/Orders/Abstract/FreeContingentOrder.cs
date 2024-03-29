@@ -22,24 +22,34 @@ public abstract class FreeContingentOrder : Order
     }
     // проверяет отсутствие у студента договора о платном обучении
     // а так же проводит базовую проверку, свойственную любому приказу
-    internal override async Task<ResultWithoutValue> CheckBaseConductionPossibility(IEnumerable<StudentModel> toCheck)
+    internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
     {
-        var baseCheck = await base.CheckBaseConductionPossibility(toCheck);
-        if (baseCheck.IsFailure)
+        var baseCheck = base.CheckConductionPossibility(toCheck);
+        if (baseCheck.IsFailure || toCheck is null)
         {
             return baseCheck;
         }
         foreach (var std in toCheck){
             if (std.PaidAgreement.IsConcluded()){
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, проходящих по приказу К, имеют договор о платном образовании"));
+                return ResultWithoutValue.Failure(
+                    new OrderValidationError(
+                        string.Format("Студент {1} имеет договор о платном обучении, это недопустимо для данного приказа", std.GetName())
+                        )
+                );
             }
+        }
+        var lowerCheck = CheckSpecificConductionPossibility();
+        if (lowerCheck.IsFailure)
+        {
+            return lowerCheck;
         }
         return ResultWithoutValue.Success();
     }
+    protected abstract ResultWithoutValue CheckSpecificConductionPossibility();
 
     public override async Task Save(ObservableTransaction? scope) 
     {
-        await SaveBase(scope);
+        await base.Save(scope);
         SequentialGuardian.Insert(this);
         SequentialGuardian.Save();
     }
@@ -49,5 +59,8 @@ public abstract class FreeContingentOrder : Order
         return base.Equals(obj);
     }
 
-
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
 }

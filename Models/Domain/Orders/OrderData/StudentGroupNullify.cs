@@ -12,7 +12,7 @@ public class StudentGroupNullifyMove {
         Student = studentModel;
     }
 
-    public static async Task<Result<StudentGroupNullifyMove?>> Create(int studentId){
+    public static async Task<Result<StudentGroupNullifyMove>> Create(int studentId){
         var student = await StudentModel.GetStudentById(studentId);
         if (student is null){
             return Result<StudentGroupNullifyMove>.Failure(new ValidationError("Указанного студента не существует"));
@@ -23,14 +23,15 @@ public class StudentGroupNullifyMove {
 
 public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
 {
+    public static StudentGroupNullifyMoveList Empty => new StudentGroupNullifyMoveList();
 
     public IReadOnlyList<StudentGroupNullifyMove> Moves {get; private init;}
 
     private StudentGroupNullifyMoveList(){
-
+        Moves = new List<StudentGroupNullifyMove>();
     }
 
-    public static async Task<Result<StudentGroupNullifyMoveList?>> Create(IEnumerable<int>? ids){
+    public static async Task<Result<StudentGroupNullifyMoveList>> Create(IEnumerable<int>? ids){
         var list = new List<StudentGroupNullifyMove>();
         if (ids is null || !ids.Any()){
             return Result<StudentGroupNullifyMoveList>.Failure(new ValidationError("Список студентов пустой или не указан")); 
@@ -38,16 +39,16 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
         foreach (int id in ids){
             var result = await StudentGroupNullifyMove.Create(id);
             if (result.IsFailure){
-                return Result<StudentGroupNullifyMoveList?>.Failure(result.Errors); 
+                return Result<StudentGroupNullifyMoveList>.Failure(result.Errors); 
             }
             else{
                 list.Add(result.ResultObject);
             }
         }
-        return Result<StudentGroupNullifyMoveList?>.Success(new StudentGroupNullifyMoveList(){Moves = list}); 
+        return Result<StudentGroupNullifyMoveList>.Success(new StudentGroupNullifyMoveList(){Moves = list}); 
     }
 
-    public static async Task<Result<StudentGroupNullifyMoveList?>> Create(StudentGroupNullifyMoveDTO? moves)
+    public static async Task<Result<StudentGroupNullifyMoveList>> Create(StudentGroupNullifyMovesDTO? moves)
     {
         return await Create(moves?.Students);
     }

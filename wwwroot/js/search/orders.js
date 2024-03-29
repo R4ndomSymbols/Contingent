@@ -56,7 +56,7 @@ function getSearchRequestData(){
         {
             SearchText: $("#order_name").val(),
             Year: year === -1 ? null : year,
-            Type: type === -1 ? null : year
+            Type: type === -1 ? null : type
         }
     )
 }

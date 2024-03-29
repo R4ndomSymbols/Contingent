@@ -16,7 +16,7 @@ public class StudentEducationalLevelRecord {
        Owner = owner;
     }
 
-    public static Result<StudentEducationalLevelRecord?> Create(StudentEducationRecordDTO dto, StudentModel model){
+    public static Result<StudentEducationalLevelRecord> Create(StudentEducationRecordDTO dto, StudentModel model){
         
         if (dto == null){
             return Result<StudentEducationalLevelRecord>.Failure(new ValidationError("general", "DTO не может быть null"));
@@ -94,6 +94,8 @@ public class LevelOfEducation {
     public LevelsOfEducation LevelCode {get; protected init;}
     public int Weight {get; protected init; }
 
+    public static LevelOfEducation None => new LevelOfEducation(LevelsOfEducation.NotMentioned, "Не указано"); 
+
     public static IReadOnlyCollection<LevelOfEducation> ListOfLevels => new List<LevelOfEducation>{
         new LevelOfEducation(LevelsOfEducation.NotMentioned, "Не указан"){
             Weight = -1,
@@ -127,6 +129,12 @@ public class LevelOfEducation {
     }
     public static bool operator != (LevelOfEducation left, LevelOfEducation rigth){
         return !(left == rigth);
+    }
+    public static bool operator >= (LevelOfEducation left, LevelOfEducation rigth){
+        return left.Weight >= rigth.Weight;
+    }
+    public static bool operator <= (LevelOfEducation left, LevelOfEducation rigth){
+        return left.Weight <= rigth.Weight;
     }
 }
 

@@ -24,7 +24,7 @@ public sealed class EmptyOrder : Order
 
     protected override OrderSequentialGuardian SequentialGuardian => throw new NotImplementedException();
 
-    public override Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
         throw new NotImplementedException("Невозможно провести пустой приказ");
     }
@@ -38,7 +38,7 @@ public sealed class EmptyOrder : Order
         throw new NotImplementedException("Невозможно сохранить пустой приказ");
     }
 
-    internal override Task<ResultWithoutValue> CheckConductionPossibility()
+    internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
     {
         throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
     }

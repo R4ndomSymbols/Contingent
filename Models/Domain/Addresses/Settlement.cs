@@ -97,7 +97,7 @@ public class Settlement : IAddressPart
     }
 
     // проверка на тип родителя
-    public static Result<Settlement?> Create(string addressPart, District? parent, ObservableTransaction? searchScope = null){
+    public static Result<Settlement> Create(string addressPart, District? parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',') || parent is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
@@ -122,7 +122,7 @@ public class Settlement : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Settlement?>.Success(new Settlement(
+                return Result<Settlement>.Success(new Settlement(
                     first.AddressPartId,
                     parent,
                     null, 
@@ -138,10 +138,10 @@ public class Settlement : IAddressPart
             settlementType,
             foundSettlement
         );
-        return Result<Settlement?>.Success(got);
+        return Result<Settlement>.Success(got);
     }
     // отличия между ними в валидации иерархии, добавить потом
-    public static Result<Settlement?> Create(string addressPart, SettlementArea parent, ObservableTransaction? searchScope = null){
+    public static Result<Settlement> Create(string addressPart, SettlementArea parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',') || parent is null){
             return Result<Settlement>.Failure(new ValidationError(nameof(Settlement), "Населенный пункт не указан или указан неверно"));
@@ -166,7 +166,7 @@ public class Settlement : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Settlement?>.Success(new Settlement(first.AddressPartId,
+                return Result<Settlement>.Success(new Settlement(first.AddressPartId,
                     null,
                     parent, 
                     (SettlementTypes)first.ToponymType,
@@ -181,7 +181,7 @@ public class Settlement : IAddressPart
             settlementType,
             foundSettlement
         );
-        return Result<Settlement?>.Success(got);
+        return Result<Settlement>.Success(got);
     }
     public static Settlement? Create(AddressRecord record, District parent){
         if (record.AddressLevelCode != ADDRESS_LEVEL || parent is null){

@@ -13,10 +13,10 @@ public class GroupHistory {
     }
     // подгружены приказы и студенты
     public IEnumerable<StudentFlowRecord> GetStateOnDate(DateTime onDate){
-        var before = _history.Where(x => x.ByOrder.EffectiveDate <= onDate);
+        var before = _history.Where(x => x.OrderNullRestict.EffectiveDate <= onDate);
         List<StudentFlowRecord> stateNow = new List<StudentFlowRecord>();
         foreach (var rec in before){
-            var studentHistory = rec.Student.History;
+            var studentHistory = rec.StudentNullRestrict.History;
             var nextChangedOrder = studentHistory.GetNextGroupChangingOrder(_historySubject);
             if (nextChangedOrder is null || nextChangedOrder.EffectiveDate >= onDate){
                 stateNow.Add(rec);

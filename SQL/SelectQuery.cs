@@ -86,7 +86,7 @@ public class SelectQuery<T> : SelectQuery
         return this;
     }
 
-    public Result<SelectQuery<T>?> Finish()
+    public Result<SelectQuery<T>> Finish()
     {
         if (_mapper == null)
         {

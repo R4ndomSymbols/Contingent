@@ -57,7 +57,7 @@ public class OrderController : Controller{
     public async Task<IActionResult> Save(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
-            var built = await Order.Build(body);
+            var built = Order.Build(body);
             if (built.IsSuccess && built.ResultObject is not null){
                 var order = built.ResultObject; 
                 await order.Save(null);
@@ -71,7 +71,7 @@ public class OrderController : Controller{
     public async Task<IActionResult> GenerateIndentity(){
         using(var reader = new StreamReader(Request.Body)){
             var body = await reader.ReadToEndAsync();
-            var result = await Order.Build(body);
+            var result = Order.Build(body);
             if (result.IsSuccess){
                 return Json(new {result.ResultObject.OrderOrgId});
             }
@@ -102,10 +102,10 @@ public class OrderController : Controller{
         var found = new OrderHistory(order);
         var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();
         foreach (var record in found.History){
-            var history = StudentHistory.Create(record.Student);
+            var history = StudentHistory.Create(record.StudentNullRestrict);
             var byAnchor = history.GetByOrder(order);
             var previous = history.GetClosestBefore(order.EffectiveDate);
-            studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.Student, byAnchor?.GroupTo, previous?.GroupTo, order));
+            studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.StudentNullRestrict, byAnchor?.GroupTo, previous?.GroupTo, order));
         }
         return Json(studentMovesHistoryRecords);
 

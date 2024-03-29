@@ -62,7 +62,7 @@ public class Apartment : IAddressPart
         _duplicationBuffer.Add(this);
         
     }
-    public static Result<Apartment?> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null){
+    public static Result<Apartment> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира указана неверно или не указана"));
@@ -87,7 +87,7 @@ public class Apartment : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Apartment?>.Success(new Apartment(first.AddressPartId,
+                return Result<Apartment>.Success(new Apartment(first.AddressPartId,
                     parent, 
                     (ApartmentTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(ApartmentTypes)first.ToponymType])
@@ -100,7 +100,7 @@ public class Apartment : IAddressPart
             apartmentType,
             foundApartment
         );
-        return Result<Apartment?>.Success(got);
+        return Result<Apartment>.Success(got);
     }
     public static Apartment? Create(AddressRecord from, Building parent){
         if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null){

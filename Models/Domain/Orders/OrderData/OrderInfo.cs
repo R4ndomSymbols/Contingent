@@ -17,105 +17,188 @@ public class OrderTypeInfo
         NoChange = 1,
         MustChange = 2,
         Vipe = 3,
-        Undefined = 4, 
+        Undefined = 4,
     }
 
-    private static IReadOnlyCollection<OrderTypeInfo> _types = new OrderTypeInfo[]{
+    private static Dictionary<OrderTypes, OrderTypeInfo> _types = new Dictionary<OrderTypes, OrderTypeInfo>{
 
-        new(
+        {OrderTypes.FreeEnrollment, new(
             OrderTypes.FreeEnrollment,
             "Зачисление на первый курс (бюджет)",
             GroupDisplayBehaviour.MustChange
-        ),
-        new (
-            OrderTypes.FreeDeductionWithGraduation,
-            "Отчисление в связи с выпуском (бюджет)",
-            GroupDisplayBehaviour.Vipe
-        ),
-        new (
-            OrderTypes.FreeNextCourseTransfer,
-            "Перевод на следующий курс (бюджет)",
-            GroupDisplayBehaviour.MustChange
-        ),
-        new (
-            OrderTypes.EmptyOrder,
-            "Не указано",
-            GroupDisplayBehaviour.Undefined
-        ),
-        new (
-            OrderTypes.FreeDeductionWithAcademicDebt,
-            "Отчисление в связи с академической задолженностью (бюджет)",
-            GroupDisplayBehaviour.Vipe
-        ),
-        new (
-            OrderTypes.FreeDeductionWithOwnDesire,
-            "Отчисление по собственному желанию (бюджет)",
-            GroupDisplayBehaviour.Vipe
-        ),
-        new (
+        )},
+        {
             OrderTypes.FreeEnrollmentWithTransfer,
-            "Зачисление в связи с переводом (бюджет)",
-            GroupDisplayBehaviour.MustChange
-        ),
-        new (
+            new(
+                OrderTypes.FreeEnrollmentWithTransfer,
+                "Зачисление в порядке перевода (бюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
             OrderTypes.FreeReenrollment,
-            "Зачисление в порядке восстановления (бюджет)",
-            GroupDisplayBehaviour.MustChange
-        ),
-        new (
+            new(
+                OrderTypes.FreeReenrollment,
+                "Зачисление в порядке восстановления (бюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
             OrderTypes.FreeTransferBetweenSpecialities,
-            "Перевод на другую специальность (бюджет)",
-            GroupDisplayBehaviour.MustChange
-        ),
-
+            new(
+                OrderTypes.FreeTransferBetweenSpecialities,
+                "Перевод внутри организации (между специальностями) (бюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.FreeTransferNextCourse,
+            new(
+                OrderTypes.FreeTransferNextCourse,
+                "Перевод на следующий курс (бюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithAcademicDebt,
+            new(
+                OrderTypes.FreeDeductionWithAcademicDebt,
+                "Отчисление в связи с академической задолженностью (бюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithGraduation,
+            new(
+                OrderTypes.FreeDeductionWithGraduation,
+                "Отчисление в связи с выпуском (бюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithOwnDesire,
+            new(
+                OrderTypes.FreeDeductionWithOwnDesire,
+                "Отчисление по собственному желанию (бюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.PaidEnrollment,
+            new(
+                OrderTypes.PaidEnrollment,
+                "Зачисление на первый курс (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidEnrollmentWithTransfer,
+            new(
+                OrderTypes.PaidEnrollmentWithTransfer,
+                "Зачисление в порядке перевода (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidReenrollment,
+            new(
+                OrderTypes.PaidReenrollment,
+                "Зачисление в порядке восстановления (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidTransferBetweenSpecialities,
+            new(
+                OrderTypes.PaidTransferBetweenSpecialities,
+                "Перевод внутри организации (между специальностями) (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidTransferNextCourse,
+            new(
+                OrderTypes.PaidTransferNextCourse,
+                "Перевод на следующий курс (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidTransferFromPaidToFree,
+            new(
+                OrderTypes.PaidTransferFromPaidToFree,
+                "Перевод на бюджет (внебюджет)",
+                GroupDisplayBehaviour.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithAcademicDebt,
+            new(
+                OrderTypes.PaidDeductionWithAcademicDebt,
+                "Отчисление в связи с академической задолженностью (внебюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithGraduation,
+            new(
+                OrderTypes.PaidDeductionWithGraduation,
+                "Отчисление в связи с выпуском (внебюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithOwnDesire,
+            new(
+                OrderTypes.PaidDeductionWithOwnDesire,
+                "Отчисление по собственному желанию (внебюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithTransfer,
+            new (
+                OrderTypes.PaidDeductionWithTransfer,
+                "Отчисление в связи с переводом в другую организаю (внебюджет)",
+                GroupDisplayBehaviour.Vipe
+            )
+        },
+        {
+            OrderTypes.EmptyOrder,
+            new(
+                OrderTypes.EmptyOrder,
+                "Не указано",
+                GroupDisplayBehaviour.Undefined
+            )
+        }
     };
 
 
 
     public static OrderTypeInfo GetByType(OrderTypes type)
-    {   
-        var found = _types.Where(x => x.Type == type); 
-        if (found.Any()){
-            return found.First();
+    {
+        if (_types.ContainsKey(type))
+        {
+            return _types[type];
         }
-        else {
-            throw new ArgumentException("приказ типа " + type.ToString() + " не зарегистрирован");
+        else
+        {
+            throw new ArgumentException("Приказ типа " + type.ToString() + " не зарегистрирован");
         }
-    }
-
-    public static IEnumerable<OrderTypeInfo> GetAllEnrollment(){
-        return _types.Where(t => t.Type.ToString().Contains("Enrollment"));
-    
     }
 
     public static IEnumerable<OrderTypeInfo> GetAllTypes()
     {
-        var result = new List<OrderTypeInfo>();
-        // метод получает не все типы, а только те, для которых
-        // на данный момент написаны обработчики
-        foreach (int t in Enum.GetValues(typeof(OrderTypes)))
-        {   
-            try {
-                var got = GetByType((OrderTypes)t);
-                result.Add(got);
-            }
-            catch {
-                continue;
-            }
-
-        }
-        return result;
+        return _types.Select(x => x.Value);
     }
 
     public bool IsAnyEnrollment()
     {
-        return Type == OrderTypes.FreeEnrollment | Type == OrderTypes.FreeReenrollment |
-        Type == OrderTypes.FreeEnrollmentWithTransfer;
+        return Type.ToString().Contains("Enrollment");
     }
-    public bool IsAnyDeduction(){
-        return Type == OrderTypes.FreeDeductionWithGraduation 
-            | Type == OrderTypes.FreeDeductionWithOwnDesire
-            | Type == OrderTypes.FreeDeductionWithAcademicDebt;
-    } 
+    public bool IsAnyDeduction()
+    {
+        return Type.ToString().Contains("Deduction");
+    }
 
 }

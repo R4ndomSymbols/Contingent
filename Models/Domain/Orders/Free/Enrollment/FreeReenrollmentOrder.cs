@@ -12,22 +12,22 @@ public class FreeReenrollmentOrder : FreeContingentOrder
     private StudentToGroupMoveList _enrollers;
 
     private FreeReenrollmentOrder() : base(){
-    
+        _enrollers = StudentToGroupMoveList.Empty;
     }
     private FreeReenrollmentOrder(int id) : base(id){
-    
+        _enrollers = StudentToGroupMoveList.Empty;
     }
 
-    public static async Task<Result<FreeReenrollmentOrder?>> Create(OrderDTO dto){
+    public static Result<FreeReenrollmentOrder> Create(OrderDTO? dto){
         var created = new FreeReenrollmentOrder();
-        return await MapBase(dto, created);
+        return MapBase(dto, created);
     }
     public static QueryResult<FreeReenrollmentOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeReenrollmentOrder(id);
         return MapParticialFromDbBase(reader, order);
     }
-    public static async Task<Result<FreeReenrollmentOrder?>> Create(int orderId, StudentGroupChangeMoveDTO? dto){
+    public static async Task<Result<FreeReenrollmentOrder>> Create(int orderId, StudentGroupChangeMovesDTO? dto){
         var orderResult = MapFromDbBaseForConduction<FreeReenrollmentOrder>(orderId);
         if (orderResult.IsFailure)
         {
@@ -40,12 +40,17 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         }
         var order = orderResult.ResultObject;
         order._enrollers = dtoResult.ResultObject;
-        return (await order.CheckConductionPossibility()).Retrace(order); 
+        return orderResult; 
     }
 
-    public override async Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        await ConductBase(_enrollers.ToRecords(this));
+        var check = base.CheckConductionPossibility(_enrollers.Select(x => x.Student));
+        if (check.IsFailure){
+            return check;
+        }
+        ConductBase(_enrollers.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -59,21 +64,19 @@ public class FreeReenrollmentOrder : FreeContingentOrder
     }
     // восстановление требует, чтобы студент был отчислен по собственному желанию
     // зачисление в бесплатную группу
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        var baseCheck = await base.CheckBaseConductionPossibility(_enrollers.Select(x => x.Student)); 
-        if (baseCheck.IsFailure){
-            return baseCheck;
-        }
         foreach (var move in _enrollers){
             var history = StudentHistory.Create(move.Student);
             if (history.GetLastRecord()?.ByOrder?.GetOrderTypeDetails().Type != OrderTypes.FreeDeductionWithOwnDesire
             || move.GroupTo.SponsorshipType.IsPaid()
             ){
-                return ResultWithoutValue.Failure(new OrderValidationError("Студент в приказе на восстановление не имеет условий для восстановелния"));
+                return ResultWithoutValue.Failure(
+                    new OrderValidationError(
+                        string.Format("Студент {0} в приказе на восстановление не имеет условий для восстановелния", move.Student.GetName())
+                    ));
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

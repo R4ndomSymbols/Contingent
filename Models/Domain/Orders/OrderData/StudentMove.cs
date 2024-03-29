@@ -15,19 +15,19 @@ public class StudentToGroupMove {
         GroupTo = group;
     }
 
-    public static async Task<Result<StudentToGroupMove?>> Create(StudentMoveDTO? dto){
+    public static async Task<Result<StudentToGroupMove>> Create(StudentMoveDTO? dto){
 
         if (dto is null){
-            return Result<StudentToGroupMove?>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
+            return Result<StudentToGroupMove>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
         }
 
         var student = await StudentModel.GetStudentById(dto.StudentId);
         if (student is null) {
-            return Result<StudentToGroupMove?>.Failure(new ValidationError("Студента, указанного в движении, не существует"));
+            return Result<StudentToGroupMove>.Failure(new ValidationError("Студента, указанного в движении, не существует"));
         }
         var group = await GroupModel.GetGroupById(dto.GroupToId);
         if (group is null){
-            return Result<StudentToGroupMove?>.Failure(new ValidationError("Группы, указанной в движении, не существует"));
+            return Result<StudentToGroupMove>.Failure(new ValidationError("Группы, указанной в движении, не существует"));
         }
         return Result<StudentToGroupMove>.Success(new StudentToGroupMove(student, group)); 
     }
@@ -37,28 +37,30 @@ public class StudentToGroupMove {
 public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>{
     public IReadOnlyList<StudentToGroupMove> Moves {get; private init;}
 
+    public static StudentToGroupMoveList Empty => new StudentToGroupMoveList(new List<StudentToGroupMove>());
+
     private StudentToGroupMoveList(List<StudentToGroupMove> moves){
         Moves = moves;
     }
 
-    public static async Task<Result<StudentToGroupMoveList?>> Create(IEnumerable<StudentMoveDTO>? dtos){
+    public static async Task<Result<StudentToGroupMoveList>> Create(IEnumerable<StudentMoveDTO>? dtos){
         var list = new List<StudentToGroupMove>();
         if (dtos is null || dtos.Count() < 1){
-            return Result<StudentToGroupMoveList?>.Failure(new ValidationError("Не указано ни одной записи для проведения"));
+            return Result<StudentToGroupMoveList>.Failure(new ValidationError("Не указано ни одной записи для проведения"));
         }
         foreach (var dto in dtos){
             var result = await StudentToGroupMove.Create(dto);
             if (result.IsFailure){
-                return Result<StudentToGroupMoveList?>.Failure(result.Errors);
+                return Result<StudentToGroupMoveList>.Failure(result.Errors);
             }
             else {
                 list.Add(result.ResultObject);
             }
         }
-        return Result<StudentToGroupMoveList?>.Success(new StudentToGroupMoveList(list));
+        return Result<StudentToGroupMoveList>.Success(new StudentToGroupMoveList(list));
 
     }
-    public static async Task<Result<StudentToGroupMoveList?>> Create(StudentGroupChangeMoveDTO? dto)
+    public static async Task<Result<StudentToGroupMoveList>> Create(StudentGroupChangeMovesDTO? dto)
     {
         return await Create(dto?.Moves);
     }

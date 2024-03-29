@@ -61,7 +61,7 @@ public class SettlementArea : IAddressPart
     }
     // добавить ограничение на создание 
     // исходя из типа родителя
-    public static Result<SettlementArea?> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
+    public static Result<SettlementArea> Create(string addressPart, District parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<SettlementArea>.Failure(new ValidationError(nameof(SettlementArea), "Поселение указано неверно"));
@@ -86,7 +86,7 @@ public class SettlementArea : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<SettlementArea?>.Success(new SettlementArea(first.AddressPartId,
+                return Result<SettlementArea>.Success(new SettlementArea(first.AddressPartId,
                     parent, 
                     (SettlementAreaTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(SettlementAreaTypes)first.ToponymType])
@@ -99,7 +99,7 @@ public class SettlementArea : IAddressPart
             settlementAreaType,
             foundSettlementArea
         );
-        return Result<SettlementArea?>.Success(got);
+        return Result<SettlementArea>.Success(got);
     }
     public static SettlementArea? Create(AddressRecord source, District parent){
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){

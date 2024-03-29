@@ -60,7 +60,7 @@ public class Building : IAddressPart
         _buildingType = type;
         _duplicationBuffer.Add(this);
     }
-    public static Result<Building?> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null){
+    public static Result<Building> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null){
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание указано неверно или не указано"));
@@ -85,7 +85,7 @@ public class Building : IAddressPart
             }
             else{
                 var first = fromDb.First();
-                return Result<Building?>.Success(new Building(
+                return Result<Building>.Success(new Building(
                     first.AddressPartId,
                     parent, 
                     (BuildingTypes)first.ToponymType,
@@ -99,7 +99,7 @@ public class Building : IAddressPart
             buildingType,
             foundBuilding
         );
-        return Result<Building?>.Success(got);
+        return Result<Building>.Success(got);
     }
     public static Building? Create(AddressRecord source, Street parent){
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){

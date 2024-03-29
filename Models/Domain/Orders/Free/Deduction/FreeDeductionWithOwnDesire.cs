@@ -11,16 +11,16 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     private StudentGroupNullifyMoveList _toDeduct;
 
     protected FreeDeductionWithOwnDesireOrder() : base() {
-    
+        _toDeduct = StudentGroupNullifyMoveList.Empty;
     }
 
     protected FreeDeductionWithOwnDesireOrder(int id) : base (id){
-    
+        _toDeduct = StudentGroupNullifyMoveList.Empty;
     }
 
-    public static async Task<Result<FreeDeductionWithOwnDesireOrder?>> Create(OrderDTO dto){
+    public static Result<FreeDeductionWithOwnDesireOrder> Create(OrderDTO? dto){
         var created = new FreeDeductionWithOwnDesireOrder();
-        var result =  await MapBase(dto, created);
+        var result =  MapBase(dto, created);
         return result;
     }
 
@@ -30,7 +30,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         return MapParticialFromDbBase(reader, order);
     }
 
-    public static async Task<Result<FreeDeductionWithOwnDesireOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto){
+    public static async Task<Result<FreeDeductionWithOwnDesireOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto){
         var model = new FreeDeductionWithOwnDesireOrder(id);
         var result = MapFromDbBaseForConduction<FreeDeductionWithOwnDesireOrder>(id);
         if (result.IsFailure){
@@ -42,14 +42,19 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         }
         var order = result.ResultObject;
         order._toDeduct = moves.ResultObject;
-        var conductionPossible = await order.CheckConductionPossibility();
-        return conductionPossible.Retrace(order);
+        return result;
     
     }
 
-    public override async Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        await ConductBase(_toDeduct.ToRecords(this));
+        var check = base.CheckConductionPossibility(_toDeduct.Select(s => s.Student));
+        if (check.IsFailure)
+        {
+            return check;
+        }
+        ConductBase(_toDeduct.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -63,18 +68,13 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     }
     // приказ об отчислении по собственному желанию
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        var res = await base.CheckBaseConductionPossibility(_toDeduct.Moves.Select(x => x.Student));
-        if (res.IsFailure){
-            return res;
-        }
         foreach (var graduate in _toDeduct){
             if (!graduate.Student.History.IsStudentEnlisted()){
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

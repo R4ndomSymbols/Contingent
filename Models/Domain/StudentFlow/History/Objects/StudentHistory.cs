@@ -18,7 +18,7 @@ public class StudentHistory
     public HistoryByOrderEffectiveDate History => _history;
     private StudentHistory()
     {
-        
+        _history = new HistoryByOrderEffectiveDate();
     }
 
     public static StudentHistory Create(StudentModel student)

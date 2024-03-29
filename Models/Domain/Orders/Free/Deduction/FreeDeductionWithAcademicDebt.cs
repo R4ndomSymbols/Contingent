@@ -11,16 +11,16 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     private StudentGroupNullifyMoveList _debtHolders;
 
     protected FreeDeductionWithAcademicDebtOrder() : base() {
-    
+        _debtHolders = StudentGroupNullifyMoveList.Empty;
     }
 
     protected FreeDeductionWithAcademicDebtOrder(int id) : base (id){
-    
+        _debtHolders = StudentGroupNullifyMoveList.Empty;
     }
 
-    public static async Task<Result<FreeDeductionWithAcademicDebtOrder?>> Create(OrderDTO dto){
+    public static Result<FreeDeductionWithAcademicDebtOrder> Create(OrderDTO? dto){
         var created = new FreeDeductionWithAcademicDebtOrder();
-        var result =  await MapBase(dto, created);
+        var result =  MapBase(dto, created);
         return result;
     }
 
@@ -30,7 +30,7 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         return MapParticialFromDbBase(reader, order);
     }
 
-    public static async Task<Result<FreeDeductionWithAcademicDebtOrder?>> Create(int id, StudentGroupNullifyMoveDTO? dto){
+    public static async Task<Result<FreeDeductionWithAcademicDebtOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto){
         var fromDb = new FreeDeductionWithAcademicDebtOrder(id);
         var result = MapFromDbBaseForConduction<FreeDeductionWithAcademicDebtOrder>(id);
         if (result.IsFailure){
@@ -42,13 +42,17 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         }
         var order = result.ResultObject;
         order._debtHolders = moves.ResultObject;
-        var conductionPossible = await order.CheckConductionPossibility();
-        return conductionPossible.Retrace(order);    
+        return result;    
     }
 
-    public override async Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        await ConductBase(_debtHolders.ToRecords(this));
+        var check = CheckConductionPossibility(_debtHolders.Select(x => x.Student));
+        if (check.IsFailure){
+            return check;
+        }
+        ConductBase(_debtHolders.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     public override async Task Save(ObservableTransaction? scope)
@@ -62,12 +66,8 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     }
     // приказ об отчислении по собственному желанию
     // не имеет ограничений вообще, главное, чтобы студент был зачислен и имел бесплатную группу
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        var res = await base.CheckBaseConductionPossibility(_debtHolders.Moves.Select(x => x.Student));
-        if (res.IsFailure){
-            return res;
-        }
         foreach (var debtHolder in _debtHolders){
             var aggregate = StudentHistory.Create(debtHolder.Student).GetLastRecord();
             var paidGroup = aggregate?.GroupTo?.SponsorshipType?.IsFree();
@@ -75,7 +75,6 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

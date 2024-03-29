@@ -3,12 +3,12 @@ using System.Text.Json.Serialization;
 namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class StudentGroupNullifyMoveDTO {
+public class StudentGroupNullifyMovesDTO {
 
     [JsonRequired]
     public List<int> Students {get; set; }
 
-    public StudentGroupNullifyMoveDTO(){
+    public StudentGroupNullifyMovesDTO(){
         Students = new List<int>();
     }
 }

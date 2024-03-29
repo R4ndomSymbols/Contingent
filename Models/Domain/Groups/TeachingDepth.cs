@@ -1,9 +1,13 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace StudentTracking.Models.Domain.Misc;
 
 public class TeachingDepth {
 
     public TeachingDepthLevels Level {get; private init; }
     public string RussianName {get; private init; }
+
+    public static TeachingDepth None => new TeachingDepth(TeachingDepthLevels.NotMentioned, "Не укзаано");
 
     private TeachingDepth(TeachingDepthLevels level, string russianName){
         Level = level;

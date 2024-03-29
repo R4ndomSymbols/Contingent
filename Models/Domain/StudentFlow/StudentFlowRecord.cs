@@ -13,6 +13,10 @@ public class StudentFlowRecord {
     public StudentModel? Student {get; private init;}
     public GroupModel? GroupTo {get; private init; }
 
+    public Order OrderNullRestict => ByOrder is null ? throw new Exception("Приказ должен быть указан") : ByOrder;
+    public StudentModel StudentNullRestrict => Student is null ? throw new Exception("Студент должен быть указан") : Student;
+    public GroupModel GroupToNullRestrict => GroupTo is null ? throw new Exception("Группа должен быть указана") : GroupTo;
+
     public StudentFlowRecord(Order order, StudentModel student, GroupModel? group){
         if (order is null || student is null){
             throw new ArgumentNullException("Один из параметров записи истории не указан");

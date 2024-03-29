@@ -6,6 +6,7 @@ using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models;
 using System.Text.Json;
+using System.Security.Cryptography.X509Certificates;
 namespace StudentTracking.Controllers;
 public class StudentFlowController : Controller
 {
@@ -47,9 +48,14 @@ public class StudentFlowController : Controller
                 var result = await Order.GetOrderForConduction(orderId, jsonString);
                 if (result.IsSuccess)
                 {
-                    var order = result.ResultObject;
-                    await order.ConductByOrder();
-                    return Ok();
+                    var conductionStatus = result.ResultObject.ConductByOrder();
+                    if (conductionStatus.IsSuccess){
+                        return Ok();
+                    }
+                    else{
+                        return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(conductionStatus.Errors)));
+                    } 
+                    
                 }
                 else
                 {

@@ -11,16 +11,16 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     private StudentToGroupMoveList _moves;
 
     private FreeTransferBetweenSpecialitiesOrder() : base(){
-    
+        _moves = StudentToGroupMoveList.Empty;
     }
 
     private FreeTransferBetweenSpecialitiesOrder(int id) : base(id){
-    
+        _moves = StudentToGroupMoveList.Empty;
     }
 
-    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(OrderDTO orderDTO){
+    public static Result<FreeTransferBetweenSpecialitiesOrder> Create(OrderDTO? orderDTO){
         var created = new FreeTransferBetweenSpecialitiesOrder();
-        var result = await MapBase(orderDTO,created);
+        var result = MapBase(orderDTO,created);
         return result;
     }
     public static QueryResult<FreeTransferBetweenSpecialitiesOrder?> Create(int id, NpgsqlDataReader reader)
@@ -30,25 +30,29 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     }
 
 
-    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder?>> Create(int id, StudentGroupChangeMoveDTO? moves){
+    public static async Task<Result<FreeTransferBetweenSpecialitiesOrder>> Create(int id, StudentGroupChangeMovesDTO? moves){
         var result = MapFromDbBaseForConduction<FreeTransferBetweenSpecialitiesOrder>(id);
         if (result.IsFailure){
             return result;
         }
         var got = result.ResultObject;
-        var data = await StudentToGroupMoveList.Create(moves.Moves);
+        var data = await StudentToGroupMoveList.Create(moves);
         if (data.IsFailure){
             return data.RetraceFailure<FreeTransferBetweenSpecialitiesOrder>();
         }
         got._moves = data.ResultObject;
-        var conductionResult = await got.CheckConductionPossibility();
-        return conductionResult.Retrace(got);
+        return result;
 
     }
 
-    public override Task ConductByOrder()
+    public override ResultWithoutValue ConductByOrder()
     {
-        return ConductBase(_moves.ToRecords(this));
+        var checkResult = CheckConductionPossibility(_moves.Select(x => x.Student));
+        if (checkResult.IsFailure){
+            return checkResult;
+        }
+        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        return ResultWithoutValue.Success();
     }
 
     public async override Task Save(ObservableTransaction? scope)
@@ -64,23 +68,20 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     // приказ о переводе внутри колледжа 
     // тот же курс тот же год поступления, различие в специальности не обязательно (???)
 
-    internal override async Task<ResultWithoutValue> CheckConductionPossibility()
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {   
-        var baseCheck = await base.CheckBaseConductionPossibility(_moves.Select(x => x.Student));
-        if (baseCheck.IsFailure){
-            return baseCheck;
-        }
         // проверка на конечный момент времени, без учета альтернативной истории
         foreach (var move in _moves){
             var currentStudentGroup = move.Student.History.GetCurrentGroup();
-            var conditionsSatisfied = 
+            var conditionsSatisfied = currentStudentGroup is not null &&
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn   
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear; 
             if (!conditionsSatisfied){
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов состоят или переводятся в группы, недопустимые по условиям приказа"));
+                return ResultWithoutValue.Failure(new OrderValidationError(
+                    string.Format("Студент {0} не может быть переведен в группу {1}", move.Student.GetName(), move.GroupTo.GroupName))
+                );
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 }

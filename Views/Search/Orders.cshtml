@@ -23,9 +23,15 @@
             <h5>
                 Тип приказа
             </h5>
+            @{
+                var sorted = OrderTypeInfo.GetAllTypes().ToList();
+                sorted.Sort(
+                    (x, y) => string.Compare(x.OrderTypeName, y.OrderTypeName, StringComparison.Ordinal)
+                );
+            }
             <select id="order_type">
                 <option value="-1" selected>Любой</option>
-                @foreach (var t in OrderTypeInfo.GetAllTypes())
+                @foreach (var t in sorted)
                 {
                     <option value="@((int)t.Type)">@t.OrderTypeName</option>
                 }
