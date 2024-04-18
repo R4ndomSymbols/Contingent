@@ -53,7 +53,7 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         {
             return check;
         }
-        ConductBase(_moves?.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
@@ -74,7 +74,7 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
                 );
             }
             var lastRecord = history.GetLastRecord();
-            if (lastRecord is not null && lastRecord.GroupToNullRestrict.CourseOn != lastRecord.GroupToNullRestrict.EducationProgram.CourseCount){
+            if (lastRecord is not null && lastRecord.GroupToNullRestrict.CourseOn == lastRecord.GroupToNullRestrict.EducationProgram.CourseCount){
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("{0} имеет выпусную группу {1}", move.Student.GetName(), lastRecord.GroupToNullRestrict.GroupName)

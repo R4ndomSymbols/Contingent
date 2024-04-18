@@ -55,7 +55,7 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
         {
             return check;
         }
-        ConductBase(_moves?.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
@@ -69,11 +69,11 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
         foreach (var move in _moves)
         {
             var history = move.Student.History;
-            if (!(history.IsStudentNotRecorded() && history.IsStudentDeducted()))
+            if (!(history.IsStudentNotRecorded() || history.IsStudentDeducted()))
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                         string.Format("Студент {0} не имеет недопустимый статус", move.Student.GetName())
+                         string.Format("Студент {0} имеет недопустимый статус", move.Student.GetName())
                     )
                 );
             }

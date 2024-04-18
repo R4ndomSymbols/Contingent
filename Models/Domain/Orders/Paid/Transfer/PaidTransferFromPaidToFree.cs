@@ -53,7 +53,7 @@ public class PaidTransferFromPaidToFreeOrder : AdditionalContingentOrder
         if (upperCheck.IsFailure){
             return upperCheck;
         }
-        ConductBase(_moves?.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

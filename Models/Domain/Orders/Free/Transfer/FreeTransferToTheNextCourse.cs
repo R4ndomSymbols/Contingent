@@ -57,7 +57,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         {
             return checkResult;
         }
-        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

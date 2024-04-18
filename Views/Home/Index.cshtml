@@ -16,8 +16,13 @@
 <div class="d-flex flex-column">
     <ul>
         <li>
-            <a href="~/statistics/age">
-                Студенты по возрастам
+            <a href="~/statistics/age_specialist">
+                Студенты по возрастам (специалисты)
+            </a>
+        </li>
+         <li>
+            <a href="~/statistics/age_qualified">
+                Студенты по возрастам (квалифицированные рабочие)
             </a>
         </li>
         <li>
@@ -31,5 +36,21 @@
             </a>
         </li>
     </ul>
-    
 </div>
+<div class="text-center">
+    <h6>Последние действия (движения)</h6>
+</div>
+<div class="flex-row">
+    <table class="table">
+        <thead>
+            <th>Номер зачетки</th>
+            <th>ФИО</th>
+            <th>Приказ</th>
+        </thead>
+        <tbody id="last_records">
+            
+        </tbody>
+    </table>
+</div>
+
+<script src="~/js/observe/home.js"></script>

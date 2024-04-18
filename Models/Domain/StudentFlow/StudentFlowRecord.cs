@@ -42,4 +42,5 @@ public struct RawStudentFlowRecord {
     public int? StudentId;
     public int? GroupToId;
     public int? OrderId;
+    public DateTime Timestamp;
 }

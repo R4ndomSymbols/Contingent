@@ -12,6 +12,6 @@ public class CountResult {
 
     public override string ToString()
     {
-        return Count == 0 ? "X" : Count.ToString();
+        return Count == 0 ? " " : Count.ToString();
     }
 }

@@ -6,17 +6,17 @@
 }
 <input type="hidden" value="@Model.OrderId" group_behaviour="@Model.OrderGroupChangePolicy" order_type="@Model.OrderEnumTypeName" id="current_order">
 
-<div class="row col-9">
-    <h6 >Проведение по приказу</h6>
+<div class="d-flex justify-content-center">
+    <h4>Проведение по приказу</h4>
 </div>
-<div class="row">
-    <h6 class="col-1">@Model.OrderOrgId</h6>
-    <div class="col-1"></div>
-    <h6 class="col-8">@Model.OrderFullName</h6>
+<div class="d-flex flex-row justify-content-center">
+    <h4 class="me-3">@Model.OrderOrgId</h4>
+    <h4 class="ms-3">@Model.OrderFullName</h4>
 </div>
-<div class="row">
-    <button type="button" class="btn btn-primary" id="close_order">Закрыть приказ</button>
+<div class="d-flex flex-row justify-content-center">
+    <h5 class="my-2">@Model.OrderRussianTypeName</h6>
 </div>
+
 
 <div class="row">
     <h6 class="col-9">Фильтр ФИО</h6>
@@ -65,9 +65,12 @@
     </table>
     </div>
 </div>
-<div class ="d-flex align-items-end col-12">
+<div class ="d-flex justify-content-start">
     <button type="button" id = "save_changes"class= "align-self-end btn btn-primary">
         Сохранить
+    </button>
+    <button type="button" class="btn btn-primary ms-2" id="close_order">
+        Закрыть приказ
     </button>
 </div>
 

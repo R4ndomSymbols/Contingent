@@ -53,7 +53,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         {
             return check;
         }
-        ConductBase(_toDeduct.ToRecords(this)).RunSynchronously();
+        ConductBase(_toDeduct.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

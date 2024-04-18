@@ -18,6 +18,7 @@ public class SelectQuery<T> : SelectQuery
     private JoinSection? _joins;
     private ComplexWhereCondition? _whereClause;
     private OrderByCondition? _orderBy;
+    private QueryLimits? _predefinedLimits;
     private string _sourceTable;
     private bool _finished;
 
@@ -26,14 +27,18 @@ public class SelectQuery<T> : SelectQuery
         _finished = false;
         _distictOn = null;
     }
-    private SelectQuery(Column distinctOn) : this() {
-        _distictOn = distinctOn; 
+    private SelectQuery(Column distinctOn) : this()
+    {
+        _distictOn = distinctOn;
     }
-    private SelectQuery(string name, string alias = ""){
-         if (alias != ""){
+    private SelectQuery(string name, string alias = "")
+    {
+        if (alias != "")
+        {
             _sourceTable = name + " AS " + alias;
         }
-        else{
+        else
+        {
             _sourceTable = name;
         }
     }
@@ -51,10 +56,12 @@ public class SelectQuery<T> : SelectQuery
     public static SelectQuery<T> Init(string sourceTable, Column distinctOnColumn, string alias = "")
     {
         var tmp = new SelectQuery<T>(sourceTable, alias);
-        if (alias != ""){
+        if (alias != "")
+        {
             tmp._sourceTable = sourceTable + " AS " + alias;
         }
-        else{
+        else
+        {
             tmp._sourceTable = sourceTable;
         }
         tmp._distictOn = distinctOnColumn;
@@ -85,6 +92,11 @@ public class SelectQuery<T> : SelectQuery
         _parameters = parameters;
         return this;
     }
+    public SelectQuery<T> AddLimits(QueryLimits? queryLimits)
+    {
+        _predefinedLimits = queryLimits;
+        return this;
+    }
 
     public Result<SelectQuery<T>> Finish()
     {
@@ -101,17 +113,20 @@ public class SelectQuery<T> : SelectQuery
     }
     public override string AsSQLText()
     {
-        if (!_finished){
+        if (!_finished)
+        {
             throw new Exception("Невозможно преобразовать несформированный запрос");
         }
         StringBuilder queryBuilder = new StringBuilder();
-        if (_distictOn is null){
+        if (_distictOn is null)
+        {
             queryBuilder.Append(_mapper.AsSQLText() + "\n");
         }
-        else {
+        else
+        {
             queryBuilder.Append(_mapper.AsSQLText(_distictOn) + "\n");
         }
-        
+
         queryBuilder.Append("FROM " + _sourceTable + "\n");
         if (_joins != null)
         {
@@ -125,6 +140,22 @@ public class SelectQuery<T> : SelectQuery
         {
             queryBuilder.Append(_orderBy.AsSQLText() + "\n");
         }
+        if (_predefinedLimits is not null)
+        {
+            if (!_predefinedLimits.IsUlimited)
+            {
+                queryBuilder.Append(" LIMIT " + _predefinedLimits.PageLength + " ");
+                if (_predefinedLimits.GlobalOffset != 0)
+                {
+                    queryBuilder.Append( " OFFSET " + _predefinedLimits.GlobalOffset);
+                }
+                else
+                {
+                    queryBuilder.Append(" OFFSET " + _predefinedLimits.PageSkipCount * _predefinedLimits.PageLength);
+                }
+            }
+        }
+
         return queryBuilder.ToString();
     }
 
@@ -135,23 +166,28 @@ public class SelectQuery<T> : SelectQuery
             throw new Exception("неполный SQL запрос");
         }
         var cmdText = AsSQLText();
-        if (!limits.IsUlimited){
+        if (!limits.IsUlimited)
+        {
             cmdText += " LIMIT " + limits.PageLength + " ";
-            if (limits.GlobalOffset != 0){
-                cmdText += " OFFSET " + limits.GlobalOffset;    
+            if (limits.GlobalOffset != 0)
+            {
+                cmdText += " OFFSET " + limits.GlobalOffset;
             }
-            else {
+            else
+            {
                 cmdText += " OFFSET " + limits.PageSkipCount * limits.PageLength;
             }
         }
-        
+
         // логирование
         Console.WriteLine(cmdText);
         NpgsqlCommand cmd;
-        if (scope is null){
+        if (scope is null)
+        {
             cmd = new NpgsqlCommand(cmdText, conn);
         }
-        else {
+        else
+        {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
         if (_parameters != null)
@@ -169,14 +205,15 @@ public class SelectQuery<T> : SelectQuery
             {
                 return result;
             }
-            
+
             while (reader.Read())
             {
                 var built = _mapper.Map(reader);
-                if (built.IsFound){
+                if (built.IsFound)
+                {
                     result.Add(built.ResultObject);
                 }
-                
+
             }
             return result;
         }
@@ -184,9 +221,9 @@ public class SelectQuery<T> : SelectQuery
 }
 
 public class QueryLimits
-{   
-    public static QueryLimits Unlimited => new QueryLimits(){IsUlimited = true};
-    public bool IsUlimited {get; private init;}
+{
+    public static QueryLimits Unlimited => new QueryLimits() { IsUlimited = true };
+    public bool IsUlimited { get; private init; }
     public readonly int PageSkipCount;
     public readonly int PageLength;
 
@@ -199,7 +236,8 @@ public class QueryLimits
         GlobalOffset = globalRawOffset;
         IsUlimited = false;
     }
-    public QueryLimits(){
+    public QueryLimits()
+    {
         IsUlimited = false;
     }
 

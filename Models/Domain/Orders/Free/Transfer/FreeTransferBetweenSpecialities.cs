@@ -51,7 +51,7 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         if (checkResult.IsFailure){
             return checkResult;
         }
-        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

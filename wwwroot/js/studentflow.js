@@ -321,8 +321,7 @@ $("#save_changes").on("click", function () {
 });
 
 function getOrderJsonData() {
-    type = String($("#current_order").attr("order_type"))
-    var result;
+    var type = String($("#current_order").attr("order_type"));
     var mainModel = students.filter((xo) => xo.pinned).map(
         (x) => {
             return {
@@ -333,11 +332,17 @@ function getOrderJsonData() {
         });
 
     switch (type) {
-        case "FreeNextCourseTransfer":
-        case "FreeEnrollment":
         case "FreeEnrollmentWithTransfer":
         case "FreeReenrollment":
+        case "FreeEnrollment":
+        case "FreeTransferNextCourse":
         case "FreeTransferBetweenSpecialities":
+        case "PaidEnrollmentWithTransfer":
+        case "PaidReenrollment":
+        case "PaidEnrollment":
+        case "PaidTransferNextCourse":
+        case "PaidTransferBetweenSpecialities":
+        case "PaidTransferFromPaidToFree":
             result =
             {
                 Moves: mainModel.map(
@@ -357,11 +362,16 @@ function getOrderJsonData() {
         case "FreeDeductionWithGraduation":
         case "FreeDeductionWithAcademicDebt":
         case "FreeDeductionWithOwnDesire":
+        case "PaidDeductionWithTransfer":
+        case "PaidDeductionWithAcademicDebt":
+        case "PaidDeductionWithGraduation":
+        case "PaidDeductionWithOwnDesire":
             result = {
                 Students: mainModel.map(
                     x => x.id
                 )
             }
+            break;
         case "EmptyOrder":
             alert("Проведение по пустому приказу...")
 

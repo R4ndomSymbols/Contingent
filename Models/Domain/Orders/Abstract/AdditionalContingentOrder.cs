@@ -28,7 +28,7 @@ public abstract class AdditionalContingentOrder : Order{
             if (!std.PaidAgreement.IsConcluded()){
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {1} не может быть проведен по приказу, т.к. у него отсутствует договор о платном обучении", std.GetName())
+                        string.Format("Студент {0} не может быть проведен по приказу, т.к. у него отсутствует договор о платном обучении", std.GetName())
                     )
                 );
             }

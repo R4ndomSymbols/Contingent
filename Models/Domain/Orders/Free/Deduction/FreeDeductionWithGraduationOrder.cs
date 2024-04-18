@@ -55,7 +55,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         {
             return result;
         }
-        ConductBase(_graduates.ToRecords(this)).RunSynchronously();
+        ConductBase(_graduates.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

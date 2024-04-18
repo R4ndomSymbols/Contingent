@@ -73,6 +73,10 @@ public class StudentHistory
     {
         return _history.GetClosestBefore(anchor);
     }
+    public StudentFlowRecord? GetClosestBefore(Order order)
+    {
+        return _history.GetClosestBefore(order);
+    }
 
     public StudentFlowRecord? GetClosestAfter(DateTime anchor)
     {
@@ -95,7 +99,6 @@ public class StudentHistory
     }
 
     // получает всю историю студента в приказах
-    // история отсортирована по дате регистрации приказа
     private static IEnumerable<StudentFlowRecord> GetHistory(StudentModel byStudent)
     {
         var found = FlowHistory.GetRecordsByFilter(

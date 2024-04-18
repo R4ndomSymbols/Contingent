@@ -40,7 +40,7 @@ public static class FlowHistory
                     return QueryResult<DateTime>.Found((DateTime)r["max_date"]);
                 }
             },
-            new Column[] { new Column("MAX", "effective_date", "orders", "max_date") }
+            new Column[] { new Column("creation_timestamp", "max_date", "orders") }
         );
         var joins = new JoinSection().AppendJoin(
             JoinSection.JoinType.InnerJoin,
@@ -55,9 +55,16 @@ public static class FlowHistory
                 WhereCondition.Relations.Equal
             )
         );
+        var orderBy = new OrderByCondition(
+            new Column("effective_date", "orders"),
+            OrderByCondition.OrderByTypes.DESC
+        );
+        orderBy.AddColumn(new Column("creation_timestamp", "orders"), OrderByCondition.OrderByTypes.DESC);
         var query = SelectQuery<DateTime>.Init("orders")
         .AddJoins(joins)
         .AddMapper(mapper)
+        .AddOrderByStatement(orderBy)
+        .AddLimits(new QueryLimits(0,1))
         .AddWhereStatement(where).Finish();
         return query.ResultObject;
     }
@@ -183,7 +190,7 @@ public static class FlowHistory
             basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.OR,
              new ComplexWhereCondition(
             new WhereCondition(
-                new Column("effective_date", "orders"),
+                new Column("creation_timestamp", "orders"),
                 GetLastOrderDateSubquery(alias),
                 WhereCondition.Relations.Equal
             ),
@@ -260,10 +267,17 @@ public static class FlowHistory
         .AddMapper(historyMapper)
         .AddJoins(historyMapper.PathTo)
         .AddWhereStatement(basicFilter)
-        .AddOrderByStatement(new OrderByCondition(
-            new Column("id", "students"),
-            OrderByCondition.OrderByTypes.ASC
-        ))
+        .AddOrderByStatement(
+            queryParameters.OverallHistorical ?
+            new OrderByCondition(
+                new Column("id", alias),
+                OrderByCondition.OrderByTypes.DESC
+            ) : queryParameters.ExtractStudentUnique ?
+            new OrderByCondition(
+                new Column("id", "students"),
+                OrderByCondition.OrderByTypes.ASC
+            ) : null
+        )
         .AddParameters(sqlParameters)
         .Finish().ResultObject;
         using var conn = await Utils.GetAndOpenConnectionFactory();
@@ -312,6 +326,7 @@ public class HistoryExtractSettings
     private bool _extractOrders;
     private bool _extractGroups;
     private bool _extractStudent;
+    private bool _overallHistorical;
 
     public bool ExtractLastState
     {
@@ -328,7 +343,11 @@ public class HistoryExtractSettings
                     }
                     ExtractByGroup = null;
                 }
+                _extractStudentUnique = true;
                 _extractLastState = value;
+            }
+            else{
+                _extractStudentUnique = false;
             }
         }
     }
@@ -407,6 +426,16 @@ public class HistoryExtractSettings
             _extractByGroup = value;
         }
     }
+    public bool OverallHistorical {
+        get => _overallHistorical;
+        set {
+            if (value)
+            {
+                ExtractStudentUnique = false;
+            }
+            _overallHistorical = value;
+        }
+    }
     public HistoryExtractSettings()
     {
         _extractLastState = false;
@@ -414,6 +443,7 @@ public class HistoryExtractSettings
         ExtractByOrder = null;
         ExtractAddress = (false, false);
         ExtractOrders = false;
+        ExtractByStudent = null;
         IncludeNotRegisteredStudents = false;
     }
 

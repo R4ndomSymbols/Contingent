@@ -95,7 +95,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         if (result.IsFailure){
             return result;
         }
-        ConductBase(_moves.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 }

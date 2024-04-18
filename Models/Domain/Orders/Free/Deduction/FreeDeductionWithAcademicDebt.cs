@@ -51,7 +51,7 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         if (check.IsFailure){
             return check;
         }
-        ConductBase(_debtHolders.ToRecords(this)).RunSynchronously();
+        ConductBase(_debtHolders.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

@@ -9,7 +9,7 @@ public class AgeTable : ITable
     private StatisticTable<StudentFlowRecord> _model;
     public string DisplayedName => _model.TableName;
     public string Html => _model.ToHtmlTable();
-    public AgeTable()
+    public AgeTable(TrainingProgramTypes type)
     {
         var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
         /*
@@ -43,10 +43,52 @@ public class AgeTable : ITable
                     }
                 )
         );
-        var trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
-            "Программы подготовки квалифицированных рабочих, служащих",
-            verticalRoot,
-            trTypeFilter1);
+
+
+        ColumnHeaderCell<StudentFlowRecord> trTypeCell1 = null;
+        switch (type)
+        {
+            case TrainingProgramTypes.QualifiedWorker:
+                trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+                    "Квалифицированные рабочие, служащие",
+                    verticalRoot,
+                    new Filter<StudentFlowRecord>(
+                    (recs) =>
+                        recs.Where(
+                            rec =>
+                            {
+
+                                var result = rec.GroupTo?.EducationProgram;
+                                if (result is null)
+                                {
+                                    return false;
+                                }
+                                return result.ProgramType.Type == TrainingProgramTypes.QualifiedWorker;
+                            }
+                        )));
+                break;
+            case TrainingProgramTypes.GenericSpecialist:
+               trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+                    "Специалисты среднего звена",
+                    verticalRoot,
+                    new Filter<StudentFlowRecord>(
+                    (recs) =>
+                        recs.Where(
+                            rec =>
+                            {
+
+                                var result = rec.GroupTo?.EducationProgram;
+                                if (result is null)
+                                {
+                                    return false;
+                                }
+                                return result.ProgramType.Type == TrainingProgramTypes.GenericSpecialist;
+                            }
+                        )));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
         // 2 уровень
         var baseEduFilter2 = new Filter<StudentFlowRecord>(
             (students) => students.Where((std) =>

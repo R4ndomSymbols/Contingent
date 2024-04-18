@@ -43,8 +43,8 @@ public class StudentFlowController : Controller
         using (var stream = new StreamReader(Request.Body))
         {
             var jsonString = await stream.ReadToEndAsync();
-            try
-            {
+            //try
+            //{
                 var result = await Order.GetOrderForConduction(orderId, jsonString);
                 if (result.IsSuccess)
                 {
@@ -61,10 +61,10 @@ public class StudentFlowController : Controller
                 {
                     return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(result.Errors)));
                 }
-            }
-            catch (Exception e){
-                return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("GENERAL","Произошла непредвиденная ошибка"))));
-            }
+            //}
+            //catch (Exception e){
+            //    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("GENERAL","Произошла непредвиденная ошибка"))));
+            //}
         }
     }
     // получение истории студента

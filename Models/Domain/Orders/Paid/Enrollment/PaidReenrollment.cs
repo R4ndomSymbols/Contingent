@@ -51,7 +51,7 @@ public class PaidReenrollmentOrder : AdditionalContingentOrder {
         {
             return check;
         }
-        ConductBase(_moves?.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

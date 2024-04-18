@@ -54,7 +54,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         if (check.IsFailure){
             return check;
         }
-        ConductBase(_toEnroll?.ToRecords(this)).RunSynchronously();
+        ConductBase(_toEnroll?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

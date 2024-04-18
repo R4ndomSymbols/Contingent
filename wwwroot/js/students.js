@@ -58,9 +58,10 @@ $("#ActualAddress").on("keyup", function () {
                 url: "/addresses/suggest/" + address,
                 dataType: "JSON",
                 success: function (response) {
-                    $("#ActualAddress").autocomplete({
+                    var search = $("#ActualAddress").autocomplete({
                         source: response.map(x => address + " " + x)
                     });
+                    search.autocomplete("search");
                 }
             });
         }
@@ -188,7 +189,7 @@ $("#save").click(function () {
             Snils: $("#Snils").val(),
             Inn: $("#Inn").val(),
             TargetAgreementType: Number($("#TargetAgreementType").val()),
-            PaidAgreementType: paid.length === 0 ? -1 : paid.val(),
+            PaidAgreementType: paid.length === 0 ? -1 : Number(paid.val()),
             AdmissionScore: $("#AdmissionScore").val(),
             GiaMark: giaMark == "" ? null : giaMark,
             GiaDemoExamMark:  giaDemMark == "" ? null : giaDemMark,

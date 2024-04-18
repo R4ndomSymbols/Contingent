@@ -53,7 +53,7 @@ public class PaidTransferBetweenSpecialitiesOrder : AdditionalContingentOrder
         if (check.IsFailure){
             return check;
         }
-        ConductBase(_moves?.ToRecords(this)).RunSynchronously();
+        ConductBase(_moves?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

@@ -53,7 +53,7 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
         {
             return checkResult;
         }
-        ConductBase(_graduates?.ToRecords(this)).RunSynchronously();
+        ConductBase(_graduates?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

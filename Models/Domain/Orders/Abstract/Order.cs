@@ -36,6 +36,9 @@ public abstract class Order
     {
         get => _isClosed;
     }
+    public bool IsOpen{
+        get =>!_isClosed;
+    }
     // дата вступления в силу
     public DateTime EffectiveDate
     {
@@ -421,17 +424,17 @@ public abstract class Order
         }
         return Result<T>.Success((T)got);
     }
-    protected async Task ConductBase(IEnumerable<StudentFlowRecord>? records)
+    protected void ConductBase(IEnumerable<StudentFlowRecord>? records)
     {
-        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || _isClosed)
+        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || IsClosed)
         {
             throw new Exception("Ошибка при записи в таблицу движения: данные приказа или приказ не соотвествуют форме или приказ закрыт");
         }
 
-        NpgsqlConnection conn = await Utils.GetAndOpenConnectionFactory();
+        NpgsqlConnection conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "COPY student_flow (student_id, order_id, group_id_to)" +
         " FROM STDIN (FORMAT BINARY) ";
-        await using (var writer = await conn.BeginBinaryImportAsync(cmdText))
+        using (var writer = conn.BeginBinaryImport(cmdText))
         {
             foreach (var r in records)
             {
@@ -447,7 +450,7 @@ public abstract class Order
                     writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer);
                 }
             }
-            await writer.CompleteAsync();
+            writer.Complete();
         }
 
         _conductionStatus = OrderConductionStatus.Conducted;
@@ -495,8 +498,6 @@ public abstract class Order
             return;
         }
     }
-    // этот метод должен по умолчанию менять статус приказа, без его вызова
-    // приказ не может получить статус готового к проведению
 
     // проверяет только студентов на предмет общих зависимостей
     internal virtual ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
@@ -507,12 +508,17 @@ public abstract class Order
         {
             return ResultWithoutValue.Failure(new OrderValidationError("Приказ не может быть проведен без указания студентов"));
         }
+        if (IsClosed)
+        {
+            return ResultWithoutValue.Failure(new OrderValidationError("Провдение для закрытого приказа невозможно"));
+        }
         foreach (var s in toCheck)
         {   
             var record = s.History.GetLastRecord();
             if (record is not null){
                 var order = record.OrderNullRestict;
-                if (order._isClosed){
+                // если предыдущий приказ открыт, то проведение невозможно
+                if (order.IsOpen){
                     return ResultWithoutValue.Failure(new OrderValidationError(string.Format("Cтудент {0} зарегистрирован в незакрытом приказе {1}", s.GetName(), order.OrderDisplayedName)));
                 }
                 if (order._effectiveDate > _effectiveDate
@@ -653,7 +659,7 @@ public abstract class Order
     }
     public void Close()
     {
-        if (!_isClosed)
+        if (IsOpen)
         {
             SetOpenCloseState(true);
         }
@@ -661,7 +667,7 @@ public abstract class Order
 
     private void Open()
     {
-        if (_isClosed)
+        if (IsClosed)
         {
             SetOpenCloseState(false);
         }

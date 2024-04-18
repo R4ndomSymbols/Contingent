@@ -52,7 +52,7 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
         {
             return check;
         }
-        ConductBase(_studentLeaving?.ToRecords(this)).RunSynchronously();
+        ConductBase(_studentLeaving.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

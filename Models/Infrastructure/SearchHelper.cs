@@ -20,7 +20,7 @@ public class SearchHelper{
             var normalized = query.Name.Trim();
             if (normalized.Length >= 3)
             {
-                filter.Include(
+                filter = filter.Include(
                 new Filter<StudentFlowRecord>(
                     (source) => source.Where(
                         rec =>
@@ -43,7 +43,7 @@ public class SearchHelper{
             var normalized = query.GroupName.Trim();
             if (normalized.Length >= 2)
             {
-                filter.Include(
+                filter = filter.Include(
                 new Filter<StudentFlowRecord>(
                     (source) => source.Where(
                         rec => rec.GroupTo is null ? GroupModel.InvalidNamePlaceholder.ToLower() == normalized.ToLower() :

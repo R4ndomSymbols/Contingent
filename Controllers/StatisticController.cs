@@ -27,8 +27,11 @@ public class StatisticController : Controller
         }
         ITable? table = null;
         switch (query){
-            case "age":
-            table = new AgeTable();
+            case "age_qualified":
+            table = new AgeTable(TrainingProgramTypes.QualifiedWorker);
+            break;
+            case "age_specialist":
+            table = new AgeTable(TrainingProgramTypes.GenericSpecialist);
             break;
             case "speciality":
             table = new GenericSpeciality();

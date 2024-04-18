@@ -49,7 +49,7 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         if (check.IsFailure){
             return check;
         }
-        ConductBase(_enrollers.ToRecords(this)).RunSynchronously();
+        ConductBase(_enrollers.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

@@ -51,7 +51,7 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder {
         if (check.IsFailure){
             return check;
         }
-        ConductBase(_studentLeaving?.ToRecords(this)).RunSynchronously();
+        ConductBase(_studentLeaving?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 

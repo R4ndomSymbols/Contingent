@@ -63,6 +63,15 @@ public class HistoryByOrderEffectiveDate : OrderedHistory{
         }
         return toReturn;
     }
+    public StudentFlowRecord? GetClosestBefore(Order byOrder){
+        int index = _history.FindIndex(x => x.OrderNullRestict.Equals(byOrder));
+        if(index > 0){
+            return _history[index - 1];
+        }
+        else{
+            return null;
+        }
+    }
     public StudentFlowRecord? GetClosestAfter(DateTime dateTime){
         StudentFlowRecord? toReturn = null;
         for(int i = 0; i < _history.Count; i++){
@@ -82,6 +91,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory{
 
     public override StudentFlowRecord Last()
     {
+        Console.WriteLine(string.Join("\n", _history.Select(x => x.OrderNullRestict.EffectiveDate)));
         return _history.Last();
     }
 }
