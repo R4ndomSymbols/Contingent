@@ -1,0 +1,106 @@
+@using StudentTracking.Models.Domain.Misc;
+@model StudentTracking.Controllers.DTO.Out.GroupOutDTO
+@{
+    ViewData["Title"] = "Группа";
+}
+<div class="container">
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Название группы</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <div id = "group_name_panel" class="col-5">
+            @if(!string.IsNullOrEmpty(Model.GroupName)){
+                <h5 id="GroupName" value="@Model.GroupName"></h5>
+            }
+            else {
+                <input id="GroupName" value="@Model.GroupName"/>
+            }
+        </div>
+        <div class="col-1"></div>
+        <div class="col-3">
+            <input type="checkbox" id = "AutogenerateName"/>
+            <label for="AutogenerateName">Автоматическая генерация</label>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-5">
+            <small class="accent_color" id="GroupName_err">
+
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Специальность</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-8">
+            <input class="col-8 data_changer" id = "edu_program_input" value="@Model.Speciality.FullName"/>
+            <input type = "hidden" id = "EducationalProgramId" value = "@Model.Speciality.Id"/>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-5">
+            <small class="accent_color" id="EducationalProgramId_err">
+
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Тип финансирования</h5>
+        <div class="col-1 mx-0"></div>
+        <h5 class="col-5 mx-0">Форма обучения</h5>
+    </div>
+    <div class="d-flex flex-row">
+         <select id = "SponsorshipType" class="col-5 data_changer">
+            @foreach(var i in GroupSponsorship.ListOfSponsorships){
+                int code = (int)i.TypeOfSponsorship;  
+                if (code == Model.EduFormatCode){
+                    <option value="@code" selected> @i.RussianName </option>
+                }
+                else{
+                    <option value="@code">@i.RussianName </option>
+                }
+            }
+        </select>
+        <div class="col-1 mx-0"></div>
+        <select id = "EducationalForm" class="col-5 data_changer">
+            @foreach(var i in GroupEducationFormat.ListOfFormats){
+                int code = (int)i.FormatType;  
+                if (code == Model.SponsorshipTypeCode){
+                    <option value="@code" selected> @i.RussianName </option>
+                }
+                else{
+                    <option value="@code">@i.RussianName </option>
+                }
+            }
+        </select>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-5 mx-0">Год создания</h5>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-3">
+            <input class = "data_changer" id = "CreationYear" value="@Model.CreationYear"/>
+        </div>
+    </div>
+    <div class="d-flex flex-row">
+        <div class="col-5">
+            <small class="accent_color" id="CreationYear_err">
+
+            </small>
+        </div>
+    </div>
+    <button class="btn btn-primary" id = "save">
+        Сохранить
+    </button>
+    @if(Model.Id is null){
+        <div id="about_group"/>
+    }
+    else{
+        <div id="about_group" group_id = "@Model.Id"/>
+    }
+</div>
+<script src="~/js/site.js"></script>
+<script src="~/js/groups.js"></script>

@@ -1,0 +1,112 @@
+@using StudentTracking.Models.Domain;
+@using StudentTracking.Models.Domain.Misc;
+@using StudentTracking.Models.Domain.Address;
+@using StudentTracking.Controllers.DTO.Out;
+@model StudentTracking.Controllers.DTO.Out.StudentFullDTO;
+@{
+    ViewData["Title"] = "Просмотр";
+}
+<div class="container">
+    <div class="d-flex flex-row">
+        <h5 class="col-4">Номер зачетки</h5>
+        <p class="col-4">@Model.GradeBookNumber</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Дата рождения</h5>
+        <p class="col-4">@Model.DateOfBirth</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Снилс</h5>
+        <p class="col-4">@Model.Snils</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Пол</h5>
+        <p class="col-4">@Model.GenderName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Договор о целевом обучении</h5>
+        @{
+            string targetAgrName = TargetEduAgreement.GetByTypeCode(Model.TargetAgreementType).RussianName;
+        }
+        <p class="col-4">@targetAgrName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Договор об обучении на платной основе</h5>
+        @{
+            string paidAgrName = PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName;
+        }
+        <p class="col-4">@paidAgrName</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Вступительный балл</h5>
+        <p class="col-4">@Model.AdmissionScore</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Балл ГИА</h5>
+        @{
+            string giaMark = Model.GiaMark?.ToString() ?? "Не указан";
+            string giaMarkDem = Model.GiaDemoExamMark?.ToString() ?? "Не указан"; 
+        }
+        <p class="col-4">@giaMark</p>
+    </div>
+     <div class="d-flex flex-row">
+        <h5 class="col-4">Балл ГИА (демэкзамен)</h5>
+        <p class="col-4">@giaMarkDem</p>
+    </div>
+    <div class="d-flex flex-row">
+        <h5 class="col-4">Фактический адрес</h5>
+        @{
+            
+            string factAddress = Model.ActualAddress.AddressName; 
+        }
+        <p class="col-8">@factAddress</p>
+    </div>
+    @{
+        RussianCitizenshipDTO citizenship = Model.Citizenship;
+    }
+    @if(citizenship != null){
+        <div class="mt-3">
+            <h2 class="mb-4">Гражданство (РФ)</h2>
+            <div class="d-flex flex-row">
+                <h5 class="col-4">Фамилия</h5>
+                <p class="col-4">@citizenship.Surname</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-4">Имя</h5>
+                <p class="col-4">@citizenship.Name</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-4">Отчество</h5>
+                <p class="col-4">@citizenship.Patronymic</p>
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="col-4">Прописка</h5>
+                @{
+                   string fullAddress = Model.Citizenship.LegalAddress.AddressName;
+                }
+                <p class="col-8">@fullAddress</p>
+            </div>
+        </div>
+    }
+    <div class="col-4">
+        <p>История студента в приказах</p>
+    </div>
+    <div class="col-11">
+        <table class="table">
+            <thead>
+                <th>Тип приказа</th>
+                <th>Номер приказа</th>
+                <th>Дата</th>
+                <th>Группа откуда</th>
+                <th>Группа куда</th>
+            </thead>
+            <tbody id="history">
+
+            </tbody>
+        </table>
+
+    </div>
+    <div id="about_student" student_id="@Model.Id"/>
+</div>
+
+<script src="~/js/studentView.js"></script>

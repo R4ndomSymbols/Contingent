@@ -1,0 +1,62 @@
+@using StudentTracking.Controllers.DTO.Out;
+
+@model object;
+
+<div class="container">
+    <div class="row">
+        <div class="col-2">
+            <h5>
+                ФИО студента:
+            </h5>
+        </div>
+        <div class="col-5">
+            <input type="text" placeholder="ФИО студента" id="name_input" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-2">
+            <h5>
+                Группа студента:
+            </h5>
+        </div>
+        <div class="col-5">
+                <input type="text" placeholder="Группа" id="group_input" />
+        </div>
+    </div>        
+
+    <div class="row my-4">
+        <button class="btn btn-primary" id="perform_search">
+            Поиск студентов
+        </button>
+    </div>
+
+    <div>
+        <table class="table">
+            <thead>
+                <th>Номер в книге</th>
+                <th>ФИО</th>
+                <th>Группа</th>
+                <th>Действия</th>
+            </thead>
+            <tbody id = "students_found">
+            
+            </tbody>    
+        </table>
+        
+
+    </div>
+    <div class="row">
+        <div id ="current_page" class="col-1">
+            <h3>1</h3>
+        </div>
+        <button id="previous_page" class="btn btn-secondary col-1">
+            Предыдущая
+        </button>
+        <button id="next_page" class="btn btn-secondary col-1">
+                Следующая
+        </button>
+    </div>
+</div>
+
+<script src="~/js/search/student.js"></script>
