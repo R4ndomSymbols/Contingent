@@ -1,0 +1,28 @@
+@using StudentTracking.Controllers.DTO.Out;
+@model IEnumerable<GroupSearchResultDTO>;
+
+<div class="container">
+    <div class="d-flex flex-row">
+        <h5 class="mr-1">
+            Имя группы:
+        </h5>
+        <input type="text" id = "name_input" placeholder="Название группы" class="col-3"/>
+        <button class="btn btn-primary col-1" id="search_button">
+            Поиск
+        </button>
+    </div>
+    <div class="d-flex flex-row">
+        <table class="table col-12">
+            <thead>
+                <th>Название</th>
+                <th>Курс</th>
+                <th>Действия</th>
+            </thead>
+            <tbody id ="groups_found">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="~/js/search/groups.js"></script>

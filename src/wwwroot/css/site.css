@@ -1,0 +1,43 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.accent_color {
+  color: #E88716;
+}
+.secondary_color{
+  color: #8c92a1;
+}
+.primary_color {
+  color: #929CB7;
+}
+.background_color {
+  color: #ffffff;
+}
+.text_color {
+  color: #181617;
+}
+
+.tableStats, .thStats, .tdStats {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
