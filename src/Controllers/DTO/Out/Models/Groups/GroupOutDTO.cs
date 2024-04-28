@@ -5,7 +5,7 @@ namespace StudentTracking.Controllers.DTO.Out;
 
 public sealed class GroupOutDTO {
     public int? Id {get; set;}
-    public string CourseOn {get; set; }
+    public int CourseOn {get; set; }
     public int EduFormatCode {get; set; }
     public string EduFormatName {get; set;}
     public int SponsorshipTypeCode {get; set;}
@@ -24,7 +24,7 @@ public sealed class GroupOutDTO {
         SponsorshipTypeCode = (int)model.SponsorshipType.TypeOfSponsorship;
         AutogenerateName = model.IsNameGenerated;
         CreationYear = model.CreationYear.ToString();
-        CourseOn = model.CourseOn.ToString();
+        CourseOn = model.CourseOn;
     }
     public GroupOutDTO(){
         Id = null;
@@ -36,6 +36,6 @@ public sealed class GroupOutDTO {
         Speciality = new SpecialityOutDTO();
         SponsorshipTypeName = "";
         EduFormatName = "";
-        CourseOn="";
+        CourseOn=0;
     }
 }

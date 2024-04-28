@@ -33,8 +33,9 @@ public class GroupEducationFormat {
         }, 
     };
 
-    public static bool TryGetByTypeCode(int code){
-        return ListOfFormats.Any(x => (int)x.FormatType == code);
+    public static bool TryGetByTypeCode(int code, out GroupEducationFormat? type){
+        type = ListOfFormats.FirstOrDefault(x => (int)x!.FormatType == code, null);
+        return type is not null;
     }
     public static GroupEducationFormat GetByTypeCode(int code){
         return ListOfFormats.Where(x => (int)x.FormatType == code).First();

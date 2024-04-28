@@ -25,7 +25,7 @@ public class StudentToGroupMove {
         if (student is null) {
             return Result<StudentToGroupMove>.Failure(new ValidationError("Студента, указанного в движении, не существует"));
         }
-        var group = await GroupModel.GetGroupById(dto.GroupToId);
+        var group = GroupModel.GetGroupById(dto.GroupToId);
         if (group is null){
             return Result<StudentToGroupMove>.Failure(new ValidationError("Группы, указанной в движении, не существует"));
         }

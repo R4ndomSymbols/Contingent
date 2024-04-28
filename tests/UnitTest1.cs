@@ -9,7 +9,7 @@ namespace Tests;
 public class Tests
 {
     //[Fact]
-    public void GenerateTable()
+    private void GenerateTable()
     {
         var csv = new CSVGenerator().GenerateStudents(100);
         Console.WriteLine(csv);
@@ -38,7 +38,6 @@ public class Tests
                 order.ImportedOrder!.Save();
             }
         }
-
     }
 
 }

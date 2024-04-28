@@ -10,7 +10,7 @@ $("#search_button").on("click", function () {
     $.ajax({
         type: "POST",
         url: "/groups/search/query",
-        data: getSearchData(),
+        data: getSearchSpecialityData(),
         contentType: "application/json",
         success: function (response) {
             $.each(response, function (indexInArray, valueOfElement) { 
@@ -20,10 +20,11 @@ $("#search_button").on("click", function () {
     });
 });
 
-function getSearchData(){
+function getSearchSpecialityData(){
     return JSON.stringify(
         {
-            GroupName: $("#name_input").val()
+            GroupName: $("#name_input").val(),
+            IsActive: $("#active_only").is(":checked")
         }
     )
 }
