@@ -61,6 +61,13 @@ public class WhereCondition : IQueryPart{
             return _columnLeft.AsSQLText() + " " + _sqlRelations[_relation] + " " + parameterValue; 
         };
     }
+    public WhereCondition(
+        Column constrainedBoolColumn){
+        _columnLeft = constrainedBoolColumn;
+        _strategy = () => {
+            return _columnLeft.AsSQLText(); 
+        };
+    }
 
     private Func<string> _strategy;
     public string AsSQLText()

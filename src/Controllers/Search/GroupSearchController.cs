@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
 using StudentTracking.Models;
+using StudentTracking.SQL;
 
 namespace StudentTracking.Controllers.Search;
 
@@ -32,7 +33,7 @@ public class GroupSearchController : Controller {
         if (dto is null){
             return Json(new ErrorsDTO(new ValidationError("Неверный поисковый запрос (не разобран)")));
         }
-        var searchResult = GroupModel.FindGroupsByName(dto.GroupName).Result;
+        var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0,30), dto.GroupName, dto.IsActive).Result;
         return Json(searchResult.Select(x => new GroupSearchResultDTO(x)));
     }
 }

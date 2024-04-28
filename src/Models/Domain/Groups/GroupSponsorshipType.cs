@@ -52,8 +52,9 @@ public class GroupSponsorship {
     public static GroupSponsorship GetByTypeCode(int code) {
         return ListOfSponsorships.Where(x => (int)x.TypeOfSponsorship == code).First();
     } 
-    public static bool TryGetByTypeCode(int code) {
-        return ListOfSponsorships.Any(x => (int)x.TypeOfSponsorship == code);
+    public static bool TryGetByTypeCode(int code, out GroupSponsorship? type) {
+        type = ListOfSponsorships.FirstOrDefault(x => (int)x.TypeOfSponsorship == code, null); 
+        return type is not null;
     } 
 }
 
