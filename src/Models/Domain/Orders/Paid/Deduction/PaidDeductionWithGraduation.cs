@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -10,20 +11,22 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
 {
     private StudentGroupNullifyMoveList _graduates;
 
-    private PaidDeductionWithGraduationOrder() : base(){
+    private PaidDeductionWithGraduationOrder() : base()
+    {
         _graduates = StudentGroupNullifyMoveList.Empty;
     }
-    private PaidDeductionWithGraduationOrder(int id) : base(id){
+    private PaidDeductionWithGraduationOrder(int id) : base(id)
+    {
         _graduates = StudentGroupNullifyMoveList.Empty;
-    }   
+    }
 
-    public static Result<PaidDeductionWithGraduationOrder>Create(OrderDTO? order)
+    public static Result<PaidDeductionWithGraduationOrder> Create(OrderDTO? order)
     {
         var created = new PaidDeductionWithGraduationOrder();
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<PaidDeductionWithGraduationOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto)
+    public static Result<PaidDeductionWithGraduationOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<PaidDeductionWithGraduationOrder>(id);
         if (result.IsFailure)
@@ -31,7 +34,7 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
             return result;
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentGroupNullifyMoveList.Create(dto);
+        var dtoAsModelResult = StudentGroupNullifyMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
             return dtoAsModelResult.RetraceFailure<PaidDeductionWithGraduationOrder>();
@@ -64,9 +67,11 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var student in _graduates){
+        foreach (var student in _graduates)
+        {
             var history = student.Student.History;
-            if (history.IsStudentEnlisted()){
+            if (history.IsStudentEnlisted())
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", student.Student.GetName())
@@ -74,7 +79,8 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
                 );
             }
             var group = history.GetLastRecord().GroupToNullRestrict;
-            if (group.EducationProgram.CourseCount != group.CourseOn){
+            if (group.EducationProgram.CourseCount != group.CourseOn)
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Группа {0} не является выпускной для студента {1}", group.GroupName, student.Student.GetName())
@@ -82,7 +88,19 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
                 );
             }
         }
-        return ResultWithoutValue.Success(); 
+        return ResultWithoutValue.Success();
     }
 
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var graduate = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentGroupNullifyMove.Create(graduate);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _graduates.Add(result.ResultObject);
+        return Result<Order>.Success(this);
+    }
 }

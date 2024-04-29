@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -27,14 +28,14 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<FreeTransferToTheNextCourseOrder>> Create(int id, StudentGroupChangeMovesDTO? dto)
+    public static Result<FreeTransferToTheNextCourseOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<FreeTransferToTheNextCourseOrder>(id);
         if (result.IsFailure)
         {
             return result;
         }
-        var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
+        var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure)
         {
             return dtoAsModelResult.RetraceFailure<FreeTransferToTheNextCourseOrder>();
@@ -104,5 +105,18 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var transfer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentToGroupMove.Create(transfer);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _moves.Add(result.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

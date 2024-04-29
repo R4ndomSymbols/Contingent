@@ -282,7 +282,8 @@ public class GroupModel
         var currentGroup = this;
         for (int i = 1; i <= currentGroup._educationProgram.CourseCount; i++)
         {
-            if (currentGroup.Save(scope).IsSuccess){
+            if (currentGroup.Save(scope).IsSuccess)
+            {
                 saved.Add(currentGroup);
             }
             currentGroup = currentGroup.Copy();
@@ -293,7 +294,8 @@ public class GroupModel
 
     public ResultWithoutValue Save(ObservableTransaction? scope)
     {
-        if (GetGroupById(_id) is not null || _educationProgram.Id is null){
+        if (GetGroupById(_id) is not null || _educationProgram.Id is null)
+        {
             return ResultWithoutValue.Failure(new ValidationError("Невозможно сохранить данную группу"));
         }
         NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
@@ -421,12 +423,12 @@ public class GroupModel
         return await buildResult.ResultObject.Execute(conn, limits);
     }
 
-    public static async Task<IReadOnlyCollection<GroupModel>> FindGroupsByName(QueryLimits limits, string? name, bool onlyActive)
+    public static IReadOnlyCollection<GroupModel> FindGroupsByName(QueryLimits limits, string? name, bool onlyActive)
     {
         var where = onlyActive ? new ComplexWhereCondition(new WhereCondition(new Column("is_active", "educational_group"))) : null;
         if (name == string.Empty || string.IsNullOrWhiteSpace(name) || name.Length < 2)
         {
-            return await FindGroups(limits, additionalConditions: where);
+            return FindGroups(limits, additionalConditions: where).Result;
         }
         var parameters = new SQLParameterCollection();
         var p1 = parameters.Add<string>(name.ToLower() + "%");
@@ -445,7 +447,7 @@ public class GroupModel
         {
             where = secondWhere;
         }
-        return await FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters);
+        return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
     }
 
     public GroupModel Copy()

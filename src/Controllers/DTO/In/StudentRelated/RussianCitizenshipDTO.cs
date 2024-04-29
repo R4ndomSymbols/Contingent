@@ -5,17 +5,18 @@ using Utilities;
 namespace StudentTracking.Controllers.DTO.In;
 
 [Serializable]
-public class RussianCitizenshipInDTO : IFromCSV<RussianCitizenshipInDTO>{
+public class RussianCitizenshipInDTO : IFromCSV<RussianCitizenshipInDTO>
+{
 
-    public RussianCitizenshipInDTO() 
+    public RussianCitizenshipInDTO()
     {
         Id = null;
         Name = "";
         Surname = "";
         Patronymic = null;
-           
+
     }
-    public int? Id {get; set; }
+    public int? Id { get; set; }
     [JsonRequired]
     public string Name { get; set; }
     [JsonRequired]
@@ -23,7 +24,7 @@ public class RussianCitizenshipInDTO : IFromCSV<RussianCitizenshipInDTO>{
     public string? Patronymic { get; set; }
 
     [JsonRequired]
-    public AddressInDTO LegalAddress{get; set;}
+    public AddressInDTO LegalAddress { get; set; }
 
     public Result<RussianCitizenshipInDTO> MapFromCSV(CSVRow row)
     {

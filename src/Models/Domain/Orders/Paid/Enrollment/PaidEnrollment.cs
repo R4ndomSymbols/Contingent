@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.Domain.Orders.Infrastructure;
 using StudentTracking.Models.Domain.Orders.OrderData;
@@ -9,7 +10,7 @@ namespace StudentTracking.Models.Domain.Orders;
 
 public class PaidEnrollmentOrder : AdditionalContingentOrder
 {
-    private StudentToGroupMoveList _moves;
+    private StudentToGroupMoveList _emrollers;
     private OrderTypes[] ForbiddenPreviousOrderTypes =>
         new OrderTypes[] {
             OrderTypes.FreeDeductionWithOwnDesire,
@@ -20,11 +21,11 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
 
     protected PaidEnrollmentOrder() : base()
     {
-        _moves = StudentToGroupMoveList.Empty;
+        _emrollers = StudentToGroupMoveList.Empty;
     }
     protected PaidEnrollmentOrder(int id) : base(id)
     {
-        _moves = StudentToGroupMoveList.Empty;
+        _emrollers = StudentToGroupMoveList.Empty;
     }
 
     public static Result<PaidEnrollmentOrder> Create(OrderDTO? order)
@@ -33,7 +34,7 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<PaidEnrollmentOrder>> Create(int id, StudentGroupChangeMovesDTO? dto)
+    public static Result<PaidEnrollmentOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<PaidEnrollmentOrder>(id);
         if (result.IsFailure)
@@ -41,12 +42,12 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
             return result;
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
+        var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
             return dtoAsModelResult.RetraceFailure<PaidEnrollmentOrder>();
         }
-        order._moves = dtoAsModelResult.ResultObject;
+        order._emrollers = dtoAsModelResult.ResultObject;
         return result;
     }
 
@@ -59,11 +60,12 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
 
     public override ResultWithoutValue ConductByOrder()
     {
-        var check = base.CheckConductionPossibility(_moves.Select(x => x.Student));
-        if (check.IsFailure){
+        var check = base.CheckConductionPossibility(_emrollers.Select(x => x.Student));
+        if (check.IsFailure)
+        {
             return check;
         }
-        ConductBase(_moves.ToRecords(this));
+        ConductBase(_emrollers.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
@@ -79,30 +81,45 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var move in _moves)
+        foreach (var move in _emrollers)
         {
             var lastRecord = move.Student.History.GetLastRecord();
-            if (lastRecord is not null && 
+            if (lastRecord is not null &&
                 ForbiddenPreviousOrderTypes.Any(x => lastRecord.OrderNullRestict.GetOrderTypeDetails().Type == x) &&
                 // разница более чем в 5 лет между приказами является основанием для игнорирования статуса
-                (this.EffectiveDate - lastRecord.OrderNullRestict.EffectiveDate) > new TimeSpan(365*5,0,0,0) 
-            ){
+                (this.EffectiveDate - lastRecord.OrderNullRestict.EffectiveDate) > new TimeSpan(365 * 5, 0, 0, 0)
+            )
+            {
                 return ResultWithoutValue.Failure(new OrderValidationError(string.Format("{0} ранее числился в базе (имеет недопустимый статус)", move.Student.GetName())));
             }
             var group = move.GroupTo;
             // группа первого курса, специальность доступна студенту  
-            if (!(group.CourseOn == 1 
+            if (!(group.CourseOn == 1
                 && group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student)
                 && group.SponsorshipType.IsPaid()
-                )){
+                ))
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Группа {0}, куда зачисляется студент {1}, не сооствествует критериям", group.GroupName, move.Student.GetName()
                         )
                     ));
-            } 
+            }
         }
         return ResultWithoutValue.Success();
 
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentToGroupMove.Create(enroller);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _emrollers.Add(result.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

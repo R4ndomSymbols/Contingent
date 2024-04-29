@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -23,7 +24,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<FreeDeductionWithGraduationOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto)
+    public static Result<FreeDeductionWithGraduationOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
     {
         var model = new FreeDeductionWithGraduationOrder(id);
         var result = MapFromDbBaseForConduction<FreeDeductionWithGraduationOrder>(id);
@@ -32,7 +33,7 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
             return result;
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentGroupNullifyMoveList.Create(dto?.Students);
+        var dtoAsModelResult = StudentGroupNullifyMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure)
         {
             return dtoAsModelResult.RetraceFailure<FreeDeductionWithGraduationOrder>();
@@ -81,5 +82,17 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        var graduateDto = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
+        var gradute = StudentGroupNullifyMove.Create(graduateDto);
+        if (gradute.IsFailure)
+        {
+            return Result<Order>.Failure(gradute.Errors);
+        }
+        _graduates.Add(gradute.ResultObject);
+        return Result<Order>.Success(this);
     }
 }
