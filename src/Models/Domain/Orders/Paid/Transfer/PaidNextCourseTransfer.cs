@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
 
@@ -7,14 +8,15 @@ namespace StudentTracking.Models.Domain.Orders;
 
 public class PaidTransferNextCourseOrder : AdditionalContingentOrder
 {
-    private StudentToGroupMoveList _moves;
+    private StudentToGroupMoveList _transfer;
 
     protected PaidTransferNextCourseOrder() : base()
     {
-        _moves = StudentToGroupMoveList.Empty;
+        _transfer = StudentToGroupMoveList.Empty;
     }
-    protected PaidTransferNextCourseOrder(int id) : base(id){
-        _moves = StudentToGroupMoveList.Empty;
+    protected PaidTransferNextCourseOrder(int id) : base(id)
+    {
+        _transfer = StudentToGroupMoveList.Empty;
     }
 
     public static Result<PaidTransferNextCourseOrder> Create(OrderDTO? order)
@@ -23,7 +25,7 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<PaidTransferNextCourseOrder>> Create(int id, StudentGroupChangeMovesDTO? dto)
+    public static Result<PaidTransferNextCourseOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<PaidTransferNextCourseOrder>(id);
         if (result.IsFailure)
@@ -31,12 +33,12 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
             return result;
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
+        var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
             return dtoAsModelResult.RetraceFailure<PaidTransferNextCourseOrder>();
         }
-        order._moves = dtoAsModelResult.ResultObject;
+        order._transfer = dtoAsModelResult.ResultObject;
         return result;
     }
 
@@ -48,12 +50,12 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
 
     public override ResultWithoutValue ConductByOrder()
     {
-        var check = base.CheckConductionPossibility(_moves.Select(x => x.Student));
+        var check = base.CheckConductionPossibility(_transfer.Select(x => x.Student));
         if (check.IsFailure)
         {
             return check;
         }
-        ConductBase(_moves.ToRecords(this));
+        ConductBase(_transfer.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
@@ -64,9 +66,11 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var move in _moves){
+        foreach (var move in _transfer)
+        {
             var history = move.Student.History;
-            if (!history.IsStudentEnlisted()){
+            if (!history.IsStudentEnlisted())
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Студент {0} не имеет недопустимый статус", move.Student.GetName())
@@ -74,7 +78,8 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
                 );
             }
             var lastRecord = history.GetLastRecord();
-            if (lastRecord is not null && lastRecord.GroupToNullRestrict.CourseOn == lastRecord.GroupToNullRestrict.EducationProgram.CourseCount){
+            if (lastRecord is not null && lastRecord.GroupToNullRestrict.CourseOn == lastRecord.GroupToNullRestrict.EducationProgram.CourseCount)
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("{0} имеет выпусную группу {1}", move.Student.GetName(), lastRecord.GroupToNullRestrict.GroupName)
@@ -83,7 +88,8 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
             }
             var group = move.GroupTo;
             if (!(group.HistoricalSequenceId == lastRecord.GroupToNullRestrict.HistoricalSequenceId
-            && group.CourseOn - lastRecord.GroupToNullRestrict.CourseOn == 1)){
+            && group.CourseOn - lastRecord.GroupToNullRestrict.CourseOn == 1))
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Группа {0}, куда зачисляется студент {1}, не сооствествует критериям", group.GroupName, move.Student.GetName())
@@ -92,5 +98,18 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var transferer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentToGroupMove.Create(transferer);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _transfer.Add(result.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

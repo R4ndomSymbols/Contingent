@@ -4,13 +4,14 @@ using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Npgsql;
 using System.Net.Http.Headers;
+using StudentTracking.Import;
 
 
 namespace StudentTracking.Models.Domain.Orders;
 
 public class FreeEnrollmentOrder : FreeContingentOrder
 {
-    private StudentToGroupMoveList _moves; 
+    private StudentToGroupMoveList _moves;
 
     protected FreeEnrollmentOrder() : base()
     {
@@ -21,31 +22,36 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         _moves = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<FreeEnrollmentOrder> Create(OrderDTO? order){
-        
+    public static Result<FreeEnrollmentOrder> Create(OrderDTO? order)
+    {
+
         var created = new FreeEnrollmentOrder();
-        var valResult = MapBase(order,created);
+        var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<FreeEnrollmentOrder>> Create(int id, StudentGroupChangeMovesDTO? dto){
+    public static Result<FreeEnrollmentOrder> Create(int id, StudentToGroupMovesDTO? dto)
+    {
         var model = new FreeEnrollmentOrder(id);
         var result = MapFromDbBaseForConduction<FreeEnrollmentOrder>(id);
-        if (result.IsFailure){
+        if (result.IsFailure)
+        {
             return result.RetraceFailure<FreeEnrollmentOrder>();
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentToGroupMoveList.Create(dto?.Moves);
-        if (dtoAsModelResult.IsFailure){
+        var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
+        if (dtoAsModelResult.IsFailure)
+        {
             return dtoAsModelResult.RetraceFailure<FreeEnrollmentOrder>();
         }
         order._moves = dtoAsModelResult.ResultObject;
         return result;
     }
 
-    public static QueryResult<FreeEnrollmentOrder?> Create (int id, NpgsqlDataReader reader){
+    public static QueryResult<FreeEnrollmentOrder?> Create(int id, NpgsqlDataReader reader)
+    {
         var order = new FreeEnrollmentOrder(id);
-        return MapParticialFromDbBase(reader,order);
-        
+        return MapParticialFromDbBase(reader, order);
+
     }
 
     public override void Save(ObservableTransaction? scope)
@@ -64,19 +70,21 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     // TODO:
     // сейчас возможна запись только одного приказа в день на каждого студента
     // нет проверки на совпадение даты, спросить у предст. предметной области
-    
-     
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
-    {   
-        foreach (var stm in _moves.Moves){
 
-            var history = StudentHistory.Create(stm.Student); 
+
+    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    {
+        foreach (var stm in _moves.Moves)
+        {
+
+            var history = StudentHistory.Create(stm.Student);
             var targetGroup = stm.GroupTo;
-            var validMove =  
+            var validMove =
                 history.IsStudentNotRecorded() &&
-                targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student)&&
-                targetGroup.SponsorshipType.IsFree(); 
-            if (!validMove){
+                targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) &&
+                targetGroup.SponsorshipType.IsFree();
+            if (!validMove)
+            {
                 return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления"));
             }
         }
@@ -92,11 +100,25 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     public override ResultWithoutValue ConductByOrder()
     {
         var result = base.CheckConductionPossibility(_moves.Select(x => x.Student));
-        if (result.IsFailure){
+        if (result.IsFailure)
+        {
             return result;
         }
         ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var enrolled = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
+        var move = StudentToGroupMove.Create(enrolled);
+        if (move.IsFailure)
+        {
+            return Result<Order>.Failure(move.Errors);
+        }
+        _moves.Add(move.ResultObject);
+        return Result<Order>.Success(this);
     }
 }
 

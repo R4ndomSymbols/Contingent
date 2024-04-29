@@ -1,18 +1,22 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
 
 namespace StudentTracking.Models.Domain.Orders;
 
-public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
+public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
+{
 
     private StudentGroupNullifyMoveList _studentLeaving;
 
-    private PaidDeductionWithTransferOrder() : base(){
+    private PaidDeductionWithTransferOrder() : base()
+    {
         _studentLeaving = StudentGroupNullifyMoveList.Empty;
     }
-    private PaidDeductionWithTransferOrder(int id) : base(id){
+    private PaidDeductionWithTransferOrder(int id) : base(id)
+    {
         _studentLeaving = StudentGroupNullifyMoveList.Empty;
     }
 
@@ -22,7 +26,7 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static async Task<Result<PaidDeductionWithTransferOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto)
+    public static Result<PaidDeductionWithTransferOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
     {
         var result = MapFromDbBaseForConduction<PaidDeductionWithTransferOrder>(id);
         if (result.IsFailure)
@@ -30,7 +34,7 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
             return result;
         }
         var order = result.ResultObject;
-        var dtoAsModelResult = await StudentGroupNullifyMoveList.Create(dto);
+        var dtoAsModelResult = StudentGroupNullifyMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
             return dtoAsModelResult.RetraceFailure<PaidDeductionWithTransferOrder>();
@@ -63,8 +67,10 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var student in _studentLeaving){
-            if (!student.Student.History.IsStudentEnlisted()){
+        foreach (var student in _studentLeaving)
+        {
+            if (!student.Student.History.IsStudentEnlisted())
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Студент {0} должен быть зачислен прежде, чем быть отчисленным", student.Student.GetName())
@@ -73,5 +79,18 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder {
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var graduate = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentGroupNullifyMove.Create(graduate);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _studentLeaving.Add(result.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

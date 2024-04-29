@@ -7,33 +7,40 @@ using StudentTracking.SQL;
 
 namespace StudentTracking.Controllers.Search;
 
-public class GroupSearchController : Controller {
-    
-    public GroupSearchController(){
+public class GroupSearchController : Controller
+{
+
+    public GroupSearchController()
+    {
 
     }
 
     [HttpGet]
     [Route("groups/search/menu")]
-    public IActionResult GetMainPage(){
+    public IActionResult GetMainPage()
+    {
         return View("Views/Search/Groups.cshtml", new List<GroupSearchResultDTO>());
     }
 
     [HttpPost]
     [Route("groups/search/query")]
-    public JsonResult Search(){
+    public JsonResult Search()
+    {
         var request = new StreamReader(Request.Body);
         GroupSearchQueryDTO? dto;
-        try {
+        try
+        {
             dto = JsonSerializer.Deserialize<GroupSearchQueryDTO>(request.ReadToEndAsync().Result);
         }
-        catch {
+        catch
+        {
             return Json(new ErrorsDTO(new ValidationError("Неверный поисковый запрос")));
         }
-        if (dto is null){
+        if (dto is null)
+        {
             return Json(new ErrorsDTO(new ValidationError("Неверный поисковый запрос (не разобран)")));
         }
-        var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0,30), dto.GroupName, dto.IsActive).Result;
+        var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0, 30), dto.GroupName, dto.IsActive);
         return Json(searchResult.Select(x => new GroupSearchResultDTO(x)));
     }
 }

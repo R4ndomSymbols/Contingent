@@ -1,3 +1,4 @@
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Orders.Infrastructure;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -7,10 +8,12 @@ namespace StudentTracking.Models.Domain.Orders;
 
 public sealed class EmptyOrder : Order
 {
-    public override string OrderOrgId {
+    public override string OrderOrgId
+    {
         get => "[Не может быть определен на данный момент]";
     }
-    private EmptyOrder(){
+    private EmptyOrder()
+    {
         _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
         _effectiveDate = DateTime.Today;
         _specifiedDate = DateTime.Today;
@@ -29,7 +32,8 @@ public sealed class EmptyOrder : Order
         throw new NotImplementedException("Невозможно провести пустой приказ");
     }
 
-    protected override OrderTypes GetOrderType(){
+    protected override OrderTypes GetOrderType()
+    {
         return OrderTypes.EmptyOrder;
     }
 
@@ -41,5 +45,10 @@ public sealed class EmptyOrder : Order
     internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
     {
         throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        throw new NotImplementedException("Невозможно загрузить пустой приказ из CSV");
     }
 }

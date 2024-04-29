@@ -2,6 +2,7 @@
 
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -11,14 +12,17 @@ public class FreeReenrollmentOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _enrollers;
 
-    private FreeReenrollmentOrder() : base(){
+    private FreeReenrollmentOrder() : base()
+    {
         _enrollers = StudentToGroupMoveList.Empty;
     }
-    private FreeReenrollmentOrder(int id) : base(id){
+    private FreeReenrollmentOrder(int id) : base(id)
+    {
         _enrollers = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<FreeReenrollmentOrder> Create(OrderDTO? dto){
+    public static Result<FreeReenrollmentOrder> Create(OrderDTO? dto)
+    {
         var created = new FreeReenrollmentOrder();
         return MapBase(dto, created);
     }
@@ -27,26 +31,28 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         var order = new FreeReenrollmentOrder(id);
         return MapParticialFromDbBase(reader, order);
     }
-    public static async Task<Result<FreeReenrollmentOrder>> Create(int orderId, StudentGroupChangeMovesDTO? dto){
+    public static Result<FreeReenrollmentOrder> Create(int orderId, StudentToGroupMovesDTO? dto)
+    {
         var orderResult = MapFromDbBaseForConduction<FreeReenrollmentOrder>(orderId);
         if (orderResult.IsFailure)
         {
             return orderResult;
-        } 
-        var dtoResult = await StudentToGroupMoveList.Create(dto);
+        }
+        var dtoResult = StudentToGroupMoveList.Create(dto);
         if (dtoResult.IsFailure)
         {
             return dtoResult.RetraceFailure<FreeReenrollmentOrder>();
         }
         var order = orderResult.ResultObject;
         order._enrollers = dtoResult.ResultObject;
-        return orderResult; 
+        return orderResult;
     }
 
     public override ResultWithoutValue ConductByOrder()
     {
         var check = base.CheckConductionPossibility(_enrollers.Select(x => x.Student));
-        if (check.IsFailure){
+        if (check.IsFailure)
+        {
             return check;
         }
         ConductBase(_enrollers.ToRecords(this));
@@ -66,11 +72,13 @@ public class FreeReenrollmentOrder : FreeContingentOrder
     // зачисление в бесплатную группу
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var move in _enrollers){
+        foreach (var move in _enrollers)
+        {
             var history = StudentHistory.Create(move.Student);
             if (history.GetLastRecord()?.ByOrder?.GetOrderTypeDetails().Type != OrderTypes.FreeDeductionWithOwnDesire
             || move.GroupTo.SponsorshipType.IsPaid()
-            ){
+            )
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Студент {0} в приказе на восстановление не имеет условий для восстановелния", move.Student.GetName())
@@ -78,5 +86,18 @@ public class FreeReenrollmentOrder : FreeContingentOrder
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        Save(null);
+        var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
+        var result = StudentToGroupMove.Create(enroller);
+        if (result.IsFailure)
+        {
+            return Result<Order>.Failure(result.Errors);
+        }
+        _enrollers.Add(result.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

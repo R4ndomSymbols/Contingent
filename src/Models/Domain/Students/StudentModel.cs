@@ -96,7 +96,7 @@ public class StudentModel
     {
         get
         {
-            if (_actualAddressId != Utils.INVALID_ID && _actualAddressId is not null  && _actualAddress is null)
+            if (_actualAddressId != Utils.INVALID_ID && _actualAddressId is not null && _actualAddress is null)
             {
                 _actualAddress = AddressModel.GetAddressById(_actualAddressId).Result;
                 _actualAddressId = _actualAddress.Id;
@@ -185,7 +185,7 @@ public class StudentModel
         studentMapper.AssumeChild(russianCitizenshipMapper);
         return studentMapper;
     }
-    public static Result<StudentModel?> Build(StudentInDTO? dto, ObservableTransaction? scope = null)
+    public static Result<StudentModel> Build(StudentInDTO? dto, ObservableTransaction? scope = null)
     {
         if (dto is null)
         {
@@ -352,7 +352,7 @@ public class StudentModel
 
     public static async Task<StudentModel?> GetStudentById(int? id)
     {
-        if (id is null)
+        if (id is null || id == Utils.INVALID_ID)
         {
             return null;
         }
@@ -377,30 +377,6 @@ public class StudentModel
             return null;
         }
     }
-
-    public static async Task LinkStudentAndCitizenship(Type citizenshipType, int studentId, int citizenshipId)
-    {
-
-        await using var connection = await Utils.GetAndOpenConnectionFactory();
-
-        if (!await IsIdExists(studentId, null) || !await RussianCitizenship.IsIdExists(citizenshipId, null))
-        {
-            return;
-        }
-
-        if (citizenshipType == typeof(RussianCitizenship))
-        {
-            string cmdText = "UPDATE students SET rus_citizenship_id = @p1 WHERE id = @p2";
-            NpgsqlCommand cmd = new NpgsqlCommand(cmdText, connection);
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", citizenshipId));
-            cmd.Parameters.Add(new NpgsqlParameter<int>("p2", studentId));
-            using (cmd)
-            {
-                var nonQuery = await cmd.ExecuteNonQueryAsync();
-            }
-        }
-    }
-
 
     public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
     {

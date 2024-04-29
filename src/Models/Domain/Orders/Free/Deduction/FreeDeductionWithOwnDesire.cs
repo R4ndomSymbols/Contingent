@@ -1,5 +1,6 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
+using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Models.Domain.Orders.OrderData;
 using Utilities;
@@ -8,19 +9,22 @@ namespace StudentTracking.Models.Domain.Orders;
 
 public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
 {
-    private StudentGroupNullifyMoveList _toDeduct;
+    private StudentGroupNullifyMoveList _desiredToDeduct;
 
-    protected FreeDeductionWithOwnDesireOrder() : base() {
-        _toDeduct = StudentGroupNullifyMoveList.Empty;
+    protected FreeDeductionWithOwnDesireOrder() : base()
+    {
+        _desiredToDeduct = StudentGroupNullifyMoveList.Empty;
     }
 
-    protected FreeDeductionWithOwnDesireOrder(int id) : base (id){
-        _toDeduct = StudentGroupNullifyMoveList.Empty;
+    protected FreeDeductionWithOwnDesireOrder(int id) : base(id)
+    {
+        _desiredToDeduct = StudentGroupNullifyMoveList.Empty;
     }
 
-    public static Result<FreeDeductionWithOwnDesireOrder> Create(OrderDTO? dto){
+    public static Result<FreeDeductionWithOwnDesireOrder> Create(OrderDTO? dto)
+    {
         var created = new FreeDeductionWithOwnDesireOrder();
-        var result =  MapBase(dto, created);
+        var result = MapBase(dto, created);
         return result;
     }
 
@@ -30,30 +34,33 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         return MapParticialFromDbBase(reader, order);
     }
 
-    public static async Task<Result<FreeDeductionWithOwnDesireOrder>> Create(int id, StudentGroupNullifyMovesDTO? dto){
+    public static Result<FreeDeductionWithOwnDesireOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
+    {
         var model = new FreeDeductionWithOwnDesireOrder(id);
         var result = MapFromDbBaseForConduction<FreeDeductionWithOwnDesireOrder>(id);
-        if (result.IsFailure){
+        if (result.IsFailure)
+        {
             return result;
         }
-        var moves = await StudentGroupNullifyMoveList.Create(dto);
-        if (moves.IsFailure){
+        var moves = StudentGroupNullifyMoveList.Create(dto);
+        if (moves.IsFailure)
+        {
             return result.RetraceFailure<FreeDeductionWithOwnDesireOrder>();
         }
         var order = result.ResultObject;
-        order._toDeduct = moves.ResultObject;
+        order._desiredToDeduct = moves.ResultObject;
         return result;
-    
+
     }
 
     public override ResultWithoutValue ConductByOrder()
     {
-        var check = base.CheckConductionPossibility(_toDeduct.Select(s => s.Student));
+        var check = base.CheckConductionPossibility(_desiredToDeduct.Select(s => s.Student));
         if (check.IsFailure)
         {
             return check;
         }
-        ConductBase(_toDeduct.ToRecords(this));
+        ConductBase(_desiredToDeduct.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
@@ -70,11 +77,25 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var graduate in _toDeduct){
-            if (!graduate.Student.History.IsStudentEnlisted()){
+        foreach (var graduate in _desiredToDeduct)
+        {
+            if (!graduate.Student.History.IsStudentEnlisted())
+            {
                 return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
             }
         }
         return ResultWithoutValue.Success();
+    }
+
+    public override Result<Order> MapFromCSV(CSVRow row)
+    {
+        var desiredDto = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
+        var desired = StudentGroupNullifyMove.Create(desiredDto);
+        if (desired.IsFailure)
+        {
+            return Result<Order>.Failure(desired.Errors);
+        }
+        _desiredToDeduct.Add(desired.ResultObject);
+        return Result<Order>.Success(this);
     }
 }

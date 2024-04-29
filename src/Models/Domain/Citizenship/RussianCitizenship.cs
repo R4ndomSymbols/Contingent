@@ -1,6 +1,7 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Address;
+using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.Domain.ValueObjects.Students;
 using StudentTracking.SQL;
 using Utilities;
@@ -8,7 +9,7 @@ using Utilities.Validation;
 
 namespace StudentTracking.Models.Domain;
 
-public class RussianCitizenship : ICitizenship
+public class RussianCitizenship : Citizenship
 {
     public static Mapper<RussianCitizenship> GetMapper(Column? source, bool includeAddress, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
     {
@@ -24,9 +25,9 @@ public class RussianCitizenship : ICitizenship
                     _id = (int)reader["id_r_cit"],
                     _surname = NamePart.Create((string)reader["surname"]).ResultObject,
                     _name = NamePart.Create((string)reader["name"]).ResultObject,
-                    _patronymic = reader["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.Create((string)reader["patronymic"]).ResultObject, 
+                    _patronymic = reader["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.Create((string)reader["patronymic"]).ResultObject,
                 };
-                found._legalAddressId = reader["legal_address"].GetType() == typeof(DBNull) ? null : (int)reader["legal_address"]; 
+                found._legalAddressId = reader["legal_address"].GetType() == typeof(DBNull) ? null : (int)reader["legal_address"];
                 found._legalAddress = includeAddress && found._legalAddressId is not null ? AddressModel.GetAddressById((int)reader["legal_address"]).Result : null;
                 return QueryResult<RussianCitizenship>.Found(found);
 
@@ -44,6 +45,45 @@ public class RussianCitizenship : ICitizenship
             mapper.PathTo.AddHead(joinType, source, new Column("id_r_cit", "rus_citizenship"));
         }
         return mapper;
+    }
+    public static ComplexWhereCondition GetFilterClause(RussianCitizenshipInDTO parameters, out SQLParameterCollection paramCollection)
+    {
+        var where = ComplexWhereCondition.Empty;
+        paramCollection = new SQLParameterCollection();
+        if (!string.IsNullOrEmpty(parameters.Name) && !string.IsNullOrWhiteSpace(parameters.Name))
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                new ComplexWhereCondition(new WhereCondition(
+                    new Column("lower", "name", "rus_citizenship", null),
+                    paramCollection.Add(parameters.Name.ToLower() + "%"),
+                    WhereCondition.Relations.Like
+                ))
+            );
+        }
+        if (!string.IsNullOrEmpty(parameters.Surname) && !string.IsNullOrWhiteSpace(parameters.Surname))
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                new ComplexWhereCondition(new WhereCondition(
+                    new Column("lower", "surname", "rus_citizenship", null),
+                    paramCollection.Add(parameters.Surname.ToLower() + "%"),
+                    WhereCondition.Relations.Like
+                ))
+            );
+        }
+        if (!string.IsNullOrEmpty(parameters.Patronymic) && !string.IsNullOrWhiteSpace(parameters.Patronymic))
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                new ComplexWhereCondition(new WhereCondition(
+                    new Column("lower", "patronymic", "rus_citizenship", null),
+                    paramCollection.Add(parameters.Patronymic.ToLower() + "%"),
+                    WhereCondition.Relations.Like
+                ))
+            );
+        }
+        return where;
     }
 
     // добавить ограничения уникальности некоторых параметров
@@ -121,7 +161,7 @@ public class RussianCitizenship : ICitizenship
         }
     }
 
-    public string GetName()
+    public override string GetName()
     {
         return (Surname + " " + Name + " " + Patronymic).TrimEnd();
     }
