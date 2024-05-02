@@ -1,3 +1,4 @@
+using StudentTracking.Models.Domain.Students;
 using StudentTracking.Models.Domain.Orders.Infrastructure;
 using Utilities;
 
@@ -6,7 +7,8 @@ namespace StudentTracking.Models.Domain.Orders;
 
 public abstract class FreeContingentOrder : Order
 {
-    public override string OrderOrgId {
+    public override string OrderOrgId
+    {
         get => _orderNumber + "-" + "к";
     }
 
@@ -29,8 +31,10 @@ public abstract class FreeContingentOrder : Order
         {
             return baseCheck;
         }
-        foreach (var std in toCheck){
-            if (std.PaidAgreement.IsConcluded()){
+        foreach (var std in toCheck)
+        {
+            if (std.PaidAgreement.IsConcluded())
+            {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
                         string.Format("Студент {0} имеет договор о платном обучении, это недопустимо для данного приказа", std.GetName())
@@ -47,7 +51,7 @@ public abstract class FreeContingentOrder : Order
     }
     protected abstract ResultWithoutValue CheckSpecificConductionPossibility();
 
-    public override void Save(ObservableTransaction? scope) 
+    public override void Save(ObservableTransaction? scope)
     {
         base.Save(scope);
         SequentialGuardian.Insert(this);

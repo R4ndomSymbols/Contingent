@@ -1,12 +1,14 @@
-namespace StudentTracking.Models.Domain.Misc;
+namespace StudentTracking.Models.Domain.Students;
 
-public static class Genders {
+public static class Genders
+{
 
-    public enum GenderCodes {
+    public enum GenderCodes
+    {
         Undefined = 0,
         Male = 1,
-        Female = 2 
-    }  
+        Female = 2
+    }
 
     public static readonly Dictionary<GenderCodes, string> Names = new Dictionary<GenderCodes, string>{
         {GenderCodes.Undefined, "Не указано"},
@@ -20,11 +22,14 @@ public static class Genders {
         {"м", GenderCodes.Male},
     };
 
-    public static GenderCodes ImportGender(string? gender){
-        if (gender is null){
+    public static GenderCodes ImportGender(string? gender)
+    {
+        if (gender is null)
+        {
             return GenderCodes.Undefined;
         }
-        if (ImportDictionary.TryGetValue(gender.ToLower(), out var result)){
+        if (ImportDictionary.TryGetValue(gender.ToLower(), out var result))
+        {
             return result;
         }
         return GenderCodes.Undefined;

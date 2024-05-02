@@ -1,7 +1,7 @@
 using System.Collections;
 using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Import;
 using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Students;
 using StudentTracking.SQL;
 using Utilities;
 

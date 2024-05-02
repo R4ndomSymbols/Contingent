@@ -2,12 +2,12 @@ using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Address;
 using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.Domain.Citizenship;
 using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
 
-namespace StudentTracking.Models.Domain;
+namespace StudentTracking.Models.Domain.Students;
 
 public class StudentModel
 {

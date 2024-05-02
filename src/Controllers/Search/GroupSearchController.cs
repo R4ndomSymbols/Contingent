@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models;
+using StudentTracking.Models.Domain.Groups;
 using StudentTracking.SQL;
 
 namespace StudentTracking.Controllers.Search;

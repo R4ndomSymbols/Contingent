@@ -1,13 +1,11 @@
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Address;
-using StudentTracking.Models.Domain.Misc;
-using StudentTracking.Models.Domain.ValueObjects.Students;
 using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
 
-namespace StudentTracking.Models.Domain;
+namespace StudentTracking.Models.Domain.Citizenship;
 
 public class RussianCitizenship : Citizenship
 {

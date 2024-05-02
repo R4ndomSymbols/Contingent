@@ -1,107 +1,107 @@
-@using StudentTracking.Models.Domain.Misc;
+@using StudentTracking.Models.Domain.Groups;
 @{
     ViewData["Title"] = "Группа";
 }
 <div class="container">
-        <div class="form-check mb-3">
-            <input type="checkbox" id="AutogenerateName" class="form-check-input" />
-            <label for="AutogenerateName" class="form-check-label">Автоматическая генерация</label>
+    <div class="form-check mb-3">
+        <input type="checkbox" id="AutogenerateName" class="form-check-input" />
+        <label for="AutogenerateName" class="form-check-label">Автоматическая генерация</label>
+    </div>
+    <div id="auto_gen" style="display: none;">
+        <div class="d-flex flex-row">
+            <h5 class="me-4">Название группы</h5>
+            <h5 id="GroupName">Нет</h5>
         </div>
-        <div id="auto_gen" style="display: none;">
-            <div class="d-flex flex-row">
-                <h5 class="me-4">Название группы</h5>
-                <h5 id="GroupName">Нет</h5>
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column flex-grow-1 me-3">
+                <h5 class="mb-2">Специальность</h5>
+                <input class="data_changer edu_program_input" />
+                <small class="accent_color mt-1 EducationProgram"></small>
             </div>
-            <div class="d-flex flex-row">
-                <div class="d-flex flex-column flex-grow-1 me-3">
-                    <h5 class="mb-2">Специальность</h5>
-                    <input class="data_changer edu_program_input" />
-                    <small class="accent_color mt-1 EducationProgram"></small>
-                </div>
-                <div class="d-flex flex-column col-2">
-                    <h5 class="mb-2">Год создания</h5>
-                    <input class="data_changer CreationYear" />
-                    <small class="accent_color mt-1 CreationYear_err"></small>
-                </div>
-            </div>
-            <div class="d-flex flex-row">
-                <div class="d-flex flex-column flex-grow-1 me-3">
-                    <h5 class="mb-2">Тип финансирования</h5>
-                    <select class="SponsorshipType data_changer">
-                        @foreach (var i in GroupSponsorship.ListOfSponsorships)
-                        {
-                            int code = (int)i.TypeOfSponsorship;
-                            <option value="@code">@i.RussianName </option>
-                        }
-                    </select>
-                </div>
-                <div class="d-flex flex-column flex-grow-1">
-                    <h5 class="mb-2">Форма обучения</h5>
-                    <select class="EducationalForm data_changer">
-                        @foreach (var i in GroupEducationFormat.ListOfFormats)
-                        {
-                            int code = (int)i.FormatType;
-                            <option value="@code">@i.RussianName </option>
-                        }
-                    </select>
-                </div>
+            <div class="d-flex flex-column col-2">
+                <h5 class="mb-2">Год создания</h5>
+                <input class="data_changer CreationYear" />
+                <small class="accent_color mt-1 CreationYear_err"></small>
             </div>
         </div>
-
-        <div id="no_gen" style="display: none;">
-            <div class="d-flex flex-row">
-                <div class="d-flex flex-column me-3 flex-grow-1">
-                    <h5 class="mb-2">Название группы</h5>
-                    <input id="GroupNameInput" type="text" />
-                    <small class="accent_color mt-1 GroupName_err"></small>
-                </div>
-                <div class="d-flex flex-column flex-grow-1">
-                    <h5 class="mb-2">Группа-предшественник</h5>
-                    <input type="text" id="ancestor_group"/>
-                    <small class="accent_color mt-1 AncestorGroup_err"></small>
-                </div>
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column flex-grow-1 me-3">
+                <h5 class="mb-2">Тип финансирования</h5>
+                <select class="SponsorshipType data_changer">
+                    @foreach (var i in GroupSponsorship.ListOfSponsorships)
+                    {
+                        int code = (int)i.TypeOfSponsorship;
+                        <option value="@code">@i.RussianName </option>
+                    }
+                </select>
             </div>
-            <div class="d-flex flex-row">
-                <div class="d-flex flex-column me-3 flex-grow-1">
-                    <h5 class="mb-2">Специальность</h5>
-                    <input class="data_changer edu_program_input"/>
-                    <small class="accent_color mt-1 EducationProgram_err"></small>
-                </div>
-                <div class="d-flex flex-column col-2">
-                    <h5 class="mb-2">Год создания</h5>
-                    <input class="data_changer CreationYear"/>
-                    <small class="accent_color mt-1 CreationYear_err"></small>
-                </div>
+            <div class="d-flex flex-column flex-grow-1">
+                <h5 class="mb-2">Форма обучения</h5>
+                <select class="EducationalForm data_changer">
+                    @foreach (var i in GroupEducationFormat.ListOfFormats)
+                    {
+                        int code = (int)i.FormatType;
+                        <option value="@code">@i.RussianName </option>
+                    }
+                </select>
             </div>
-            <div class="d-flex flex-row">
-                <div class="d-flex flex-column me-3 flex-grow-1">
-                    <h5 class="mb-2">Тип финансирования</h5>
-                    <select class="SponsorshipType data_changer">
-                        @foreach (var i in GroupSponsorship.ListOfSponsorships)
-                        {
-                            int code = (int)i.TypeOfSponsorship;
-                            <option value="@code">@i.RussianName </option>
-                        }
-                    </select>
-                </div>
-                <div class="d-flex flex-column flex-grow-1">
-                    <h5 class="mb-2">Форма обучения</h5>
-                    <select class="EducationalForm data_changer">
-                        @foreach (var i in GroupEducationFormat.ListOfFormats)
-                        {
-                            int code = (int)i.FormatType;
-                            <option value="@code">@i.RussianName </option>
-                        }
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="d-flex flex-row mt-2">
-            <button class="btn btn-primary" id="save">
-                Сохранить
-            </button>
         </div>
     </div>
+
+    <div id="no_gen" style="display: none;">
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column me-3 flex-grow-1">
+                <h5 class="mb-2">Название группы</h5>
+                <input id="GroupNameInput" type="text" />
+                <small class="accent_color mt-1 GroupName_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-grow-1">
+                <h5 class="mb-2">Группа-предшественник</h5>
+                <input type="text" id="ancestor_group" />
+                <small class="accent_color mt-1 AncestorGroup_err"></small>
+            </div>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column me-3 flex-grow-1">
+                <h5 class="mb-2">Специальность</h5>
+                <input class="data_changer edu_program_input" />
+                <small class="accent_color mt-1 EducationProgram_err"></small>
+            </div>
+            <div class="d-flex flex-column col-2">
+                <h5 class="mb-2">Год создания</h5>
+                <input class="data_changer CreationYear" />
+                <small class="accent_color mt-1 CreationYear_err"></small>
+            </div>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column me-3 flex-grow-1">
+                <h5 class="mb-2">Тип финансирования</h5>
+                <select class="SponsorshipType data_changer">
+                    @foreach (var i in GroupSponsorship.ListOfSponsorships)
+                    {
+                        int code = (int)i.TypeOfSponsorship;
+                        <option value="@code">@i.RussianName </option>
+                    }
+                </select>
+            </div>
+            <div class="d-flex flex-column flex-grow-1">
+                <h5 class="mb-2">Форма обучения</h5>
+                <select class="EducationalForm data_changer">
+                    @foreach (var i in GroupEducationFormat.ListOfFormats)
+                    {
+                        int code = (int)i.FormatType;
+                        <option value="@code">@i.RussianName </option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex flex-row mt-2">
+        <button class="btn btn-primary" id="save">
+            Сохранить
+        </button>
+    </div>
+</div>
 </div>
 <script src="~/js/site.js"></script>
 <script src="~/js/modify/groups.js"></script>

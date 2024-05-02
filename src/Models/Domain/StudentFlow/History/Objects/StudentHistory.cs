@@ -1,10 +1,8 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using Microsoft.AspNetCore.Components.RenderTree;
-using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using StudentTracking.Models.Domain.Flow.History;
 using StudentTracking.Models.Domain.Orders;
+using StudentTracking.Models.Domain.Students;
+using StudentTracking.Models.Domain.Groups;
 using StudentTracking.SQL;
 using Utilities;
 
@@ -29,33 +27,37 @@ public class StudentHistory
         return result;
     }
 
-    public Order? GetNextGroupChangingOrder(GroupModel groupFrom){
+    public Order? GetNextGroupChangingOrder(GroupModel groupFrom)
+    {
         // история отсортирована
         // сначала старые записи, потом новые
         // состояния 
         // группа не найдена - 0
         // группа найдена - 1
         int state = 0;
-        foreach (var rec in _history){
-            switch (state) 
+        foreach (var rec in _history)
+        {
+            switch (state)
             {
                 case 0:
-                if (rec.Record.GroupToId == groupFrom.Id){
-                    state = 1;
-                }
-                break;
-                case 1:
-                {   
-                    // поиск измнения группы
-                    if (rec.Record.GroupToId != groupFrom.Id){
-                        return rec.ByOrder;
+                    if (rec.Record.GroupToId == groupFrom.Id)
+                    {
+                        state = 1;
                     }
-                }
-                break;
+                    break;
+                case 1:
+                    {
+                        // поиск измнения группы
+                        if (rec.Record.GroupToId != groupFrom.Id)
+                        {
+                            return rec.ByOrder;
+                        }
+                    }
+                    break;
             }
         }
         return null;
-    } 
+    }
 
     public StudentFlowRecord? GetByOrder(Order orderBy)
     {
@@ -85,31 +87,34 @@ public class StudentHistory
 
     public StudentFlowRecord? GetLastRecord()
     {
-        if (!_history.Any()){
+        if (!_history.Any())
+        {
             return null;
         }
         return _history.Last();
 
     }
 
-    public void RevertHistory(Order startingPoint){
+    public void RevertHistory(Order startingPoint)
+    {
         List<int> _toRemove = new();
         _history.RemoveOlderOrEqualThan(startingPoint, (rec) => _toRemove.Add((int)rec.Record.Id));
-        FlowHistory.DeleteRecords(_toRemove);        
+        FlowHistory.DeleteRecords(_toRemove);
     }
 
     // получает всю историю студента в приказах
     private static IEnumerable<StudentFlowRecord> GetHistory(StudentModel byStudent)
     {
         var found = FlowHistory.GetRecordsByFilter(
-            new QueryLimits(0,50),
-            new HistoryExtractSettings{
+            new QueryLimits(0, 50),
+            new HistoryExtractSettings
+            {
                 ExtractByStudent = byStudent,
                 ExtractGroups = true,
                 ExtractOrders = true,
                 IncludeNotRegisteredStudents = false
             }
-        ).ToList(); 
+        ).ToList();
         return found;
     }
 

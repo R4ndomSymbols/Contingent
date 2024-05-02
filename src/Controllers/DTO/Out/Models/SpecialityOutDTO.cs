@@ -1,27 +1,28 @@
-using StudentTracking.Models;
+using StudentTracking.Models.Domain.Specialities;
 
 namespace StudentTracking.Controllers.DTO.Out;
-public class SpecialityOutDTO {
-    
-    public int? Id {get; set;}
-    public string FgosCode {get; set;}
-    public string FgosName {get; set; }
-    public string Qualification {get; set; }
-    public string FgosPrefix {get; set; }
-    public string QualificationPostfix {get; set; }
-    public int CourseCount {get; set; }
-    public int EducationalLevelIn {get; set; }
-    public int EducationalLevelOut {get; set; }
-    public string EducationalLevelInName {get; set; }
-    public string EducationalLevelOutName {get; set; }
-    public int TeachingDepth {get; set;}
-    public string TeachingDepthName {get; set;}
-    public string FullName {get; set;}
+public class SpecialityOutDTO
+{
+
+    public int? Id { get; set; }
+    public string FgosCode { get; set; }
+    public string FgosName { get; set; }
+    public string Qualification { get; set; }
+    public string FgosPrefix { get; set; }
+    public string QualificationPostfix { get; set; }
+    public int CourseCount { get; set; }
+    public int EducationalLevelIn { get; set; }
+    public int EducationalLevelOut { get; set; }
+    public string EducationalLevelInName { get; set; }
+    public string EducationalLevelOutName { get; set; }
+    public int TeachingDepth { get; set; }
+    public string TeachingDepthName { get; set; }
+    public string FullName { get; set; }
     public int ProgramType { get; set; }
-    public string ProgramTypeName {get; set;}
+    public string ProgramTypeName { get; set; }
 
     public SpecialityOutDTO(SpecialityModel model)
-    {   
+    {
         Id = model.Id;
         FgosCode = model.FgosCode;
         FgosName = model.FgosName;
@@ -39,8 +40,9 @@ public class SpecialityOutDTO {
         TeachingDepthName = model.TeachingLevel.RussianName;
     }
 
-    public SpecialityOutDTO(){
-        
+    public SpecialityOutDTO()
+    {
+
     }
 
 }

@@ -1,5 +1,4 @@
 @using StudentTracking.Models.Domain;
-@using StudentTracking.Models.Domain.Misc;
 @using StudentTracking.Models.Domain.Orders.OrderData;
 @using Utilities;
 @using StudentTracking.Models.Domain.Flow.History;
@@ -35,7 +34,7 @@
         <p class="text-center">
             @{
                 var found = OrderHistory.GetAbsoluteLastOrder();
-                var text = found is null ? " Не найден " : " " + Utils.FormatDateTime(found.SpecifiedDate) + " "; 
+                var text = found is null ? " Не найден " : " " + Utils.FormatDateTime(found.SpecifiedDate) + " ";
             }
             Последний приказ зарегистрирован [@text]
         </p>

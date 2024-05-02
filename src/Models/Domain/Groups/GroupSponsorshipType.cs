@@ -1,13 +1,15 @@
-namespace StudentTracking.Models.Domain.Misc;
+namespace StudentTracking.Models.Domain.Groups;
 
-public class GroupSponsorship {
-    
-    public string RussianName {get; private init;}
+public class GroupSponsorship
+{
 
-    public string GroupNamePostfix {get; private init;}
-    public GroupSponsorshipTypes TypeOfSponsorship {get; private init;}
+    public string RussianName { get; private init; }
 
-    private GroupSponsorship(){
+    public string GroupNamePostfix { get; private init; }
+    public GroupSponsorshipTypes TypeOfSponsorship { get; private init; }
+
+    private GroupSponsorship()
+    {
 
     }
 
@@ -39,32 +41,41 @@ public class GroupSponsorship {
         },
     };
 
-    public bool IsFree(){
-        return 
+    public bool IsFree()
+    {
+        return
         TypeOfSponsorship == GroupSponsorshipTypes.FederalGovernmentSponsorship ||
-        TypeOfSponsorship == GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship || 
+        TypeOfSponsorship == GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship ||
         TypeOfSponsorship == GroupSponsorshipTypes.LocalGovenmentSponsorship;
     }
-    public bool IsPaid(){
+    public bool IsPaid()
+    {
         return TypeOfSponsorship == GroupSponsorshipTypes.IndividualSponsorship;
     }
 
-    public static GroupSponsorship GetByTypeCode(int code) {
+    public static GroupSponsorship GetByTypeCode(int code)
+    {
         return ListOfSponsorships.Where(x => (int)x.TypeOfSponsorship == code).First();
-    } 
-    public static bool TryGetByTypeCode(int code, out GroupSponsorship? type) {
-        type = ListOfSponsorships.FirstOrDefault(x => (int)x.TypeOfSponsorship == code, null); 
+    }
+    public static bool TryGetByTypeCode(int code, out GroupSponsorship? type)
+    {
+        type = ListOfSponsorships.FirstOrDefault(x => (int)x.TypeOfSponsorship == code, null);
         return type is not null;
-    } 
+    }
+    public bool IsDefined()
+    {
+        return TypeOfSponsorship != GroupSponsorshipTypes.NotMentioned;
+    }
 }
 
 
-public enum GroupSponsorshipTypes {
-        NotMentioned = -1,
-        FederalGovernmentSponsorship = 1,
-        FederalSubjectGovernmentSponsorship = 2,
-        LocalGovenmentSponsorship = 3,
-        IndividualSponsorship = 4 
-    }
+public enum GroupSponsorshipTypes
+{
+    NotMentioned = -1,
+    FederalGovernmentSponsorship = 1,
+    FederalSubjectGovernmentSponsorship = 2,
+    LocalGovenmentSponsorship = 3,
+    IndividualSponsorship = 4
+}
 
 

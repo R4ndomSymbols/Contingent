@@ -2,7 +2,9 @@ using Npgsql;
 using StudentTracking.Models.Domain.Orders;
 using StudentTracking.SQL;
 using Utilities;
-using static StudentTracking.Models.Domain.Flow.FlowHistory;
+using StudentTracking.Models.Domain.Students;
+using StudentTracking.Models.Domain.Groups;
+
 
 namespace StudentTracking.Models.Domain.Flow;
 
@@ -64,7 +66,7 @@ public static class FlowHistory
         .AddJoins(joins)
         .AddMapper(mapper)
         .AddOrderByStatement(orderBy)
-        .AddLimits(new QueryLimits(0,1))
+        .AddLimits(new QueryLimits(0, 1))
         .AddWhereStatement(where).Finish();
         return query.ResultObject;
     }
@@ -262,7 +264,7 @@ public static class FlowHistory
 
         var query =
         // последнее состояние исключает неуникальность студентов
-        (queryParameters.ExtractStudentUnique?
+        (queryParameters.ExtractStudentUnique ?
         SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("id", "students"), alias)
         : SelectQuery<StudentFlowRecord>.Init("student_flow", alias))
         .AddMapper(historyMapper)
@@ -290,8 +292,10 @@ public static class FlowHistory
         return GetHistoryAggregate(limits: limits, queryParameters: settings).Result;
     }
 
-    public static void DeleteRecords(IEnumerable<int> ids){
-        if (!ids.Any()){
+    public static void DeleteRecords(IEnumerable<int> ids)
+    {
+        if (!ids.Any())
+        {
             return;
         }
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
@@ -302,19 +306,17 @@ public static class FlowHistory
         p.Value = ids.ToArray();
         p.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
         cmd.Parameters.Add(p);
-        using (cmd){
+        using (cmd)
+        {
             cmd.ExecuteNonQuery();
         }
     }
+}
 
-
-    public enum OrderRelationMode
-    {
-        OnlyExcluded,
-        OnlyIncluded
-    }
-
-
+public enum OrderRelationMode
+{
+    OnlyExcluded,
+    OnlyIncluded
 }
 
 public class HistoryExtractSettings
@@ -347,7 +349,8 @@ public class HistoryExtractSettings
                 _extractStudentUnique = false;
                 _extractLastState = value;
             }
-            else{
+            else
+            {
                 _extractLastState = false;
             }
         }
@@ -364,28 +367,37 @@ public class HistoryExtractSettings
 
     public (bool actual, bool legal) ExtractAddress { get; set; }
 
-    public bool ExtractOrders { 
-        get => _extractOrders; 
-        set {
-            if (value){
+    public bool ExtractOrders
+    {
+        get => _extractOrders;
+        set
+        {
+            if (value)
+            {
                 ExtractByOrder = null;
             }
             _extractOrders = value;
-        } 
+        }
     }
-    public bool ExtractGroups { 
-        get => _extractGroups; 
-        set {
-            if (value){
+    public bool ExtractGroups
+    {
+        get => _extractGroups;
+        set
+        {
+            if (value)
+            {
                 ExtractByGroup = null;
             }
             _extractGroups = value;
         }
     }
-    public bool ExtractStudents { 
-        get => _extractStudent; 
-        set {
-            if (value){
+    public bool ExtractStudents
+    {
+        get => _extractStudent;
+        set
+        {
+            if (value)
+            {
                 ExtractByStudent = null;
             }
             _extractStudent = value;
@@ -396,8 +408,10 @@ public class HistoryExtractSettings
     public StudentModel? ExtractByStudent
     {
         get => _extractByStudent;
-        set {
-            if (value is not null){
+        set
+        {
+            if (value is not null)
+            {
                 ExtractStudents = false;
             }
             _extractByStudent = value;
@@ -417,19 +431,23 @@ public class HistoryExtractSettings
             _extractByOrder = value;
         }
     }
-    public GroupModel? ExtractByGroup 
-    { 
-        get => _extractByGroup; 
-        set {
-            if (value is not null){
+    public GroupModel? ExtractByGroup
+    {
+        get => _extractByGroup;
+        set
+        {
+            if (value is not null)
+            {
                 ExtractGroups = false;
             }
             _extractByGroup = value;
         }
     }
-    public bool OverallHistorical {
+    public bool OverallHistorical
+    {
         get => _overallHistorical;
-        set {
+        set
+        {
             if (value)
             {
                 ExtractStudentUnique = false;

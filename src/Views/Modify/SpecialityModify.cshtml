@@ -1,5 +1,4 @@
-@using StudentTracking.Models.Domain;
-@using StudentTracking.Models.Domain.Misc;
+@using StudentTracking.Models.Domain.Specialities;
 @model StudentTracking.Controllers.DTO.Out.SpecialityOutDTO;
 
 @{
@@ -144,7 +143,8 @@
                     }
                 </select>
             }
-            else {
+            else
+            {
                 <p>@Model.EducationalLevelOutName</p>
             }
         </div>
@@ -189,7 +189,8 @@
     </div>
 
     <div class="d-flex flex-row my-1">
-        @if(Model.Id is not null){
+        @if (Model.Id is not null)
+        {
             <div id="id_section" spec_id="@Model.Id" />
         }
         <button id="save" class="my-1">
