@@ -1,12 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Orders;
-using Utilities.Validation;
+using StudentTracking.Models.Domain.Students;
+using StudentTracking.Models.Domain.Groups;
 using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models;
 using System.Text.Json;
-using System.Security.Cryptography.X509Certificates;
 namespace StudentTracking.Controllers;
 public class StudentFlowController : Controller
 {
@@ -45,22 +42,24 @@ public class StudentFlowController : Controller
             var jsonString = await stream.ReadToEndAsync();
             //try
             //{
-                var result = await Order.GetOrderForConduction(orderId, jsonString);
-                if (result.IsSuccess)
+            var result = await Order.GetOrderForConduction(orderId, jsonString);
+            if (result.IsSuccess)
+            {
+                var conductionStatus = result.ResultObject.ConductByOrder();
+                if (conductionStatus.IsSuccess)
                 {
-                    var conductionStatus = result.ResultObject.ConductByOrder();
-                    if (conductionStatus.IsSuccess){
-                        return Ok();
-                    }
-                    else{
-                        return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(conductionStatus.Errors)));
-                    } 
-                    
+                    return Ok();
                 }
                 else
                 {
-                    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(result.Errors)));
+                    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(conductionStatus.Errors)));
                 }
+
+            }
+            else
+            {
+                return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(result.Errors)));
+            }
             //}
             //catch (Exception e){
             //    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("GENERAL","Произошла непредвиденная ошибка"))));

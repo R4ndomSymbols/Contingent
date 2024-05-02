@@ -1,6 +1,4 @@
-using System.Text.Json.Serialization;
-using StudentTracking.Models.Domain;
-using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.Domain.Students;
 using Utilities;
 
 namespace StudentTracking.Controllers.DTO.Out;
@@ -20,7 +18,7 @@ public sealed class StudentFullDTO
     public int? GiaDemoExamMark { get; private init; }
     public int PaidAgreementType { get; private init; }
     public RussianCitizenshipDTO Citizenship { get; private init; }
-    public AddressOutDTO ActualAddress {get; private init; }
+    public AddressOutDTO ActualAddress { get; private init; }
     public StudentFullDTO(StudentModel model)
     {
         if (model is null)

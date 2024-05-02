@@ -1,15 +1,12 @@
-using System.Runtime.Serialization;
-using Microsoft.Extensions.Primitives;
 using Npgsql;
 using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain;
-using StudentTracking.Models.Domain.Misc;
 using StudentTracking.Models.JSON;
 using StudentTracking.SQL;
 using Utilities;
 using Utilities.Validation;
+using StudentTracking.Models.Domain.Students;
 
-namespace StudentTracking.Models;
+namespace StudentTracking.Models.Domain.Specialities;
 
 public class SpecialityModel
 {
@@ -172,11 +169,7 @@ public class SpecialityModel
                 model._groupNameFgosPrefix = dto.FgosPrefix;
             }
 
-            if (dto.QualificationPostfix == null)
-            {
-                model._groupNameQualificationPostfix = null;
-            }
-            else if (errors.IsValidRule(
+            if (errors.IsValidRule(
                 ValidatorCollection.CheckStringPattern(dto.QualificationPostfix, ValidatorCollection.OnlyLetters) || dto.QualificationPostfix == string.Empty,
                 message: "Постфикс квалификации указан неверно",
                 propName: nameof(QualificationPostfix)
@@ -194,21 +187,22 @@ public class SpecialityModel
             }
 
             if (errors.IsValidRule(
-                LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelIn),
+                LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelIn, out LevelOfEducation? typeIn) &&
+                typeIn!.IsDefined(),
                 message: "Уровень образования (входной) указан неверно",
                 propName: nameof(EducationalLevelIn)
             ))
             {
-                model._levelIn = LevelOfEducation.GetByLevelCode(dto.EducationalLevelIn);
+                model._levelIn = typeIn!;
             }
 
             if (errors.IsValidRule(
-                LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelOut),
+                LevelOfEducation.TryGetByLevelCode(dto.EducationalLevelOut, out LevelOfEducation? typeOut) && typeOut!.IsDefined(),
                 message: "Уровень образования (выходной) указан неверно",
                 propName: nameof(EducationalLevelOut)
             ))
             {
-                model._levelOut = LevelOfEducation.GetByLevelCode(dto.EducationalLevelOut);
+                model._levelOut = typeOut!;
             }
         }
 
@@ -224,7 +218,7 @@ public class SpecialityModel
         if (
             errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(dto.FgosName, ValidatorCollection.OnlyText),
-            message: "Номер ФГОС не соответствует формату или не указан",
+            message: "Название ФГОС не соответствует формату или не указан",
             propName: nameof(FgosName)
         ))
         {
@@ -242,20 +236,20 @@ public class SpecialityModel
         }
 
         if (errors.IsValidRule(
-            TeachingDepth.TryGetByTypeCode(dto.TeachingDepth),
+            TeachingDepth.TryGetByTypeCode(dto.TeachingDepthCode),
             message: "Уровень программы подготовки указан неверно",
             propName: nameof(TeachingLevel)
         ))
         {
-            model._teachingDepth = TeachingDepth.GetByTypeCode(dto.TeachingDepth);
+            model._teachingDepth = TeachingDepth.GetByTypeCode(dto.TeachingDepthCode);
         }
         if (errors.IsValidRule(
-            TrainingProgram.TryGetByType(dto.ProgramType, out TrainingProgram result),
+            TrainingProgram.TryGetByType(dto.ProgramType, out TrainingProgram? result),
             message: "Уровень подготовки указан неверно",
             propName: nameof(ProgramType)
         ))
         {
-            model._trainingProgram = result;
+            model._trainingProgram = result!;
         }
         if (errors.Any())
         {
@@ -286,17 +280,16 @@ public class SpecialityModel
 
     }
 
-    public async Task Save(ObservableTransaction? scope = null)
+    public void Save(ObservableTransaction? scope = null)
     {
-
-        if (_id is not null)
+        if (_id is not null || _id == Utils.INVALID_ID)
         {
-            await Update(scope);
+            Update(scope);
             return;
         }
 
 
-        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
+        NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
         string cmdText = "INSERT INTO public.educational_program( " +
         " fgos_code, fgos_name, qualification, course_count, " +
         " speciality_out_education_level, speciality_in_education_level, knowledge_depth, group_prefix, group_postfix, training_program_type) " +
@@ -321,19 +314,16 @@ public class SpecialityModel
         cmd.Parameters.Add(new NpgsqlParameter<string?>("p9", _groupNameQualificationPostfix));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p10", (int)_trainingProgram.Type));
 
-        await using (cmd)
+        using (cmd)
         {
-            await using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
+            using var reader = cmd.ExecuteReader();
+            reader.Read();
             _id = (int)reader["id"];
         }
-        if (conn != null)
-        {
-            await conn.DisposeAsync();
-        }
+        conn?.Dispose();
     }
 
-    public async Task Update(ObservableTransaction? scope = null)
+    public void Update(ObservableTransaction? scope = null)
     {
         string updateText =
         // изменить id, количество курсов, выходной и необходимый уровень образования нельзя
@@ -341,7 +331,7 @@ public class SpecialityModel
         "SET fgos_code = @p1, fgos_name = @p2, qualification = @p3, knowledge_depth = @p4, training_program_type = @p5 " +
         "WHERE id = @p6";
         NpgsqlCommand cmd;
-        using var connection = scope is null ? await Utils.GetAndOpenConnectionFactory() : null;
+        using var connection = scope is null ? Utils.GetAndOpenConnectionFactory().Result : null;
         if (scope is null)
         {
             cmd = new NpgsqlCommand(updateText, connection);

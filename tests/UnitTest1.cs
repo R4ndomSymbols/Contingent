@@ -24,8 +24,7 @@ public class Tests
             };
         }
     }
-    [Fact]
-    public void GenerateTable1()
+    private void GenerateTable1()
     {
         var csv = new CSVGenerator().GenerateOrders(100);
         Console.WriteLine(csv);
@@ -36,6 +35,21 @@ public class Tests
             foreach (var order in result.ResultObject)
             {
                 order.ImportedOrder!.Save();
+            }
+        }
+    }
+    [Fact]
+    public void GenerateTable2()
+    {
+        var csv = new CSVGenerator().GetSpecialities();
+        Console.WriteLine(csv);
+        var result = ImportCSV<SpecialityImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+        Console.WriteLine(result);
+        if (result.IsSuccess)
+        {
+            foreach (var speciality in result.ResultObject)
+            {
+                speciality.Speciality!.Save();
             }
         }
     }

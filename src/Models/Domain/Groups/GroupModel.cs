@@ -1,14 +1,12 @@
-using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.Domain.Specialities;
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
 using StudentTracking.SQL;
 using StudentTracking.Controllers.DTO.In;
-using System.Data.SqlTypes;
-using Microsoft.AspNetCore.Http.Connections;
 using StudentTracking.Models.Domain.Flow.History;
 
-namespace StudentTracking.Models;
+namespace StudentTracking.Models.Domain.Groups;
 
 // при записи в базу создается не группа, а целый набор групп до выпускного курса
 // пользователь может создавать только группы начального курса
@@ -152,7 +150,7 @@ public class GroupModel
             model._creationYear = dto.CreationYear;
         }
         if (errors.IsValidRule(
-            GroupEducationFormat.TryGetByTypeCode(dto.EduFormatCode, out GroupEducationFormat? type),
+            GroupEducationFormat.TryGetByTypeCode(dto.EduFormatCode, out GroupEducationFormat? type) && type!.IsDefined(),
             message: "Тип обучения указан неверно",
             propName: nameof(FormatOfEducation)
         ))
@@ -160,7 +158,7 @@ public class GroupModel
             model._formatOfEducation = type!;
         }
         if (errors.IsValidRule(
-            GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship),
+            GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship) && sponsorship!.IsDefined(),
             message: "Тип финансирования указан неверно",
             propName: nameof(CreationYear)
         ))
@@ -272,7 +270,7 @@ public class GroupModel
     }
     // метод сохраняет не только созданную группу, но и создает набор групп до выпускного курса
     // вызывается только в случае, если группа имеет первый курс, и ее имя генерируемое
-    public Result<IReadOnlyCollection<GroupModel>> SaveGroupSequence(ObservableTransaction? scope = null)
+    private Result<IReadOnlyCollection<GroupModel>> SaveGroupSequence(ObservableTransaction? scope = null)
     {
         if (_courseOn != 1 || !_nameGenerated)
         {
@@ -282,7 +280,7 @@ public class GroupModel
         var currentGroup = this;
         for (int i = 1; i <= currentGroup._educationProgram.CourseCount; i++)
         {
-            if (currentGroup.Save(scope).IsSuccess)
+            if (currentGroup.SaveBase(scope).IsSuccess)
             {
                 saved.Add(currentGroup);
             }
@@ -291,8 +289,21 @@ public class GroupModel
         }
         return Result<IReadOnlyCollection<GroupModel>>.Success(saved);
     }
+    public ResultWithoutValue Save(ObservableTransaction? scope = null)
+    {
+        if (_courseOn == 1 && _nameGenerated)
+        {
+            var result = SaveGroupSequence(scope);
+            if (result.IsFailure)
+            {
+                return ResultWithoutValue.Failure(result.Errors);
+            }
+            return ResultWithoutValue.Success();
+        }
+        return SaveBase(scope);
+    }
 
-    public ResultWithoutValue Save(ObservableTransaction? scope)
+    private ResultWithoutValue SaveBase(ObservableTransaction? scope)
     {
         if (GetGroupById(_id) is not null || _educationProgram.Id is null)
         {
@@ -462,7 +473,7 @@ public class GroupModel
             _groupSpecialTeachingCondition = _groupSpecialTeachingCondition,
             _groupSponsorship = _groupSponsorship,
             _historySequenceId = _historySequenceId,
-            _id = _id,
+            _id = Utils.INVALID_ID,
             _nameGenerated = _nameGenerated,
             _sequenceLetter = _sequenceLetter
         };

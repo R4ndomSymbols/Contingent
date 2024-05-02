@@ -1,6 +1,9 @@
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.SQL;
 using Utilities;
+using StudentTracking.Models.Domain.Students;
+using StudentTracking.Models.Domain.Groups;
+using StudentTracking.Models.Domain.Citizenship;
 
 namespace StudentTracking.Models.Domain.Orders;
 public abstract class StudentStatement

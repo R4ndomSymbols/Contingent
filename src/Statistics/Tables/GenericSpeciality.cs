@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Authorization.Infrastructure;
-using StudentTracking.Models.Domain;
 using StudentTracking.Models.Domain.Flow;
 using StudentTracking.Statistics.Tables.Headers;
 
@@ -7,10 +5,10 @@ namespace StudentTracking.Statistics.Tables;
 
 public class GenericSpeciality : ITable
 {
-    private StatisticTable<StudentFlowRecord> _model; 
+    private StatisticTable<StudentFlowRecord> _model;
     public string DisplayedName => _model.TableName;
     public string Html => _model.ToHtmlTable();
-   
+
 
     /*
 
@@ -19,13 +17,15 @@ public class GenericSpeciality : ITable
     */
 
 
-    public GenericSpeciality(){
+    public GenericSpeciality()
+    {
         var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
         var rowHeaderColHeader = new ColumnHeaderCell<StudentFlowRecord>(
             "Специальности",
             verticalRoot
         );
-        for(int i = 1; i < 5; i++){
+        for (int i = 1; i < 5; i++)
+        {
             var first = TemplateHeaders.GetBaseCourseHeader(
             i,
             (StudentFlowRecord s) => s.Student,
@@ -43,9 +43,9 @@ public class GenericSpeciality : ITable
             verticalHeader,
             horizontalHeader,
             source,
-            "Специальности" 
-        ); 
+            "Специальности"
+        );
     }
 
-    
+
 }

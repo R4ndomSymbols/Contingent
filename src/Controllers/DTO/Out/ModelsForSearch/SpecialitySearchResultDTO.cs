@@ -1,4 +1,4 @@
-using StudentTracking.Models;
+using StudentTracking.Models.Domain.Specialities;
 
 namespace StudentTracking.Controllers.DTO.Out;
 
@@ -23,7 +23,8 @@ public class SpecialitySearchResultDTO
             LinkToModify = "/specialities/modify/" + Id.ToString();
             LinkToView = "/specialities/about/" + Id.ToString();
         }
-        else{
+        else
+        {
             LinkToModify = "";
             LinkToView = "";
         }

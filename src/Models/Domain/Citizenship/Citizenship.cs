@@ -1,6 +1,6 @@
 using StudentTracking.SQL;
 
-namespace StudentTracking.Models.Domain;
+namespace StudentTracking.Models.Domain.Citizenship;
 
 public abstract class Citizenship
 {

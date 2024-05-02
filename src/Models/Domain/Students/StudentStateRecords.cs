@@ -1,7 +1,7 @@
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Misc;
+namespace StudentTracking.Models.Domain.Students;
 
 
 public class StudentStateRecord
@@ -54,8 +54,9 @@ public class StudentStateRecord
             }
         }
     }
-    public static async Task<List<StudentStateRecord>?> GetByOwnerId(int ownerId){
-        await using (var conn =  await Utils.GetAndOpenConnectionFactory())
+    public static async Task<List<StudentStateRecord>?> GetByOwnerId(int ownerId)
+    {
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
             await using (var command = new NpgsqlCommand("SELECT * FROM student_states WHERE student_id = @p1", conn)
             {
@@ -65,12 +66,15 @@ public class StudentStateRecord
             })
             {
                 using var reader = await command.ExecuteReaderAsync();
-                if (!reader.HasRows){
+                if (!reader.HasRows)
+                {
                     return null;
                 }
                 var found = new List<StudentStateRecord>();
-                while(await reader.ReadAsync()){
-                    found.Add(new StudentStateRecord{
+                while (await reader.ReadAsync())
+                {
+                    found.Add(new StudentStateRecord
+                    {
                         OwnerId = ownerId,
                         RecordedOn = (DateTime)reader["recorded_on"],
                         StateRecorded = (States)(int)reader["status_code"],

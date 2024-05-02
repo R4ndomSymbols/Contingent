@@ -1,19 +1,23 @@
 using StudentTracking.Controllers.DTO.In;
 using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Flow.History;
 using StudentTracking.Models.Domain.Orders;
+using StudentTracking.Models.Domain.Groups;
+using StudentTracking.Models.Domain.Specialities;
 using StudentTracking.Statistics;
 
 namespace StudentTracking.Models.Infrastruture;
 
 
-public class SearchHelper{
+public class SearchHelper
+{
 
-    public SearchHelper(){
+    public SearchHelper()
+    {
 
     }
 
-    public Filter<StudentFlowRecord> GetFilter(StudentSearchQueryDTO query){
+    public Filter<StudentFlowRecord> GetFilter(StudentSearchQueryDTO query)
+    {
         var filter = Filter<StudentFlowRecord>.Empty;
         if (!string.IsNullOrEmpty(query.Name))
         {
@@ -26,14 +30,16 @@ public class SearchHelper{
                         rec =>
                         {
                             var found = rec?.Student;
-                            if (found is null){
+                            if (found is null)
+                            {
                                 return false;
                             }
-                            else {
+                            else
+                            {
                                 return found.GetName().Contains(normalized, StringComparison.OrdinalIgnoreCase);
-                            } 
+                            }
 
-                        } 
+                        }
                     )
                 ));
             }
@@ -53,23 +59,30 @@ public class SearchHelper{
             }
         }
         return filter;
-    }  
+    }
     // получает фильтрованный источник для дальнейшей фильтрации
     // существует по причинам производительности
-    public Func<IEnumerable<StudentFlowRecord>>? GetSource(StudentSearchQuerySourceDTO dto){
-        if (dto is null){
+    public Func<IEnumerable<StudentFlowRecord>>? GetSource(StudentSearchQuerySourceDTO dto)
+    {
+        if (dto is null)
+        {
             return null;
         }
-        if (dto.OrderId != null && dto.OrderMode != null){
+        if (dto.OrderId != null && dto.OrderMode != null)
+        {
             var order = Order.GetOrderById(dto.OrderId.Value);
-            if (order is null){
+            if (order is null)
+            {
                 return null;
             }
-            if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyExcluded.ToString()){
-                return () => {
-                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
-                    new HistoryExtractSettings{
-                        ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyExcluded),
+            if (dto.OrderMode == OrderRelationMode.OnlyExcluded.ToString())
+            {
+                return () =>
+                {
+                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0, 500),
+                    new HistoryExtractSettings
+                    {
+                        ExtractByOrder = (order, OrderRelationMode.OnlyExcluded),
                         ExtractLastState = true,
                         ExtractGroups = true,
                         ExtractStudents = true,
@@ -77,11 +90,14 @@ public class SearchHelper{
                     });
                 };
             }
-            else if (dto.OrderMode == FlowHistory.OrderRelationMode.OnlyIncluded.ToString()){
-                return () => {
-                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0,500),
-                    new HistoryExtractSettings{
-                        ExtractByOrder = (order, FlowHistory.OrderRelationMode.OnlyIncluded),
+            else if (dto.OrderMode == OrderRelationMode.OnlyIncluded.ToString())
+            {
+                return () =>
+                {
+                    return FlowHistory.GetRecordsByFilter(new SQL.QueryLimits(0, 500),
+                    new HistoryExtractSettings
+                    {
+                        ExtractByOrder = (order, OrderRelationMode.OnlyIncluded),
                         ExtractLastState = false,
                         ExtractOrders = false,
                         ExtractStudentUnique = true,
@@ -94,34 +110,41 @@ public class SearchHelper{
         return null;
     }
 
-    public Filter<SpecialityModel> GetFilterForSpecialities(SpecialitySearchQueryDTO dto){
+    public Filter<SpecialityModel> GetFilterForSpecialities(SpecialitySearchQueryDTO dto)
+    {
         var filter = Filter<SpecialityModel>.Empty;
-        if (dto is null){
+        if (dto is null)
+        {
             return filter;
         }
-        if (dto.SearchString is not null && dto.SearchString.Length >= 3){
+        if (dto.SearchString is not null && dto.SearchString.Length >= 3)
+        {
             filter = filter.Include(
                 new Filter<SpecialityModel>(
                     (spec) => spec.Where(
-                        s => s.FgosCode.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase) 
-                        || s.FgosName.Contains(dto.SearchString,StringComparison.OrdinalIgnoreCase)
+                        s => s.FgosCode.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase)
+                        || s.FgosName.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase)
                         || s.Qualification.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase)
                     )
                 )
             );
         }
         return filter;
-        
+
     }
 
-    public Filter<Order> GetFilterForOrder(OrderSearchParamentersDTO? dto){
+    public Filter<Order> GetFilterForOrder(OrderSearchParamentersDTO? dto)
+    {
         var filter = Filter<Order>.Empty;
-        if (dto is null){
+        if (dto is null)
+        {
             return filter;
         }
-        if (!string.IsNullOrEmpty(dto.SearchText)){
+        if (!string.IsNullOrEmpty(dto.SearchText))
+        {
             var normalized = dto.SearchText.Trim().ToLower();
-            if (normalized.Length >= 3){
+            if (normalized.Length >= 3)
+            {
                 filter = filter.Include(
                     new Filter<Order>(
                         (source) => source.Where(o => o.OrderDisplayedName.Contains(normalized, StringComparison.OrdinalIgnoreCase))
@@ -129,14 +152,16 @@ public class SearchHelper{
                 );
             }
         }
-        if (dto.Year is not null){
+        if (dto.Year is not null)
+        {
             filter = filter.Include(
                 new Filter<Order>(
                     (source) => source.Where(o => o.SpecifiedDate.Year == dto.Year)
                 )
             );
         }
-        if (dto.Type is not null){
+        if (dto.Type is not null)
+        {
             filter = filter.Include(
                 new Filter<Order>(
                     (source) => source.Where(o => (int)o.GetOrderTypeDetails().Type == dto.Type)

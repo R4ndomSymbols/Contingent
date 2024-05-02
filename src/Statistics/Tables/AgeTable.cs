@@ -1,5 +1,7 @@
 using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Misc;
+using StudentTracking.Models.Domain.Students;
+using StudentTracking.Models.Domain.Groups;
+using StudentTracking.Models.Domain.Specialities;
 using StudentTracking.SQL;
 
 namespace StudentTracking.Statistics.Tables;
@@ -68,23 +70,23 @@ public class AgeTable : ITable
                         )));
                 break;
             case TrainingProgramTypes.GenericSpecialist:
-               trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
-                    "Специалисты среднего звена",
-                    verticalRoot,
-                    new Filter<StudentFlowRecord>(
-                    (recs) =>
-                        recs.Where(
-                            rec =>
-                            {
+                trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+                     "Специалисты среднего звена",
+                     verticalRoot,
+                     new Filter<StudentFlowRecord>(
+                     (recs) =>
+                         recs.Where(
+                             rec =>
+                             {
 
-                                var result = rec.GroupTo?.EducationProgram;
-                                if (result is null)
-                                {
-                                    return false;
-                                }
-                                return result.ProgramType.Type == TrainingProgramTypes.GenericSpecialist;
-                            }
-                        )));
+                                 var result = rec.GroupTo?.EducationProgram;
+                                 if (result is null)
+                                 {
+                                     return false;
+                                 }
+                                 return result.ProgramType.Type == TrainingProgramTypes.GenericSpecialist;
+                             }
+                         )));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);

@@ -1,6 +1,6 @@
 using Npgsql;
 using Utilities;
-namespace StudentTracking.Models.Domain.Misc;
+namespace StudentTracking.Models.Domain.Students;
 
 
 public class MedicalReference
@@ -58,16 +58,16 @@ public class MedicalReference
         DisorderTypeId = HealthDisorderTypes.NotMentioned;
         InitialDate = null;
     }
-    
+
     public static async Task<int> SaveOrUpdateReference(MedicalReference toSave)
     {
-        await using (var conn =  await Utils.GetAndOpenConnectionFactory())
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
             if (toSave.Id == Utils.INVALID_ID)
             {
-               await using (var command = new NpgsqlCommand("INSERT INTO health_status( " +
-                        " person_id, initial_date, end_date, status_type, health_disorder_type) " +
-                        " VALUES (@p1, @p2, @p3, @p4, @p5) RETURNING id", conn)
+                await using (var command = new NpgsqlCommand("INSERT INTO health_status( " +
+                         " person_id, initial_date, end_date, status_type, health_disorder_type) " +
+                         " VALUES (@p1, @p2, @p3, @p4, @p5) RETURNING id", conn)
                 {
                     Parameters = {
                         new ("p1", toSave.OwnerId),
@@ -76,13 +76,15 @@ public class MedicalReference
                         new ("p4", (int)toSave.StatusTypeId),
                         new ("p5", (int)toSave.DisorderTypeId),
                     }
-                }){
+                })
+                {
                     using var reader = command.ExecuteReader();
                     return (int)reader["id"];
                 }
             }
-            else{
-                using (var command = new NpgsqlCommand("UPDATE health_status " + 
+            else
+            {
+                using (var command = new NpgsqlCommand("UPDATE health_status " +
                 " person_id=@p1, initial_date=@p2, end_date=@p3, status_type=@p4, health_disorder_type=@p5 " +
                 " WHERE id = @p6", conn)
                 {
@@ -94,7 +96,8 @@ public class MedicalReference
                         new ("p5", (int)toSave.DisorderTypeId),
                         new ("p6", toSave.Id),
                     }
-                }){
+                })
+                {
                     command.ExecuteNonQuery();
                     return toSave.Id;
                 }
@@ -104,19 +107,25 @@ public class MedicalReference
 
     public async Task<List<MedicalReference>?> GetByOwnerId(int ownerId)
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
-            await using (var command = new NpgsqlCommand("SELECT * FROM health_status WHERE person_id = @p1", conn){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        {
+            await using (var command = new NpgsqlCommand("SELECT * FROM health_status WHERE person_id = @p1", conn)
+            {
                 Parameters = {
                     new ("p1", ownerId)
                 }
-            }){
+            })
+            {
                 using var reader = await command.ExecuteReaderAsync();
-                if (!reader.HasRows){
+                if (!reader.HasRows)
+                {
                     return null;
                 }
                 var toReturn = new List<MedicalReference>();
-                while (await reader.ReadAsync()){
-                    toReturn.Add(new MedicalReference(){
+                while (await reader.ReadAsync())
+                {
+                    toReturn.Add(new MedicalReference()
+                    {
                         Id = (int)reader["id"],
                         OwnerId = (int)reader["person_id"],
                         InitialDate = reader["initial_date"].GetType() == typeof(DBNull) ? null : (DateTime)reader["initial_date"],

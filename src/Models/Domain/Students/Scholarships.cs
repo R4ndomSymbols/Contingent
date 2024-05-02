@@ -1,6 +1,6 @@
 using Npgsql;
 using Utilities;
-namespace StudentTracking.Models.Domain.Misc;
+namespace StudentTracking.Models.Domain.Students;
 
 
 public class Scholarship
@@ -27,7 +27,7 @@ public class Scholarship
     };
 
 
-    public int Id {get; set;}
+    public int Id { get; set; }
     public int OwnerId { get; set; }
     public ScolarshipTypes Type { get; set; }
     public DateTime? InitialDate { get; set; }
@@ -46,60 +46,68 @@ public class Scholarship
     {
         await using (var conn = await Utils.GetAndOpenConnectionFactory())
         {
-            if (Id == Utils.INVALID_ID){
-               await using (var command = new NpgsqlCommand("INSERT INTO scholarship( " +
-                    " student_id, scholarship_type, initial_date, end_date) " +
-                    " VALUES (@p1, @p2, @p3, @p4) RETURNING id", conn)
+            if (Id == Utils.INVALID_ID)
             {
-                Parameters = {
+                await using (var command = new NpgsqlCommand("INSERT INTO scholarship( " +
+                     " student_id, scholarship_type, initial_date, end_date) " +
+                     " VALUES (@p1, @p2, @p3, @p4) RETURNING id", conn)
+                {
+                    Parameters = {
                     new ("p1", toSave.OwnerId),
                     new ("p2", toSave.Type),
                     new ("p3", toSave.InitialDate == null ? DBNull.Value : (DateTime)toSave.InitialDate),
                     new ("p4", toSave.EndDate == null ? DBNull.Value : (DateTime)toSave.EndDate),
                 }
-            })
+                })
+                {
+                    using var reader = await command.ExecuteReaderAsync();
+                    await reader.ReadAsync();
+                    return (int)reader["id"];
+                }
+            }
+            else
             {
-                using var reader = await command.ExecuteReaderAsync();
-                await reader.ReadAsync();
-                return (int)reader["id"];
-            }
-            }
-            else {
                 using (var command = new NpgsqlCommand("UPDATE scholarship " +
                     " SET student_id=@p1, scholarship_type=@p2, initial_date=@p3, end_date=@p4 " +
                     " WHERE id = @p5 ", conn)
-            {
-                Parameters = {
+                {
+                    Parameters = {
                     new ("p1", toSave.OwnerId),
                     new ("p2", toSave.Type),
                     new ("p3", toSave.InitialDate == null ? DBNull.Value : (DateTime)toSave.InitialDate),
                     new ("p4", toSave.EndDate == null ? DBNull.Value : (DateTime)toSave.EndDate),
                     new ("p2", toSave.Id),
                 }
-            })
-            {
-                command.ExecuteNonQuery();
-                return toSave.Id;
-            }
+                })
+                {
+                    command.ExecuteNonQuery();
+                    return toSave.Id;
+                }
             }
         }
     }
 
     public async Task<List<Scholarship>?> GetScholarshipsByOwnerId(int ownerId)
     {
-        await using (var conn = await Utils.GetAndOpenConnectionFactory()){
-            await using (var command = new NpgsqlCommand("SELECT * FROM scholarship WHERE student_id = @p1", conn){
+        await using (var conn = await Utils.GetAndOpenConnectionFactory())
+        {
+            await using (var command = new NpgsqlCommand("SELECT * FROM scholarship WHERE student_id = @p1", conn)
+            {
                 Parameters = {
                     new ("p1",ownerId),
                 }
-            }){
+            })
+            {
                 using var reader = await command.ExecuteReaderAsync();
-                if (!reader.HasRows){
+                if (!reader.HasRows)
+                {
                     return null;
                 }
                 var found = new List<Scholarship>();
-                while (await reader.ReadAsync()){
-                    found.Add(new Scholarship(){
+                while (await reader.ReadAsync())
+                {
+                    found.Add(new Scholarship()
+                    {
                         Id = (int)reader["id"],
                         OwnerId = ownerId,
                         InitialDate = reader["initial_date"].GetType() == typeof(DBNull) ? null : (DateTime)reader["initial_date"],

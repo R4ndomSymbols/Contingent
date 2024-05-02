@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Statistics;
-using StudentTracking.SQL;
-using StudentTracking.Models.Domain.Misc;
-using StudentTracking.Models.Domain.Flow;
+using StudentTracking.Models.Domain.Specialities;
 using StudentTracking.Statistics.Tables;
 
 namespace StudentTracking.Controllers;
@@ -22,28 +19,32 @@ public class StatisticController : Controller
     [Route("statistics/{query?}")]
     public IActionResult GetAgeStatistics(string query)
     {
-        if (string.IsNullOrEmpty(query)){
+        if (string.IsNullOrEmpty(query))
+        {
             return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");
         }
         ITable? table = null;
-        switch (query){
+        switch (query)
+        {
             case "age_qualified":
-            table = new AgeTable(TrainingProgramTypes.QualifiedWorker);
-            break;
+                table = new AgeTable(TrainingProgramTypes.QualifiedWorker);
+                break;
             case "age_specialist":
-            table = new AgeTable(TrainingProgramTypes.GenericSpecialist);
-            break;
+                table = new AgeTable(TrainingProgramTypes.GenericSpecialist);
+                break;
             case "speciality":
-            table = new GenericSpeciality();
-            break;
+                table = new GenericSpeciality();
+                break;
             case "legalAddress":
-            table = new AddressTable();
-            break;
+                table = new AddressTable();
+                break;
         }
-        if (table is null){
+        if (table is null)
+        {
             return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");
         }
-        else{
+        else
+        {
             return View("Views/Statistics/BaseTableView.cshtml", table);
         }
     }
