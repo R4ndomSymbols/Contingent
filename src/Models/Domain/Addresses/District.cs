@@ -1,13 +1,14 @@
 using System.Security.AccessControl;
 using System.Text.RegularExpressions;
 using Utilities;
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 public class District : IAddressPart
 {
     public const int ADDRESS_LEVEL = 2;
 
     private static List<District> _duplicationBuffer;
-    static District(){
+    static District()
+    {
         _duplicationBuffer = new List<District>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -32,7 +33,7 @@ public class District : IAddressPart
     private DistrictTypes _districtType;
     public int Id
     {
-       get => _id;
+        get => _id;
     }
     public FederalSubject SubjectParentId
     {
@@ -42,7 +43,7 @@ public class District : IAddressPart
     {
         get => _districtType;
     }
-    private District(FederalSubject parent,DistrictTypes type, AddressNameToken name)
+    private District(FederalSubject parent, DistrictTypes type, AddressNameToken name)
     {
         _id = Utils.INVALID_ID;
         _districtName = name;
@@ -50,53 +51,63 @@ public class District : IAddressPart
         _districtType = type;
         _duplicationBuffer.Add(this);
     }
-    private District(int id, FederalSubject parent,DistrictTypes type, AddressNameToken name){
+    private District(int id, FederalSubject parent, DistrictTypes type, AddressNameToken name)
+    {
         _id = id;
         _districtName = name;
         _parentFederalSubject = parent;
         _districtType = type;
     }
-    private static IEnumerable<District> GetDuplicates(District district){
+    private static IEnumerable<District> GetDuplicates(District district)
+    {
         return _duplicationBuffer.Where(
-            d => 
+            d =>
             district._districtType == d._districtType &&
             district._districtName.Equals(d._districtName) &&
             district._parentFederalSubject.Equals(d._parentFederalSubject)
         );
     }
-    public static Result<District> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null){
+    public static Result<District> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null)
+    {
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(','))
+        {
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня указано неверно"));
         }
         AddressNameToken? foundDistrict = null;
-        DistrictTypes subjectType = DistrictTypes.NotMentioned;  
-        foreach (var pair in Names){
-            foundDistrict = pair.Value.ExtractToken(addressPart, Restrictions); 
-            if (foundDistrict is not null){
+        DistrictTypes subjectType = DistrictTypes.NotMentioned;
+        foreach (var pair in Names)
+        {
+            foundDistrict = pair.Value.ExtractToken(addressPart, Restrictions);
+            if (foundDistrict is not null)
+            {
                 subjectType = pair.Key;
                 break;
             }
         }
-        if (foundDistrict is null){
+        if (foundDistrict is null)
+        {
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
         }
         var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict.UnformattedName, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
-        
-        if (fromDb.Any()){
-            if (fromDb.Count() != 1){
+
+        if (fromDb.Any())
+        {
+            if (fromDb.Count() != 1)
+            {
                 return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не может быть однозначно распознано"));
             }
-            else{
+            else
+            {
                 var first = fromDb.First();
                 return Result<District>.Success(new District(first.AddressPartId,
-                     parent, 
+                     parent,
                      (DistrictTypes)first.ToponymType,
                      new AddressNameToken(first.AddressName, Names[(DistrictTypes)first.ToponymType])
                 ));
             }
         }
-        
+
         var got = new District(
             parent,
             subjectType,
@@ -104,9 +115,11 @@ public class District : IAddressPart
         );
         return Result<District>.Success(got);
     }
-    public static District? Create(AddressRecord source, FederalSubject parent){
-        
-        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+    public static District? Create(AddressRecord source, FederalSubject parent)
+    {
+
+        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null)
+        {
             return null;
         }
         return new District(source.AddressPartId,
@@ -115,17 +128,19 @@ public class District : IAddressPart
             new AddressNameToken(source.AddressName, Names[(DistrictTypes)source.ToponymType])
         );
     }
-    
-    
+
+
     public async Task Save(ObservableTransaction? scope = null)
-    {   
+    {
 
         await _parentFederalSubject.Save(scope);
-        if (_id == Utils.INVALID_ID){
+        if (_id == Utils.INVALID_ID)
+        {
             _id = await AddressModel.SaveRecord(this, scope);
         }
         var duplicates = GetDuplicates(this);
-        foreach(var d in duplicates){
+        foreach (var d in duplicates)
+        {
             d._id = this._id;
         }
         _duplicationBuffer.RemoveAll(d => d._id == this._id);
@@ -133,7 +148,8 @@ public class District : IAddressPart
     }
     public AddressRecord ToAddressRecord()
     {
-        return new AddressRecord(){
+        return new AddressRecord()
+        {
             ParentId = _parentFederalSubject.Id,
             AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _districtName.UnformattedName,
@@ -144,7 +160,7 @@ public class District : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var foundUntyped = AddressModel.FindRecords(_id).Result;
-        return 
+        return
         foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL)
         .Select(rec => Settlement.Create(rec, this))
         .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)));
@@ -156,7 +172,8 @@ public class District : IAddressPart
     }
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != typeof(District)){
+        if (obj is null || obj.GetType() != typeof(District))
+        {
             return false;
         }
         var toCompare = (District)obj;

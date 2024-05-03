@@ -1,7 +1,7 @@
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Statistics.Tables.Headers;
+using Contingent.Models.Domain.Flow;
+using Contingent.Statistics.Tables.Headers;
 
-namespace StudentTracking.Statistics.Tables;
+namespace Contingent.Statistics.Tables;
 
 public class GenericSpeciality : ITable
 {

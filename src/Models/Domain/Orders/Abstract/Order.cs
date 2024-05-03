@@ -1,17 +1,17 @@
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.SQL;
-using StudentTracking.Controllers.DTO.In;
+using Contingent.SQL;
+using Contingent.Controllers.DTO.In;
 using System.Text.Json;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Orders.OrderData;
-using StudentTracking.Models.Domain.Orders.Infrastructure;
-using StudentTracking.Models.Domain.Flow.History;
-using StudentTracking.Import;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Orders.Infrastructure;
+using Contingent.Models.Domain.Flow.History;
+using Contingent.Import;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 
 public abstract class Order : IFromCSV<Order>
 {
@@ -554,13 +554,13 @@ public abstract class Order : IFromCSV<Order>
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
+        var predefinedOrderBy = new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC);
+        predefinedOrderBy.AddColumn(new Column("creation_timestamp", "orders"), OrderByCondition.OrderByTypes.DESC);
         var result = SelectQuery<Order>.Init("orders")
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
         .AddWhereStatement(filter)
-        .AddOrderByStatement(orderBy is null ?
-            new OrderByCondition(new Column("specified_date", "orders"), OrderByCondition.OrderByTypes.DESC)
-            : orderBy)
+        .AddOrderByStatement(orderBy is null ? predefinedOrderBy : orderBy)
         .AddParameters(additionalParams)
         .Finish();
         if (result.IsFailure)
@@ -731,50 +731,47 @@ public abstract class Order : IFromCSV<Order>
 
         if (parameters.EndDate is not null)
         {
-            where = new ComplexWhereCondition(
-                where,
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
                 new ComplexWhereCondition(new WhereCondition(
                     new Column("specified_date", "orders"),
                     args.Add(parameters.EndDate),
                     WhereCondition.Relations.LessOrEqual
-                )),
-                ComplexWhereCondition.ConditionRelation.AND
+                ))
+
             );
         }
         if (parameters.StartDate is not null)
         {
-            where = new ComplexWhereCondition(
-                where,
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
                 new ComplexWhereCondition(new WhereCondition(
                     new Column("specified_date", "orders"),
                     args.Add(parameters.StartDate),
                     WhereCondition.Relations.BiggerOrEqual
-                )),
-                ComplexWhereCondition.ConditionRelation.AND
+                ))
             );
         }
         if (parameters.Year is not null)
         {
-            where = new ComplexWhereCondition(
-                where,
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
                 new ComplexWhereCondition(new WhereCondition(
                     Column.GetRaw("EXTRACT(YEAR FROM orders.specified_date)"),
-                    args.Add(parameters.Year),
+                    args.Add((int)parameters.Year),
                     WhereCondition.Relations.Equal
-                )),
-                ComplexWhereCondition.ConditionRelation.AND
+                ))
             );
         }
         if (parameters.OrderOrgId is not null)
         {
-            where = new ComplexWhereCondition(
-                where,
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
                 new ComplexWhereCondition(new WhereCondition(
                     new Column("lower", "org_id", "orders", null),
                     args.Add(parameters.OrderOrgId.ToLower()),
                     WhereCondition.Relations.Like
-                )),
-                ComplexWhereCondition.ConditionRelation.AND
+                ))
             );
         }
 

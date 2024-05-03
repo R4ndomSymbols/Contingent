@@ -1,7 +1,7 @@
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.SQL;
 using System.Data;
 using Utilities;
 public class AddressModel
@@ -87,7 +87,8 @@ public class AddressModel
     }
     public static async Task<AddressModel?> GetAddressById(int? id)
     {
-        if (id is null || id.Value == Utils.INVALID_ID){
+        if (id is null || id.Value == Utils.INVALID_ID)
+        {
             return null;
         }
         var address = new AddressModel();
@@ -104,7 +105,7 @@ public class AddressModel
         var trimmed = request.Trim();
         if (trimmed == string.Empty)
         {
-            return new List<string>();;
+            return new List<string>(); ;
         }
         var split = request.Split(',').Select(x => x.Trim()).Where(x => x != string.Empty).ToArray();
         var address = new AddressModel();
@@ -215,7 +216,8 @@ public class AddressModel
         var found = await FindRecords(new QueryLimits(0, 200), filter, param, scope);
         return found;
     }
-    public static IEnumerable<AddressRecord> FindByAddressLevel(int addressLevel){
+    public static IEnumerable<AddressRecord> FindByAddressLevel(int addressLevel)
+    {
         var param = new SQLParameterCollection();
         var p1 = param.Add<int>(addressLevel);
         var filter = new ComplexWhereCondition(
@@ -238,7 +240,7 @@ public class AddressModel
                     AddressLevelCode = (int)m["address_level"],
                     AddressName = (string)m["address_name"],
                     ToponymType = (int)m["toponym_type"],
-                    ParentId = m["parent_id"].GetType() == typeof(DBNull) ? null : (int)m["parent_id"] 
+                    ParentId = m["parent_id"].GetType() == typeof(DBNull) ? null : (int)m["parent_id"]
                 };
                 return QueryResult<AddressRecord>.Found(mapped);
             },
@@ -295,7 +297,7 @@ public class AddressModel
                         AddressLevelCode = (int)reader["address_level"],
                         AddressName = (string)reader["address_name"],
                         ToponymType = (int)reader["toponym_type"],
-                        ParentId = reader["parent_id"].GetType() == typeof(DBNull) ? null : (int)reader["parent_id"] 
+                        ParentId = reader["parent_id"].GetType() == typeof(DBNull) ? null : (int)reader["parent_id"]
                     }
                 );
             }
@@ -361,15 +363,17 @@ public class AddressModel
             built._districtPart = result.ResultObject;
             stopPoint.PointTo = built._districtPart;
             err = ProcessSettlement(pointer + 1, built, parts, stopPoint, scope);
-            if (err.Any()){
+            if (err.Any())
+            {
                 err = ProcessSettlementArea(pointer + 1, built, parts, stopPoint, scope);
             }
-            return err;  
+            return err;
         }
-        else{
+        else
+        {
             return result.Errors;
         }
-        
+
     }
     private static IEnumerable<ValidationError> ProcessSettlementArea(int pointer, AddressModel built, string[] parts, AddressPartPointer stopPoint, ObservableTransaction? scope = null)
     {
@@ -554,8 +558,10 @@ public class AddressModel
         }
     }
 
-    public bool Contains(IAddressPart? part){
-        if (part is null){
+    public bool Contains(IAddressPart? part)
+    {
+        if (part is null)
+        {
             return false;
         }
         IAddressPart?[] parts = {

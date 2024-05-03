@@ -1,13 +1,15 @@
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Address;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Citizenship;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Address;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Citizenship;
+using Contingent.SQL;
 using Utilities;
 using Utilities.Validation;
+using Contingent.Models.Domain.Specialities;
+using System.Runtime.InteropServices;
 
-namespace StudentTracking.Models.Domain.Students;
+namespace Contingent.Models.Domain.Students;
 
 public class StudentModel
 {
@@ -64,6 +66,7 @@ public class StudentModel
     }
 
     // зависимости
+    private StudentEducation? _education;
     private int? _actualAddressId;
     private AddressModel? _actualAddress;
     private int? _russianCitizenshipId;
@@ -110,6 +113,14 @@ public class StudentModel
 
         }
     }
+    public StudentEducation Education
+    {
+        get
+        {
+            _education ??= new StudentEducation(this);
+            return _education;
+        }
+    }
     public StudentHistory History
     {
         get
@@ -122,11 +133,13 @@ public class StudentModel
         }
     }
 
+
     private StudentModel()
     {
         _id = null;
         _actualAddressId = null;
         _russianCitizenshipId = null;
+        _education = null;
     }
 
     public static Mapper<StudentModel> GetMapper((bool actual, bool legal) includeAddresses, Column? source, JoinSection.JoinType join = JoinSection.JoinType.InnerJoin)
@@ -230,6 +243,26 @@ public class StudentModel
         else
         {
             errors.AddRange(citizenshipResult.Errors);
+        }
+        if (errors.IsValidRule(
+            dto.Education is not null && dto.Education.Count > 0,
+            message: "Отсутствуют данные об образовании",
+            propName: nameof(Education)
+        ))
+        {
+            model._education = new StudentEducation(model);
+            for (int i = 0; i < dto.Education!.Count; i++)
+            {
+                var level = StudentEducationalLevelRecord.Create(dto.Education[i], model);
+                if (level.IsFailure)
+                {
+                    errors.AddRange(level.Errors);
+                }
+                else
+                {
+                    model._education.Add(level.ResultObject);
+                }
+            }
         }
 
         // инн и снилс должны быть уникальны в базе
@@ -378,33 +411,8 @@ public class StudentModel
         }
     }
 
-    public static async Task<bool> IsIdExists(int id, ObservableTransaction? scope)
-    {
-
-        await using var connection = await Utils.GetAndOpenConnectionFactory();
-        string cmdText = "SELECT EXISTS(SELECT id FROM students WHERE id = @p1)";
-        NpgsqlCommand cmd;
-        if (scope != null)
-        {
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-        }
-        else
-        {
-            cmd = new NpgsqlCommand(cmdText, connection);
-        }
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", id));
-        await using (connection)
-        await using (cmd)
-        {
-            using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
-            return (bool)reader["exists"];
-        }
-    }
-
     public string GetName()
     {
-
         if (_russianCitizenship != null)
         {
             return _russianCitizenship.GetName();
@@ -427,12 +435,12 @@ public class StudentModel
 
     }
 
-    public async Task<ResultWithoutValue> Save(ObservableTransaction? scope = null)
+    public ResultWithoutValue Save(ObservableTransaction? scope = null)
     {
 
         if (_actualAddress is not null)
         {
-            var result = await _actualAddress.Save(scope);
+            var result = _actualAddress.Save(scope).Result;
             if (result.IsFailure)
             {
                 return result;
@@ -440,7 +448,7 @@ public class StudentModel
         }
         if (_russianCitizenship is not null)
         {
-            var result = await _russianCitizenship.Save(scope);
+            var result = _russianCitizenship.Save(scope).Result;
             if (result.IsFailure)
             {
                 return result;
@@ -449,11 +457,11 @@ public class StudentModel
 
         if (_id is not null)
         {
-            await Update(scope);
+            Update(scope).Wait();
             return ResultWithoutValue.Success();
         }
 
-        await using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
+        using NpgsqlConnection connection = Utils.GetAndOpenConnectionFactory().Result;
 
         var cmdText = "INSERT INTO students( " +
             "snils, actual_address, date_of_birth, rus_citizenship_id, " +
@@ -483,11 +491,16 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p11", (int)_paidAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<decimal>("p12", _admissionScore));
 
-        await using (cmd)
+        using (cmd)
         {
-            using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
+            using var reader = cmd.ExecuteReader();
+            reader.Read();
             _id = (int)reader["id"];
+        }
+        connection.Dispose();
+        if (_education.Any())
+        {
+            _education.Save();
         }
         return ResultWithoutValue.Success();
     }

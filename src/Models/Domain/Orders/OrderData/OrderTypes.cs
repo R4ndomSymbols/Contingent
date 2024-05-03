@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 
 
 public enum OrderTypes
@@ -162,22 +162,22 @@ public enum OrderTypes
     //
 
 
-   
 
-    
+
+
     // перевод внебюджет на следующий курс
-    
+
     // перевод внебюджет между специальностями
-    
+
     // отчисление по собственному желанию
-   
+
     // отчисление в связи с академической задолженностью
-    
+
 
     // зачисление в связи с переводом
-    
+
 
     // зачисление в порядке восстановления
-    
+
 
 }

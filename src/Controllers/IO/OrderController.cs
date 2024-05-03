@@ -1,16 +1,17 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Flow.History;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Flow.History;
+using Contingent.Models.Domain.Orders;
+using Contingent.SQL;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 
 
-public class OrderController : Controller{
+public class OrderController : Controller
+{
 
     private readonly ILogger<OrderController> _logger;
 
@@ -18,73 +19,90 @@ public class OrderController : Controller{
     {
         _logger = logger;
     }
-    
+
     [HttpGet]
     [Route("/orders/modify/{query}")]
-    public IActionResult ProcessOrder(string query){
-        if (query == "new"){
-            return View(@"Views/Modify/OrderModify.cshtml", EmptyOrder.Empty); 
+    public IActionResult ProcessOrder(string query)
+    {
+        if (query == "new")
+        {
+            return View(@"Views/Modify/OrderModify.cshtml", EmptyOrder.Empty);
         }
-        else if(int.TryParse(query, out int id)){
+        else if (int.TryParse(query, out int id))
+        {
             var order = Order.GetOrderById(id);
-            if (order is not null){
+            if (order is not null)
+            {
                 return View(@"Views/Modify/OrderModify.cshtml", order);
             }
-            else{
+            else
+            {
                 return View(@"Views/Shared/Error.cshtml", "Приказа не существует");
             }
-            
+
         }
-        else{
+        else
+        {
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id приказа");
         }
     }
     [HttpGet]
     [Route("/orders/view/{id:int?}")]
-    public IActionResult ViewOrder(int id){
-        
+    public IActionResult ViewOrder(int id)
+    {
+
         var order = Order.GetOrderById(id);
-        if (order is not null){
+        if (order is not null)
+        {
             return View(@"Views/Observe/Order.cshtml", new OrderSearchDTO(order));
         }
-        else{
+        else
+        {
             return View(@"Views/Shared/Error.cshtml", "Такого приказа не существует");
-        }  
+        }
     }
-    
+
     [HttpPost]
     [Route("/orders/save")]
-    public async Task<IActionResult> Save(){
-        using(var reader = new StreamReader(Request.Body)){
+    public async Task<IActionResult> Save()
+    {
+        using (var reader = new StreamReader(Request.Body))
+        {
             var body = await reader.ReadToEndAsync();
             var built = Order.Build(body);
-            if (built.IsSuccess && built.ResultObject is not null){
-                var order = built.ResultObject; 
+            if (built.IsSuccess && built.ResultObject is not null)
+            {
+                var order = built.ResultObject;
                 order.Save(null);
-                return Ok(Json(new {OrderId = order.Id}).Value);
+                return Ok(Json(new { OrderId = order.Id }).Value);
             }
-            return BadRequest(Json(new ErrorsDTO(built.Errors)).Value);  
+            return BadRequest(Json(new ErrorsDTO(built.Errors)).Value);
         }
     }
     [HttpPost]
     [Route("/orders/generateIdentity")]
-    public async Task<IActionResult> GenerateIndentity(){
-        using(var reader = new StreamReader(Request.Body)){
+    public async Task<IActionResult> GenerateIndentity()
+    {
+        using (var reader = new StreamReader(Request.Body))
+        {
             var body = await reader.ReadToEndAsync();
             var result = Order.Build(body);
-            if (result.IsSuccess){
-                return Json(new {result.ResultObject.OrderOrgId});
+            if (result.IsSuccess)
+            {
+                return Json(new { result.ResultObject.OrderOrgId });
             }
-            return BadRequest(Json(new ErrorsDTO(result.Errors)).Value);  
+            return BadRequest(Json(new ErrorsDTO(result.Errors)).Value);
         }
     }
 
     [HttpGet]
     [Route("/orders/close/{id:int?}")]
-    public IActionResult CloseOrder(int? id){
-        
+    public IActionResult CloseOrder(int? id)
+    {
+
         var order = Order.GetOrderById(id);
-        if (order is null){
+        if (order is null)
+        {
             return BadRequest("Неверно указан id приказа");
         }
         order.Close();
@@ -101,7 +119,8 @@ public class OrderController : Controller{
         };
         var found = new OrderHistory(order);
         var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();
-        foreach (var record in found.History){
+        foreach (var record in found.History)
+        {
             var history = StudentHistory.Create(record.StudentNullRestrict);
             var byAnchor = history.GetByOrder(order);
             var previous = history.GetClosestBefore(order);
@@ -109,7 +128,7 @@ public class OrderController : Controller{
         }
         return Json(studentMovesHistoryRecords);
     }
-    
 
-    
+
+
 }

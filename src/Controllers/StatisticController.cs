@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Models.Domain.Specialities;
-using StudentTracking.Statistics.Tables;
+using Contingent.Models.Domain.Specialities;
+using Contingent.Statistics.Tables;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 
 public class StatisticController : Controller
 {

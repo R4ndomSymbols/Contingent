@@ -1,7 +1,7 @@
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 public class StudentSearchResultDTO
 {

@@ -1,11 +1,11 @@
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Specialities;
-using StudentTracking.Statistics;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Specialities;
+using Contingent.Statistics;
 
-namespace StudentTracking.Models.Infrastruture;
+namespace Contingent.Models.Infrastruture;
 
 
 public class SearchHelper

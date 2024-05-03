@@ -1,7 +1,7 @@
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Students;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 [Serializable]
 public sealed class StudentFullDTO
@@ -19,6 +19,7 @@ public sealed class StudentFullDTO
     public int PaidAgreementType { get; private init; }
     public RussianCitizenshipDTO Citizenship { get; private init; }
     public AddressOutDTO ActualAddress { get; private init; }
+    public EducationalLevelRecordDTO[] EducationalLevels { get; private init; }
     public StudentFullDTO(StudentModel model)
     {
         if (model is null)
@@ -38,6 +39,7 @@ public sealed class StudentFullDTO
         PaidAgreementType = (int)model.PaidAgreement.AgreementType;
         ActualAddress = model.ActualAddress is null ? new AddressOutDTO(model.ActualAddressId) : new AddressOutDTO(model.ActualAddress);
         GenderName = Genders.Names[model.Gender];
+        EducationalLevels = StudentEducationalLevelRecord.GetByOwner(model).Select(x => new EducationalLevelRecordDTO(x)).ToArray();
 
     }
     public StudentFullDTO()
@@ -56,6 +58,7 @@ public sealed class StudentFullDTO
         Citizenship = new RussianCitizenshipDTO();
         ActualAddress = new AddressOutDTO();
         GenderName = Genders.Names[Genders.GenderCodes.Undefined];
+        EducationalLevels = Array.Empty<EducationalLevelRecordDTO>();
     }
 
 

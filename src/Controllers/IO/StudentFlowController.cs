@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Controllers.DTO.Out;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
+using Contingent.Controllers.DTO.Out;
 using System.Text.Json;
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 public class StudentFlowController : Controller
 {
 

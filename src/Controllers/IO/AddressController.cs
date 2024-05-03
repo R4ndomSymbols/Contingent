@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Address;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Address;
 using Utilities;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 
 public class AddressController : Controller
 {
@@ -24,12 +24,12 @@ public class AddressController : Controller
     [Route("/addresses/explain/{address?}")]
     public JsonResult GetAddressInfo(string? address)
     {
-        Result<AddressModel?> result = AddressModel.Create(new AddressInDTO(){ Address = address});
+        Result<AddressModel?> result = AddressModel.Create(new AddressInDTO() { Address = address });
         if (result.IsFailure)
         {
             return Json(new ErrorsDTO(result.Errors));
         }
-        return Json(new { AddressState = result.ResultObject?.GetAddressInfo() ?? ""});   
+        return Json(new { AddressState = result.ResultObject?.GetAddressInfo() ?? "" });
     }
 
     [HttpPost]
@@ -37,11 +37,13 @@ public class AddressController : Controller
     public async Task<JsonResult> CreateAddress(string? address)
     {
 
-        var result = AddressModel.Create(new AddressInDTO(){ Address = address});
-        if (result.IsFailure){
+        var result = AddressModel.Create(new AddressInDTO() { Address = address });
+        if (result.IsFailure)
+        {
             return Json(new ErrorsDTO(result.Errors));
         }
-        if (result.ResultObject is null){
+        if (result.ResultObject is null)
+        {
             throw new Exception("Suppression");
         }
         var built = result.ResultObject;
@@ -49,9 +51,10 @@ public class AddressController : Controller
         using var transaction = await connection.BeginTransactionAsync();
         using ObservableTransaction savingTransaction = new ObservableTransaction(transaction, connection);
         var savingResult = await built.Save(savingTransaction);
-        if (savingResult.IsFailure){
+        if (savingResult.IsFailure)
+        {
             return Json(new ErrorsDTO(savingResult.Errors));
         }
-        return Json(new { AddressId = built});
+        return Json(new { AddressId = built });
     }
 }

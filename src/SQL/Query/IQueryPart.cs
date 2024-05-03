@@ -1,6 +1,7 @@
-namespace StudentTracking.SQL;
+namespace Contingent.SQL;
 
-public interface IQueryPart {
+public interface IQueryPart
+{
     public string AsSQLText();
 
 }

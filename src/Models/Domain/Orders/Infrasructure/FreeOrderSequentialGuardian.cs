@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders.Infrastructure;
+namespace Contingent.Models.Domain.Orders.Infrastructure;
 
 public class FreeOrderSequentialGuardian : OrderSequentialGuardian
 {
@@ -86,7 +86,6 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
 
     public override void Save()
     {
-        Console.WriteLine(string.Join("\n", _foundFree.Select(x => x.order.SpecifiedDate + " " + x.bias + " " + x.order.Id + " " + x.order.OrderOrgId)));
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
         var cmdText = "UPDATE orders SET serial_number = @p1, org_id = @p3 WHERE id = @p2";
         for (int orderIndex = 0; orderIndex < _foundFree.Count; orderIndex++)
@@ -95,7 +94,7 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
             {
                 throw new Exception("Приказ должен быть сохранен прежде, чем обновлен");
             }
-            if (_foundFree[orderIndex].bias != 0 || _foundFree[orderIndex].order.OrderNumber!=orderIndex+1)
+            if (_foundFree[orderIndex].bias != 0 || _foundFree[orderIndex].order.OrderNumber != orderIndex + 1)
             {
                 using var cmd = new NpgsqlCommand(cmdText, conn);
                 // новый индекс приказа - складывается из текущего положения, единицы и смещения
@@ -107,13 +106,14 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
                 cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _foundFree[orderIndex].order.OrderOrgId));
                 cmd.ExecuteNonQuery();
                 _foundFree[orderIndex] = (_foundFree[orderIndex].order, 0);
-                
+
             }
         }
     }
 
-    private void SetSource(DateTime start, DateTime end){
+    private void SetSource(DateTime start, DateTime end)
+    {
         _foundFree = Order.FindWithinRangeSortedByTime(start, end, SQL.OrderByCondition.OrderByTypes.ASC)
-        .Where(ord => ord is FreeContingentOrder).Select(o => ((FreeContingentOrder)o,0)).ToList();
+        .Where(ord => ord is FreeContingentOrder).Select(o => ((FreeContingentOrder)o, 0)).ToList();
     }
 }

@@ -1,8 +1,8 @@
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Models.Domain.Flow;
+namespace Contingent.Models.Domain.Flow;
 
 // представляет собой запись в таблице движения студентов
 // является агрегатом 

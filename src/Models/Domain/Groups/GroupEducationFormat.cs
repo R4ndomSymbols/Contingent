@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Groups;
+namespace Contingent.Models.Domain.Groups;
 
 public class GroupEducationFormat
 {

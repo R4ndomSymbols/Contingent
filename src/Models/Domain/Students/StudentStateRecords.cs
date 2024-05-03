@@ -1,7 +1,7 @@
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Students;
+namespace Contingent.Models.Domain.Students;
 
 
 public class StudentStateRecord

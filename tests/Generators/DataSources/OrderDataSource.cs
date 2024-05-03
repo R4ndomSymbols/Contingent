@@ -1,4 +1,4 @@
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 
 namespace Tests;
@@ -6,7 +6,7 @@ namespace Tests;
 public class OrderRowDataSource : IRowSource
 {
 
-    private static readonly List<string> _orderTypeNames = OrderTypeInfo.GetAllTypes().Where(x => x.Type != StudentTracking.Models.Domain.Orders.OrderTypes.EmptyOrder).Select(x => x.OrderTypeName).ToList();
+    private static readonly List<string> _orderTypeNames = OrderTypeInfo.GetAllTypes().Where(x => x.Type != Contingent.Models.Domain.Orders.OrderTypes.EmptyOrder).Select(x => x.OrderTypeName).ToList();
     private Random _rng;
     private string[] _data;
     private string[] _headers;

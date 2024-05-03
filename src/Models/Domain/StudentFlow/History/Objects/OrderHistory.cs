@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.SQL;
+using Contingent.Models.Domain.Orders;
+using Contingent.SQL;
 
-namespace StudentTracking.Models.Domain.Flow.History;
+namespace Contingent.Models.Domain.Flow.History;
 
 public class OrderHistory
 {

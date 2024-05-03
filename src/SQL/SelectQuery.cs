@@ -2,7 +2,7 @@ using System.Text;
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.SQL;
+namespace Contingent.SQL;
 
 public abstract class SelectQuery : IQueryPart
 {
@@ -147,7 +147,7 @@ public class SelectQuery<T> : SelectQuery
                 queryBuilder.Append(" LIMIT " + _predefinedLimits.PageLength + " ");
                 if (_predefinedLimits.GlobalOffset != 0)
                 {
-                    queryBuilder.Append( " OFFSET " + _predefinedLimits.GlobalOffset);
+                    queryBuilder.Append(" OFFSET " + _predefinedLimits.GlobalOffset);
                 }
                 else
                 {

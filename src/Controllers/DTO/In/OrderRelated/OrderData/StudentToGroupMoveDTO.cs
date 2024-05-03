@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Import;
+using Contingent.Import;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
 public class StudentToGroupMovesDTO

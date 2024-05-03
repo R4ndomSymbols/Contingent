@@ -1,7 +1,7 @@
-using StudentTracking.Models.Domain.Specialities;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 [Serializable]
 public class EducationalLevelRecordDTO

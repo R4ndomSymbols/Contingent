@@ -1,13 +1,13 @@
 using Utilities;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Flow;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Orders.OrderData;
 using Npgsql;
 using System.Net.Http.Headers;
-using StudentTracking.Import;
+using Contingent.Import;
 
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 
 public class FreeEnrollmentOrder : FreeContingentOrder
 {

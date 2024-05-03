@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Specialities;
+namespace Contingent.Models.Domain.Specialities;
 
 
 public class TrainingProgram

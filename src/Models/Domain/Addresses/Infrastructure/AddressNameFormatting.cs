@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 
 public class AddressNameFormatting
 {
@@ -44,7 +44,7 @@ public class AddressNameFormatting
             string token = tokenContainer.Trim();
             var ext = Find(token, _longTypeName) ?? Find(token, _shortTypeName);
             return ext;
-            
+
             AddressNameToken? Find(string token, string toFind)
             {
                 try
@@ -65,7 +65,7 @@ public class AddressNameFormatting
                         }
                     }
                 }
-                catch {}
+                catch { }
                 return null;
             }
 

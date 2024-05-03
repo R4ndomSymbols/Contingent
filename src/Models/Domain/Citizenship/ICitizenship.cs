@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Citizenship;
+namespace Contingent.Models.Domain.Citizenship;
 
 public interface ICitizenship
 {

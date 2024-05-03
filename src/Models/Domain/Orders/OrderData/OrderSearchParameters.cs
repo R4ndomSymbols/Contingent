@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Orders.OrderData;
+namespace Contingent.Models.Domain.Orders.OrderData;
 
 public class OrderSearchParameters
 {

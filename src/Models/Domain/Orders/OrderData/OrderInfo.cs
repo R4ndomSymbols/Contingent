@@ -1,4 +1,4 @@
-namespace StudentTracking.Models.Domain.Orders.OrderData;
+namespace Contingent.Models.Domain.Orders.OrderData;
 
 public class OrderTypeInfo
 {
@@ -207,8 +207,10 @@ public class OrderTypeInfo
         {
             return (int)OrderTypes.EmptyOrder;
         }
-        foreach (var pair in _types){
-            if (pair.Value.OrderTypeName == v){
+        foreach (var pair in _types)
+        {
+            if (pair.Value.OrderTypeName == v)
+            {
                 return (int)pair.Key;
             }
         }

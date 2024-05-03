@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Flow.History;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Flow.History;
+using Contingent.SQL;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 
 public class HomeController : Controller
 {
@@ -26,10 +26,11 @@ public class HomeController : Controller
     public IActionResult GetLastHistoryRecords()
     {
         var records = FlowHistory.GetRecordsByFilter(
-            new QueryLimits(0,50),
-            new HistoryExtractSettings(){
+            new QueryLimits(0, 50),
+            new HistoryExtractSettings()
+            {
                 OverallHistorical = true,
-                ExtractAddress = (false,false),
+                ExtractAddress = (false, false),
                 ExtractOrders = true,
                 ExtractStudents = true,
                 ExtractGroups = false,
@@ -37,7 +38,8 @@ public class HomeController : Controller
         );
         records = records.OrderByDescending(x => x.Record.Id);
         var studentMovesHistoryRecords = new List<InGroupRelation>();
-        foreach (var record in records){
+        foreach (var record in records)
+        {
             studentMovesHistoryRecords.Add(new InGroupRelation(record.Student, record.ByOrder));
         }
         return Json(studentMovesHistoryRecords);

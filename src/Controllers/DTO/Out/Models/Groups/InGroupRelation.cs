@@ -1,8 +1,8 @@
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Orders;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Orders;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 [Serializable]
 public class InGroupRelation

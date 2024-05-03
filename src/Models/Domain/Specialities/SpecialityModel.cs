@@ -1,12 +1,12 @@
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.JSON;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.JSON;
+using Contingent.SQL;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Models.Domain.Specialities;
+namespace Contingent.Models.Domain.Specialities;
 
 public class SpecialityModel
 {
@@ -463,8 +463,7 @@ public class SpecialityModel
 
     public bool IsStudentAllowedByEducationLevel(StudentModel student)
     {
-        var levels = StudentEducationalLevelRecord.GetByOwner(student).Result;
-        return levels.Any(x => x.Level >= _levelIn);
+        return student.Education.IsHigherThan(_levelIn);
     }
 
     public static IEnumerable<SpecialityModel> GetAll()

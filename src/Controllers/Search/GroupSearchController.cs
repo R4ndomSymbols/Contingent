@@ -1,11 +1,11 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Groups;
+using Contingent.SQL;
 
-namespace StudentTracking.Controllers.Search;
+namespace Contingent.Controllers.Search;
 
 public class GroupSearchController : Controller
 {

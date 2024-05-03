@@ -1,8 +1,8 @@
-@using StudentTracking.Models.Domain.Students;
-@using StudentTracking.Models.Domain.Address;
+@using Contingent.Models.Domain.Students;
+@using Contingent.Models.Domain.Address;
 @using Utilities;
-@using StudentTracking.Controllers.DTO.Out;
-@model StudentTracking.Controllers.DTO.Out.StudentFullDTO;
+@using Contingent.Controllers.DTO.Out;
+@model Contingent.Controllers.DTO.Out.StudentFullDTO;
 @{
     ViewData["Title"] = "Студент";
 }
@@ -153,7 +153,7 @@
         <small class="accent_color" id="legal_address_info"></small>
     </div>
     @{
-        var tags = await StudentEducationalLevelRecord.GetByOwner(await StudentModel.GetStudentById(Model.Id));
+        var tags = Model.EducationalLevels;
     }
     <h2 class=".my-4">Образование студента</h2>
     <button class="btn btn-primary .my-2 col-3" id="add_education_level">
@@ -164,7 +164,7 @@
         {
             <div class="d-flex flex-row">
                 <div class="col-4">
-                    @t.RussianName
+                    @t.TypeName
                 </div>
             </div>
         }

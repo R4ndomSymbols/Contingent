@@ -1,11 +1,11 @@
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.SQL;
 using Utilities;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Citizenship;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Citizenship;
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 public abstract class StudentStatement
 {
     protected Result<StudentModel> GetStudent(StudentStatementDTO? dto)
@@ -17,7 +17,15 @@ public abstract class StudentStatement
         var student = StudentModel.GetStudentById(dto.StudentId).Result;
         if (student is null)
         {
-            var whereClauseForCitizenship = RussianCitizenship.GetFilterClause(new RussianCitizenshipInDTO() { Surname = dto.NamePart }, out SQLParameterCollection paramCollection);
+            Console.WriteLine("Имя:" + dto.Name + " " + dto.StudentGradeBookNumber);
+            var nameSplit = dto.Name.Split(' ');
+            var whereClauseForCitizenship = RussianCitizenship.GetFilterClause(new RussianCitizenshipInDTO()
+            {
+                Surname = nameSplit.ElementAtOrDefault(0)!,
+                Name = nameSplit.ElementAtOrDefault(1)!,
+                Patronymic = nameSplit.ElementAtOrDefault(2)
+            },
+            out SQLParameterCollection paramCollection);
             var foundBy = StudentModel.FindUniqueStudents(
                 new QueryLimits(0, 2),
                 null,

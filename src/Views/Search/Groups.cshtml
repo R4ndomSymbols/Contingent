@@ -1,4 +1,4 @@
-@using StudentTracking.Controllers.DTO.Out;
+@using Contingent.Controllers.DTO.Out;
 @model IEnumerable<GroupSearchResultDTO>;
 
 <div class="container">
@@ -6,8 +6,8 @@
         <h5 class="mr-1">
             Имя группы:
         </h5>
-        <input type="text" id = "name_input" placeholder="Название группы" class="col-3"/>
-        <input type="checkbox" id ="active_only">
+        <input type="text" id="name_input" placeholder="Название группы" class="col-3" />
+        <input type="checkbox" id="active_only">
         <label for="active_only">Только активные</label>
         <button class="btn btn-primary col-1" id="search_button">
             Поиск
@@ -20,7 +20,7 @@
                 <th>Курс</th>
                 <th>Действия</th>
             </thead>
-            <tbody id ="groups_found">
+            <tbody id="groups_found">
 
             </tbody>
         </table>

@@ -1,18 +1,19 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Import;
+using Contingent.Import;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class AddressInDTO {
+public class AddressInDTO
+{
     public AddressInDTO()
     {
         Address = null;
         AddressId = null;
     }
 
-    public int? AddressId {get; set;}
+    public int? AddressId { get; set; }
 
     [JsonRequired]
-    public string? Address {get; set; }
+    public string? Address { get; set; }
 }

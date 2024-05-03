@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Utilities;
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 public class Building : IAddressPart
 {
     public const int ADDRESS_LEVEL = 6;
@@ -10,16 +10,18 @@ public class Building : IAddressPart
         new Regex(@"дом", RegexOptions.IgnoreCase),
         new Regex(@"д\u002E", RegexOptions.IgnoreCase),
     };
-    static Building(){
+    static Building()
+    {
         _duplicationBuffer = new List<Building>();
     }
-    private static IEnumerable<Building> GetDuplicates(Building building){
+    private static IEnumerable<Building> GetDuplicates(Building building)
+    {
         return _duplicationBuffer.Where(
             b => b._parentStreet.Equals(building._parentStreet)
-            && b._buildingName.Equals(building._buildingName) 
-            && b._buildingType == building._buildingType 
+            && b._buildingName.Equals(building._buildingName)
+            && b._buildingType == building._buildingType
         );
-    } 
+    }
 
     public static readonly IReadOnlyDictionary<BuildingTypes, AddressNameFormatting> Names = new Dictionary<BuildingTypes, AddressNameFormatting>(){
         {BuildingTypes.Building, new AddressNameFormatting("д.", "Дом", AddressNameFormatting.BEFORE)},
@@ -60,40 +62,48 @@ public class Building : IAddressPart
         _buildingType = type;
         _duplicationBuffer.Add(this);
     }
-    public static Result<Building> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null){
+    public static Result<Building> Create(string addressPart, Street parent, ObservableTransaction? searchScope = null)
+    {
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(','))
+        {
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание указано неверно или не указано"));
         }
         AddressNameToken? foundBuilding = null;
-        BuildingTypes buildingType = BuildingTypes.NotMentioned;  
-        foreach (var pair in Names){
-            foundBuilding = pair.Value.ExtractToken(addressPart, Restrictions); 
-            if (foundBuilding is not null){
+        BuildingTypes buildingType = BuildingTypes.NotMentioned;
+        foreach (var pair in Names)
+        {
+            foundBuilding = pair.Value.ExtractToken(addressPart, Restrictions);
+            if (foundBuilding is not null)
+            {
                 buildingType = pair.Key;
                 break;
             }
         }
-        if (foundBuilding is null){
+        if (foundBuilding is null)
+        {
             return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание не распознано"));
         }
         var fromDb = AddressModel.FindRecords(parent.Id, foundBuilding.UnformattedName, (int)buildingType, ADDRESS_LEVEL, searchScope).Result;
-        
-        if (fromDb.Any()){
-            if (fromDb.Count() != 1){
+
+        if (fromDb.Any())
+        {
+            if (fromDb.Count() != 1)
+            {
                 return Result<Building>.Failure(new ValidationError(nameof(Building), "Здание не может быть однозначно распознано"));
             }
-            else{
+            else
+            {
                 var first = fromDb.First();
                 return Result<Building>.Success(new Building(
                     first.AddressPartId,
-                    parent, 
+                    parent,
                     (BuildingTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(BuildingTypes)first.ToponymType])
                 ));
             }
         }
-        
+
         var got = new Building(
             parent,
             buildingType,
@@ -101,8 +111,10 @@ public class Building : IAddressPart
         );
         return Result<Building>.Success(got);
     }
-    public static Building? Create(AddressRecord source, Street parent){
-        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+    public static Building? Create(AddressRecord source, Street parent)
+    {
+        if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null)
+        {
             return null;
         }
         return new Building(source.AddressPartId,
@@ -111,21 +123,25 @@ public class Building : IAddressPart
             new AddressNameToken(source.AddressName, Names[(BuildingTypes)source.ToponymType])
         );
     }
-    public async Task Save(ObservableTransaction? scope = null){
+    public async Task Save(ObservableTransaction? scope = null)
+    {
         await _parentStreet.Save(scope);
-        if (_id == Utils.INVALID_ID){
+        if (_id == Utils.INVALID_ID)
+        {
             _id = await AddressModel.SaveRecord(this, scope);
         }
         var duplicates = GetDuplicates(this);
-        foreach(var d in duplicates){
+        foreach (var d in duplicates)
+        {
             d._id = this._id;
         }
         _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
-    
+
     public AddressRecord ToAddressRecord()
     {
-        return new AddressRecord(){
+        return new AddressRecord()
+        {
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _buildingName.UnformattedName,
@@ -136,14 +152,16 @@ public class Building : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var found = AddressModel.FindRecords(_id).Result;
-        return found.Select(d => Apartment.Create(d, this));    
+        return found.Select(d => Apartment.Create(d, this));
     }
-    public override string ToString(){
+    public override string ToString()
+    {
         return _buildingName.FormattedName;
     }
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != typeof(Building)){
+        if (obj is null || obj.GetType() != typeof(Building))
+        {
             return false;
         }
         var toCompare = (Building)obj;

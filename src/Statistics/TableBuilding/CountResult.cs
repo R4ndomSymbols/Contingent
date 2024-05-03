@@ -1,12 +1,15 @@
-namespace StudentTracking.Statistics;
+namespace Contingent.Statistics;
 
-public class CountResult {
+public class CountResult
+{
 
-    public int Count {get; set; }
-    public CountResult(){
+    public int Count { get; set; }
+    public CountResult()
+    {
         Count = 0;
     }
-    public CountResult(int count){
+    public CountResult(int count)
+    {
         Count = count;
     }
 

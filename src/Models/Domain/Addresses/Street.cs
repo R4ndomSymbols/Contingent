@@ -1,13 +1,14 @@
 using System.Text.RegularExpressions;
 using Utilities;
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 public class Street : IAddressPart
 {
     public const int ADDRESS_LEVEL = 5;
     private static List<Street> _duplicationBuffer;
-    static Street(){
+    static Street()
+    {
         _duplicationBuffer = new List<Street>();
-    } 
+    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"улица", RegexOptions.IgnoreCase),
         new Regex(@"набережная", RegexOptions.IgnoreCase),
@@ -19,7 +20,8 @@ public class Street : IAddressPart
         new Regex(@"шоссе",RegexOptions.IgnoreCase),
     };
 
-    private IEnumerable<Street> GetDuplicates(Street street){
+    private IEnumerable<Street> GetDuplicates(Street street)
+    {
         return _duplicationBuffer.Where(str =>
             str._parentSettlement.Equals(street._parentSettlement) &&
             str._streetName.Equals(street._streetName) &&
@@ -76,39 +78,47 @@ public class Street : IAddressPart
         _streetName = name;
         _duplicationBuffer.Add(this);
     }
-    public static Result<Street> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null){
+    public static Result<Street> Create(string addressPart, Settlement parent, ObservableTransaction? searchScope = null)
+    {
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(','))
+        {
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не указан или указан неверно"));
         }
         AddressNameToken? foundStreet = null;
-        StreetTypes streetType = StreetTypes.NotMentioned;  
-        foreach (var pair in Names){
-            foundStreet = pair.Value.ExtractToken(addressPart, Restrictions); 
-            if (foundStreet is not null){
+        StreetTypes streetType = StreetTypes.NotMentioned;
+        foreach (var pair in Names)
+        {
+            foundStreet = pair.Value.ExtractToken(addressPart, Restrictions);
+            if (foundStreet is not null)
+            {
                 streetType = pair.Key;
                 break;
             }
         }
-        if (foundStreet is null){
+        if (foundStreet is null)
+        {
             return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не распознан"));
         }
         var fromDb = AddressModel.FindRecords(parent.Id, foundStreet.UnformattedName, (int)streetType, ADDRESS_LEVEL, searchScope).Result;
-        
-        if (fromDb.Any()){
-            if (fromDb.Count() != 1){
+
+        if (fromDb.Any())
+        {
+            if (fromDb.Count() != 1)
+            {
                 return Result<Street>.Failure(new ValidationError(nameof(Street), "Объект дорожной инфраструктуры не может быть однозначно распознан"));
             }
-            else{
+            else
+            {
                 var first = fromDb.First();
                 return Result<Street>.Success(new Street(first.AddressPartId,
-                    parent, 
+                    parent,
                     (StreetTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(StreetTypes)first.ToponymType])
                 ));
             }
         }
-        
+
         var got = new Street(
              parent,
              streetType,
@@ -116,7 +126,8 @@ public class Street : IAddressPart
         );
         return Result<Street>.Success(got);
     }
-    public static Street Create(AddressRecord source, Settlement parent){
+    public static Street Create(AddressRecord source, Settlement parent)
+    {
         return new Street(source.AddressPartId,
             parent,
             (StreetTypes)source.ToponymType,
@@ -124,20 +135,23 @@ public class Street : IAddressPart
         );
     }
     public async Task Save(ObservableTransaction? scope = null)
-    {   
+    {
         await _parentSettlement.Save(scope);
-        if (_id == Utils.INVALID_ID){
-            _id = await AddressModel.SaveRecord(this, scope); 
+        if (_id == Utils.INVALID_ID)
+        {
+            _id = await AddressModel.SaveRecord(this, scope);
         }
         var duplicates = GetDuplicates(this);
-        foreach(var d in duplicates){
+        foreach (var d in duplicates)
+        {
             d._id = this._id;
         }
         _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
     public AddressRecord ToAddressRecord()
     {
-        return new AddressRecord(){
+        return new AddressRecord()
+        {
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _streetName.UnformattedName,
@@ -157,7 +171,8 @@ public class Street : IAddressPart
 
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != typeof(Street)){
+        if (obj is null || obj.GetType() != typeof(Street))
+        {
             return false;
         }
         var toCompare = (Street)obj;
