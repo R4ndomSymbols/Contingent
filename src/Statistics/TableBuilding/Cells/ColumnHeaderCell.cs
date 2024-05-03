@@ -1,58 +1,71 @@
-namespace StudentTracking.Statistics;
+namespace Contingent.Statistics;
 
 // параметр нужен для фильтрации
-public class ColumnHeaderCell<T> {
+public class ColumnHeaderCell<T>
+{
 
     private ColumnHeaderCell<T>? _parent;
     private List<ColumnHeaderCell<T>> _children;
-    public Filter<T> NodeFilter {get; set;}
+    public Filter<T> NodeFilter { get; set; }
     private CellPlacement _placement;
-    public bool IsFixed {get; private init;}
-    public string Name {get; set; }
-    public CellPlacement Placement {
+    public bool IsFixed { get; private init; }
+    public string Name { get; set; }
+    public CellPlacement Placement
+    {
         get => _placement;
-        set {
-            if (IsFixed){
+        set
+        {
+            if (IsFixed)
+            {
                 return;
             }
             _placement = value;
         }
-    } 
+    }
     public IReadOnlyList<ColumnHeaderCell<T>> Children => _children;
     public bool HasAnyChildren => _children.Any();
     public bool IsRoot => _parent is null;
 
     // колонка с фильтром
-    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, Filter<T>? nodeFilter = null) 
-    : this(name, parent, false){
-        if (nodeFilter is null){
+    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, Filter<T>? nodeFilter = null)
+    : this(name, parent, false)
+    {
+        if (nodeFilter is null)
+        {
             NodeFilter = Filter<T>.Empty.Include(_parent.NodeFilter);
         }
-        else{
+        else
+        {
             NodeFilter = nodeFilter.Include(_parent.NodeFilter);
         }
     }
-    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, CellPlacement permanent, Filter<T>? nodeFilter = null) 
-    : this(name, parent, true){
-        if (nodeFilter is null){
+    public ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, CellPlacement permanent, Filter<T>? nodeFilter = null)
+    : this(name, parent, true)
+    {
+        if (nodeFilter is null)
+        {
             NodeFilter = Filter<T>.Empty.Include(_parent.NodeFilter);
         }
-        else{
+        else
+        {
             NodeFilter = nodeFilter.Include(_parent.NodeFilter);
         }
         _placement = permanent;
     }
     // корень
-    public ColumnHeaderCell(){
+    public ColumnHeaderCell()
+    {
         Name = string.Empty;
         IsFixed = false;
         _parent = null;
-        NodeFilter = Filter<T>.Empty; 
+        NodeFilter = Filter<T>.Empty;
         _children = new List<ColumnHeaderCell<T>>();
     }
     // дочернаяя колонка
-    private ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, bool isFixed){
-        if (parent is null){
+    private ColumnHeaderCell(string name, ColumnHeaderCell<T> parent, bool isFixed)
+    {
+        if (parent is null)
+        {
             throw new Exception("Родитель дочерней ноды должен быть указан");
         }
         IsFixed = isFixed;
@@ -63,27 +76,34 @@ public class ColumnHeaderCell<T> {
     }
 
     // конструируется дерево, потом оно будет выравнено до прямоугольника
-    private void AddChild(ColumnHeaderCell<T> child){
+    private void AddChild(ColumnHeaderCell<T> child)
+    {
         child._parent = this;
         _children.Add(child);
     }
 
-    public int GetTreeLogicalHeight(){
+    public int GetTreeLogicalHeight()
+    {
         // корневая нода не участвует в компоновке
-        if (IsRoot){
+        if (IsRoot)
+        {
             return 0;
         }
-        else{
-            return 1 + _parent.GetTreeLogicalHeight(); 
+        else
+        {
+            return 1 + _parent.GetTreeLogicalHeight();
         }
     }
-    public int GetTreeGeometricalHeight(){
-        if (IsRoot){
+    public int GetTreeGeometricalHeight()
+    {
+        if (IsRoot)
+        {
             return 0;
         }
-        else{
+        else
+        {
             return _placement.RowSpan + _parent.GetTreeGeometricalHeight();
         }
-    }    
+    }
 }
 

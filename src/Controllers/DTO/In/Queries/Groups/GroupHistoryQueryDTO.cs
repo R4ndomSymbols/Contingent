@@ -1,14 +1,16 @@
 using System.Text.Json.Serialization;
 
-namespace StudentTracking.Controllers.DTO.In;
-public class GroupHistoryQueryDTO {
+namespace Contingent.Controllers.DTO.In;
+public class GroupHistoryQueryDTO
+{
 
-    public GroupHistoryQueryDTO(){
+    public GroupHistoryQueryDTO()
+    {
         OnDate = "";
     }
     [JsonRequired]
     public int Id { get; set; }
     [JsonRequired]
-    public string OnDate {get; set;}
+    public string OnDate { get; set; }
 
 }

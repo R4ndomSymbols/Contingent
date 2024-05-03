@@ -1,10 +1,10 @@
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Import;
-using StudentTracking.Models.Domain.Orders.Infrastructure;
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Students;
+using Contingent.Import;
+using Contingent.Models.Domain.Orders.Infrastructure;
+using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 
 
 public sealed class EmptyOrder : Order

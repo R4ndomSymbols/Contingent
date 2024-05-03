@@ -1,7 +1,7 @@
-using StudentTracking.SQL;
-using StudentTracking.Models.Domain.Groups;
+using Contingent.SQL;
+using Contingent.Models.Domain.Groups;
 
-namespace StudentTracking.Models.Domain.Flow.History;
+namespace Contingent.Models.Domain.Flow.History;
 
 
 public class GroupHistory

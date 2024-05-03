@@ -23,9 +23,9 @@ $(document).ready(function () {
     $(".edu_program_input").on("input", function () {
         findSpecialities();
     });
-    $(".CreationYear").on("keyup", function () {
+    $(".CreationYear").on("input", function () {
         var num = Number($(this).val());
-        creationYear = isNaN(num) ? creationYear : num; 
+        creationYear = isNaN(num) ? creationYear : num;
     });
     $(".SponsorshipType").on("change", function () {
         var num = Number($(this).val());
@@ -53,8 +53,8 @@ $(document).ready(function () {
         financingType = -1;
         $(".edu_program_input").val(undefined);
         $(".creationYear").val(undefined);
-        $('.EducationalForm').prop('selectedIndex',0);
-        $('.SponsorshipType').prop('selectedIndex',0);
+        $('.EducationalForm').prop('selectedIndex', 0);
+        $('.SponsorshipType').prop('selectedIndex', 0);
 
     });
     $("#AutogenerateName").trigger("click")
@@ -142,7 +142,7 @@ function findSpecialities() {
                     specialityId = ui.item.value
                 },
                 select: function (event, ui) {
-                    $(".edu_program_input").prop("value", ui.item.label)
+                    $(this).prop("value", ui.item.label)
                     event.preventDefault();
                 }
             })

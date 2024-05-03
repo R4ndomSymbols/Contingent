@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Metadata;
-using StudentTracking.Import;
+using Contingent.Import;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
 public class StudentGroupNullifyMovesDTO

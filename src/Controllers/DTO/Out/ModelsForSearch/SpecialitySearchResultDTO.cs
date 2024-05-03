@@ -1,6 +1,6 @@
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialities;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 
 public class SpecialitySearchResultDTO

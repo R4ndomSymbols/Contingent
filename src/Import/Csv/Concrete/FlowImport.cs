@@ -1,15 +1,17 @@
 using System.Security.Cryptography.X509Certificates;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 
-namespace StudentTracking.Import;
+namespace Contingent.Import;
 
 public class FlowImport : IFromCSV<FlowImport>
 {
     public const string GradeBookFieldName = "номер зачетной книжки";
-    public const string SurnameFieldName = "фамилия";
+    public const string StudentFullNameFieldName = "фамилия";
     public const string GroupFieldName = "группа";
+    public const string OrderFieldOrgIdName = "приказ";
+    public const string OrderFieldDateName = "дата приказа";
     private static int _index = 0;
     private static int CurrentNumber
     {
@@ -31,8 +33,8 @@ public class FlowImport : IFromCSV<FlowImport>
     }
     public Result<FlowImport> MapFromCSV(CSVRow row)
     {
-        string? orderOrgId = row["приказ"];
-        string? orderDateRaw = row["дата приказа"];
+        string? orderOrgId = row[OrderFieldOrgIdName];
+        string? orderDateRaw = row[OrderFieldDateName];
         Order orderDetermined = null!;
         if (orderOrgId is not null && int.TryParse(orderDateRaw, out int year) && !string.IsNullOrEmpty(orderOrgId))
         {
@@ -127,7 +129,7 @@ public class FlowImportBatch
             var conductionResult = order.ConductByOrder();
             if (conductionResult.IsFailure)
             {
-                return conductionResult;
+                Console.WriteLine(conductionResult);
             }
         }
         _imports.Clear();

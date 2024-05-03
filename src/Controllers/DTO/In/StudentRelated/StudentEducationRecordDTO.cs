@@ -1,17 +1,18 @@
 using System.Text.Json.Serialization;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class StudentEducationRecordInDTO{
+public class StudentEducationRecordInDTO
+{
 
     public StudentEducationRecordInDTO()
     {
-        
+
     }
-    
+
     [JsonRequired]
     public int Level { get; set; }
-    public int StudentId {get; set;}
+    public int StudentId { get; set; }
 
 }

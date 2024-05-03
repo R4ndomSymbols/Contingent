@@ -1,8 +1,8 @@
 using Utilities;
 
-namespace StudentTracking.Import;
+namespace Contingent.Import;
 
-public interface IFromCSV<T> 
+public interface IFromCSV<T>
 {
     public Result<T> MapFromCSV(CSVRow row);
 }

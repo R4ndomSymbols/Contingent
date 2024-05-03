@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StudentTracking.Statistics;
+namespace Contingent.Statistics;
 
 /*
     |0 1 | 2 3   4 5 |
@@ -32,7 +32,7 @@ public class TableRowHeader<T>
         // дебаг
         Action<RowHeaderCell<T>> printCords = (cell) => Console.WriteLine(cell.Placement + " " + cell.Name);
         TraceTree(printCords, _root);
-        
+
     }
     // не оптимальное решение
     private void CheckCycle(RowHeaderCell<T> current, List<RowHeaderCell<T>> log)

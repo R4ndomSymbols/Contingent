@@ -1,8 +1,8 @@
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 
 public class AddressNameToken
-{   
-    public AddressNameFormatting Formatting {get; private set;}
+{
+    public AddressNameFormatting Formatting { get; private set; }
     private string _normalizedName;
     public string FormattedName
     {
@@ -12,13 +12,15 @@ public class AddressNameToken
             _normalizedName = NormalizeFrom(value);
         }
     }
-    public string UnformattedName{
+    public string UnformattedName
+    {
         get => _normalizedName;
     }
 
     public AddressNameToken(string nameOnly, AddressNameFormatting formatting)
     {
-        if (formatting is null){
+        if (formatting is null)
+        {
             throw new Exception("Форматирование должно быть определено");
         }
         FormattedName = nameOnly;
@@ -35,25 +37,29 @@ public class AddressNameToken
         return string.Join(" ", split);
     }
 
-    private string NormalizeFrom(string name){
-        if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name)){
+    private string NormalizeFrom(string name)
+    {
+        if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
+        {
             throw new Exception("Нормализация невозможна");
         }
         string[] split = name.Split('-');
-        if (split.Any(x => x == string.Empty)){
+        if (split.Any(x => x == string.Empty))
+        {
             throw new ArgumentException("Входной топоним не был в правильном формате");
         }
-        string normalized = string.Join(" ", name.Split(" ").Where(x => x!=string.Empty));
+        string normalized = string.Join(" ", name.Split(" ").Where(x => x != string.Empty));
         return name.Trim().ToLower();
     }
 
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != typeof(AddressNameToken)){
+        if (obj is null || obj.GetType() != typeof(AddressNameToken))
+        {
             return false;
         }
         var toCompare = (AddressNameToken)obj;
-        return toCompare._normalizedName == this._normalizedName && 
+        return toCompare._normalizedName == this._normalizedName &&
                 toCompare.Formatting.Equals(this.Formatting);
     }
 }

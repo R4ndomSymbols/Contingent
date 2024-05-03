@@ -1,12 +1,12 @@
 
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Import;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Controllers.DTO.In;
+using Contingent.Import;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _toEnroll;

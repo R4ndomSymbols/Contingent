@@ -1,11 +1,12 @@
 using System.Text.RegularExpressions;
 using Utilities;
-namespace StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 public class Apartment : IAddressPart
 {
     public const int ADDRESS_LEVEL = 7;
     private static List<Apartment> _duplicationBuffer;
-    static Apartment(){
+    static Apartment()
+    {
         _duplicationBuffer = new List<Apartment>();
     }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
@@ -13,14 +14,15 @@ public class Apartment : IAddressPart
         new Regex(@"кв\u002E", RegexOptions.IgnoreCase),
     };
 
-    private static IEnumerable<Apartment> GetDuplicates(Apartment apartment){
+    private static IEnumerable<Apartment> GetDuplicates(Apartment apartment)
+    {
         return _duplicationBuffer.Where(
             a => a._parentBuilding.Equals(apartment._parentBuilding)
             && a._apartmentName.Equals(apartment._apartmentName)
             && apartment._apartmentType == a._apartmentType
         );
     }
-    
+
     public static readonly IReadOnlyDictionary<ApartmentTypes, AddressNameFormatting> Names = new Dictionary<ApartmentTypes, AddressNameFormatting>(){
         {ApartmentTypes.Apartment, new AddressNameFormatting("кв.", "Квартира", AddressNameFormatting.BEFORE)},
     };
@@ -60,41 +62,49 @@ public class Apartment : IAddressPart
         _apartmentType = type;
         _apartmentName = name;
         _duplicationBuffer.Add(this);
-        
+
     }
-    public static Result<Apartment> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null){
+    public static Result<Apartment> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null)
+    {
         IEnumerable<ValidationError> errors = new List<ValidationError>();
-        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(',')){
+        if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(','))
+        {
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира указана неверно или не указана"));
         }
         AddressNameToken? foundApartment = null;
-        ApartmentTypes apartmentType = ApartmentTypes.NotMentioned;  
-        foreach (var pair in Names){
-            foundApartment = pair.Value.ExtractToken(addressPart, Restrictions); 
-            if (foundApartment is not null){
+        ApartmentTypes apartmentType = ApartmentTypes.NotMentioned;
+        foreach (var pair in Names)
+        {
+            foundApartment = pair.Value.ExtractToken(addressPart, Restrictions);
+            if (foundApartment is not null)
+            {
                 apartmentType = pair.Key;
                 break;
             }
         }
-        if (foundApartment is null){
+        if (foundApartment is null)
+        {
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира не распознана"));
         }
         var fromDb = AddressModel.FindRecords(parent.Id, foundApartment.UnformattedName, (int)apartmentType, ADDRESS_LEVEL, searchScope).Result;
-        
-        if (fromDb.Any()){
-            if (fromDb.Count() != 1){
+
+        if (fromDb.Any())
+        {
+            if (fromDb.Count() != 1)
+            {
                 return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира не может быть однозначно распознана"));
             }
-            else{
+            else
+            {
                 var first = fromDb.First();
                 return Result<Apartment>.Success(new Apartment(first.AddressPartId,
-                    parent, 
+                    parent,
                     (ApartmentTypes)first.ToponymType,
                     new AddressNameToken(first.AddressName, Names[(ApartmentTypes)first.ToponymType])
                 ));
             }
         }
-        
+
         var got = new Apartment(
             parent,
             apartmentType,
@@ -102,10 +112,12 @@ public class Apartment : IAddressPart
         );
         return Result<Apartment>.Success(got);
     }
-    public static Apartment? Create(AddressRecord from, Building parent){
-        if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null){
+    public static Apartment? Create(AddressRecord from, Building parent)
+    {
+        if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null)
+        {
             return null;
-        } 
+        }
         return new Apartment(from.AddressPartId,
             parent,
             (ApartmentTypes)from.ToponymType,
@@ -116,11 +128,13 @@ public class Apartment : IAddressPart
     {
         // итеративное сохрание всего дерева, чтобы не писать кучу ерунды
         await _parentBuilding.Save(scope);
-        if (_id == Utils.INVALID_ID){
+        if (_id == Utils.INVALID_ID)
+        {
             _id = await AddressModel.SaveRecord(this, scope);
         }
         var duplicates = GetDuplicates(this);
-        foreach(var d in duplicates){
+        foreach (var d in duplicates)
+        {
             d._id = this._id;
         }
         _duplicationBuffer.RemoveAll(d => d._id == this._id);
@@ -140,7 +154,8 @@ public class Apartment : IAddressPart
     }
     public AddressRecord ToAddressRecord()
     {
-        return new AddressRecord(){
+        return new AddressRecord()
+        {
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _apartmentName.UnformattedName,

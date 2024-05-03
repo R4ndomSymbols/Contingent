@@ -1,5 +1,5 @@
-using StudentTracking.Import;
-using StudentTracking.Import.Concrete;
+using Contingent.Import;
+using Contingent.Import.Concrete;
 using System.ComponentModel;
 using System.Text;
 using Utilities;
@@ -8,16 +8,15 @@ namespace Tests;
 
 public class Tests
 {
-    //[Fact]
     private void GenerateTable()
     {
-        var csv = new CSVGenerator().GenerateStudents(100);
+        var csv = new CSVGenerator().GenerateStudents(500);
         Console.WriteLine(csv);
-        var result = ImportCSV<StudentImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+        var result = ImportCSV<StudentImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new StudentImport());
         Console.WriteLine(result);
         foreach (var student in result.ResultObject)
         {
-            var saved = student.Student!.Save().Result;
+            var saved = student.Student!.Save();
             if (saved.IsFailure)
             {
                 Console.WriteLine(saved.Errors.First());
@@ -28,7 +27,7 @@ public class Tests
     {
         var csv = new CSVGenerator().GenerateOrders(100);
         Console.WriteLine(csv);
-        var result = ImportCSV<OrderImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+        var result = ImportCSV<OrderImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new OrderImport());
         Console.WriteLine(result);
         if (result.IsSuccess)
         {
@@ -38,12 +37,11 @@ public class Tests
             }
         }
     }
-    [Fact]
-    public void GenerateTable2()
+    private void GenerateTable2()
     {
         var csv = new CSVGenerator().GetSpecialities();
         Console.WriteLine(csv);
-        var result = ImportCSV<SpecialityImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+        var result = ImportCSV<SpecialityImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new SpecialityImport());
         Console.WriteLine(result);
         if (result.IsSuccess)
         {
@@ -51,6 +49,19 @@ public class Tests
             {
                 speciality.Speciality!.Save();
             }
+        }
+    }
+    [Fact]
+    private void FlowImportTest()
+    {
+        var csv = new CSVGenerator().GenerateFlow(150);
+        var batch = new FlowImportBatch();
+        Console.WriteLine(csv);
+        var result = ImportCSV<FlowImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new FlowImport(batch));
+        Console.WriteLine(result);
+        if (result.IsSuccess)
+        {
+            batch.MassConduct();
         }
     }
 

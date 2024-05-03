@@ -1,5 +1,6 @@
 using System.Text;
-using StudentTracking.Tests;
+using Contingent.Models.Domain.Orders;
+using Contingent.Tests;
 
 namespace Tests;
 
@@ -44,6 +45,8 @@ public class CSVGenerator
             StudentDataSource.Patronymics,
             StudentDataSource.Snils,
             StudentDataSource.PaidAgreement,
+            StudentDataSource.TargetAgreement,
+            StudentDataSource.Education,
         };
         return GenerateBase(source, count);
     }
@@ -56,5 +59,10 @@ public class CSVGenerator
     {
         var source = new SpecialityDataSource();
         return GenerateBase(source, source.Length);
+    }
+    public string GenerateFlow(int count)
+    {
+        var source = new OrderConductionDataSource(OrderTypes.FreeEnrollment);
+        return GenerateBase(source, count);
     }
 }

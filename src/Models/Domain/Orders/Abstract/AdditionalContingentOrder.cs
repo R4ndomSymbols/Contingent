@@ -1,8 +1,8 @@
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Orders.Infrastructure;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Orders.Infrastructure;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders;
+namespace Contingent.Models.Domain.Orders;
 
 public abstract class AdditionalContingentOrder : Order
 {

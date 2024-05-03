@@ -1,12 +1,12 @@
 using Npgsql;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.SQL;
+using Contingent.Models.Domain.Orders;
+using Contingent.SQL;
 using Utilities;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
 
 
-namespace StudentTracking.Models.Domain.Flow;
+namespace Contingent.Models.Domain.Flow;
 
 // общие запросы по таблице истории студентов
 public static class FlowHistory

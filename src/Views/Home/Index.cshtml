@@ -1,4 +1,4 @@
-﻿@using StudentTracking.Models.Domain.Flow;
+﻿@using Contingent.Models.Domain.Flow;
 @using Utilities;
 @{
     ViewData["Title"] = "Домашняя";
@@ -7,7 +7,7 @@
 <div class="text-center">
     <h1 class="display-4">Статистика</h1>
     <p class="text-center" style="font-size:30px">
-        За период с 
+        За период с
         @Utils.FormatDateTime(FlowHistory.CurrentPeriodStartDate, true)
         по
         @Utils.FormatDateTime(FlowHistory.CurrentPeriodEndDate, true)
@@ -20,7 +20,7 @@
                 Студенты по возрастам (специалисты)
             </a>
         </li>
-         <li>
+        <li>
             <a href="~/statistics/age_qualified">
                 Студенты по возрастам (квалифицированные рабочие)
             </a>
@@ -48,7 +48,7 @@
             <th>Приказ</th>
         </thead>
         <tbody id="last_records">
-            
+
         </tbody>
     </table>
 </div>

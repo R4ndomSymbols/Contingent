@@ -1,10 +1,9 @@
-
-
-@model StudentTracking.Controllers.DTO.Out.OrderSearchDTO;
+@model Contingent.Controllers.DTO.Out.OrderSearchDTO;
 @{
     ViewData["Title"] = "Движение студентов";
 }
-<input type="hidden" value="@Model.OrderId" group_behaviour="@Model.OrderGroupChangePolicy" order_type="@Model.OrderEnumTypeName" id="current_order">
+<input type="hidden" value="@Model.OrderId" group_behaviour="@Model.OrderGroupChangePolicy"
+    order_type="@Model.OrderEnumTypeName" id="current_order">
 
 <div class="d-flex justify-content-center">
     <h4>Проведение по приказу</h4>
@@ -24,49 +23,49 @@
 </div>
 
 <div class="row">
-    <input class="col-9" id = "fullname_filter"/>
-    <input class="col-2" id = "group_filter"/>
-    <button class="col-1" id = "find_students" >Поиск</button>
+    <input class="col-9" id="fullname_filter" />
+    <input class="col-2" id="group_filter" />
+    <button class="col-1" id="find_students">Поиск</button>
 </div>
 
-<div class = "row">
+<div class="row">
     <div class="col-6 d-flex">
-    <table class ="align-self-start table">
-        <thead>
-            <tr class ="d-flex">
-                <th colspan="3">Доступная выборка</th>
-            </tr>
-            <tr>
-                <th>Фио</th>
-                <th>Группа</th>
-                <th>Добавить</th>
-            </tr>
-        </thead>
-        <tbody id="students_not_in_order">
+        <table class="align-self-start table">
+            <thead>
+                <tr class="d-flex">
+                    <th colspan="3">Доступная выборка</th>
+                </tr>
+                <tr>
+                    <th>Фио</th>
+                    <th>Группа</th>
+                    <th>Добавить</th>
+                </tr>
+            </thead>
+            <tbody id="students_not_in_order">
 
-        </tbody>
-    </table>
+            </tbody>
+        </table>
     </div>
     <div class="col-6 d-flex">
-    <table class ="align-self-start table">
-        <thead >
-            <tr>
-                <th colspan="3">Студенты в приказе</th>
-            </tr>
-            <tr>
-                <th>Фио</th>
-                <th>Группа</th>
-                <th>Исключить</th>
-            </tr>
-        </thead>
-        <tbody id="students_in_order">
+        <table class="align-self-start table">
+            <thead>
+                <tr>
+                    <th colspan="3">Студенты в приказе</th>
+                </tr>
+                <tr>
+                    <th>Фио</th>
+                    <th>Группа</th>
+                    <th>Исключить</th>
+                </tr>
+            </thead>
+            <tbody id="students_in_order">
 
-        </tbody>
-    </table>
+            </tbody>
+        </table>
     </div>
 </div>
-<div class ="d-flex justify-content-start">
-    <button type="button" id = "save_changes"class= "align-self-end btn btn-primary">
+<div class="d-flex justify-content-start">
+    <button type="button" id="save_changes" class="align-self-end btn btn-primary">
         Сохранить
     </button>
     <button type="button" class="btn btn-primary ms-2" id="close_order">

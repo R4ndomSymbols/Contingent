@@ -1,84 +1,84 @@
-@using StudentTracking.Controllers.DTO.Out;
+@using Contingent.Controllers.DTO.Out;
 @model GroupOutDTO;
 
 <div class="container">
-    <div id ="info" group_id = "@Model.Id">
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Название
-        </h5>
-        <p class="col-7">
-            @Model.GroupName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Специальность
-        </h5>
-        <p class="col-7">
-            @Model.Speciality.FullName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Курс
-        </h5>
-        <p class="col-7">
-            @Model.CourseOn
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Формат обучения
-        </h5>
-        <p class="col-7">
-            @Model.EduFormatName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Финансирование
-        </h5>
-        <p class="col-7">
-            @Model.SponsorshipTypeName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Год регистрации (поток)
-        </h5>
-        <p class="col-7">
-            @Model.CreationYear
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-2">
-            Дата статистики
-        </h5>
-        <input type="text" placeholder="ДД.ММ.ГГГГ" class="col-2" id = "date_input"/>
-        <button id = "search_students_button" class="col-1">
-            Запросить
-        </button>
-    </div>
-    
-    <div class="text-center">
-        <h5>
-            Студенты, числящиеся в группе
-        </h5>
-    </div>
-    <div class="table-responsible">
-        <table class="table">
-            <thead>
-                <th>Номер</th>
-                <th>ФИО</th>
-                <th>Приказ</th>
-                <th>Дата</th>
-            </thead>
-            <tbody id = "group_history">
+    <div id="info" group_id="@Model.Id">
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Название
+            </h5>
+            <p class="col-7">
+                @Model.GroupName
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Специальность
+            </h5>
+            <p class="col-7">
+                @Model.Speciality.FullName
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Курс
+            </h5>
+            <p class="col-7">
+                @Model.CourseOn
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Формат обучения
+            </h5>
+            <p class="col-7">
+                @Model.EduFormatName
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Финансирование
+            </h5>
+            <p class="col-7">
+                @Model.SponsorshipTypeName
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Год регистрации (поток)
+            </h5>
+            <p class="col-7">
+                @Model.CreationYear
+            </p>
+        </div>
+        <div class="d-flex flex-row">
+            <h5 class="col-2">
+                Дата статистики
+            </h5>
+            <input type="text" placeholder="ДД.ММ.ГГГГ" class="col-2" id="date_input" />
+            <button id="search_students_button" class="col-1">
+                Запросить
+            </button>
+        </div>
 
-            </tbody>
-        </table>
-    </div>
-</div>
+        <div class="text-center">
+            <h5>
+                Студенты, числящиеся в группе
+            </h5>
+        </div>
+        <div class="table-responsible">
+            <table class="table">
+                <thead>
+                    <th>Номер</th>
+                    <th>ФИО</th>
+                    <th>Приказ</th>
+                    <th>Дата</th>
+                </thead>
+                <tbody id="group_history">
 
-<script src="~/js/observe/groups.js"></script>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="~/js/observe/groups.js"></script>

@@ -1,8 +1,8 @@
-@using StudentTracking.Models.Domain;
-@using StudentTracking.Models.Domain.Students;
-@using StudentTracking.Models.Domain.Address;
-@using StudentTracking.Controllers.DTO.Out;
-@model StudentTracking.Controllers.DTO.Out.StudentFullDTO;
+@using Contingent.Models.Domain;
+@using Contingent.Models.Domain.Students;
+@using Contingent.Models.Domain.Address;
+@using Contingent.Controllers.DTO.Out;
+@model Contingent.Controllers.DTO.Out.StudentFullDTO;
 @{
     ViewData["Title"] = "Просмотр";
 }
@@ -89,6 +89,18 @@
             </div>
         </div>
     }
+    <div class="text-center">
+        <h5>Образование студента</h5>
+    </div>
+    <div class="d-flex flex-row">
+        @foreach (var edu in Model.EducationalLevels)
+        {
+            <div class="me-4">
+                <p>@edu.TypeName</p>
+            </div>
+        }
+    </div>
+
     <div class="col-4">
         <p>История студента в приказах</p>
     </div>

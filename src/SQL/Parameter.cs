@@ -2,24 +2,28 @@ using System.Collections;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace StudentTracking.SQL;
+namespace Contingent.SQL;
 
 
-public class SQLParameterCollection : IEnumerable<SQLParameter>{
+public class SQLParameterCollection : IEnumerable<SQLParameter>
+{
 
     private List<SQLParameter> _parameters;
 
-    public SQLParameterCollection() {
+    public SQLParameterCollection()
+    {
         _parameters = new List<SQLParameter>();
     }
     // возвращает параметр в запросе
-    public SQLParameter Add<T>(T value){
+    public SQLParameter Add<T>(T value)
+    {
         string name = GetNextName();
         var result = new SQLParameter<T>(new NpgsqlParameter<T>(name, value));
         _parameters.Add(result);
         return result;
     }
-    public SQLParameter Add(object value, NpgsqlDbType type){
+    public SQLParameter Add(object value, NpgsqlDbType type)
+    {
         string name = GetNextName();
         var par = new NpgsqlParameter();
         par.NpgsqlDbType = type;
@@ -40,29 +44,34 @@ public class SQLParameterCollection : IEnumerable<SQLParameter>{
         return _parameters.GetEnumerator();
     }
 
-    private string GetNextName(){
-        return  "p" + (_parameters.Count + 1).ToString();
+    private string GetNextName()
+    {
+        return "p" + (_parameters.Count + 1).ToString();
     }
-} 
-public abstract class SQLParameter {
-    public bool UseBrackets {get; set;} 
+}
+public abstract class SQLParameter
+{
+    public bool UseBrackets { get; set; }
     public abstract NpgsqlParameter ToNpgsqlParameter();
     public abstract string GetName();
 
 }
 
-public class SQLParameter<T> : SQLParameter {
-    
+public class SQLParameter<T> : SQLParameter
+{
+
     private NpgsqlParameter<T> _value;
-    public SQLParameter(NpgsqlParameter<T> value){
+    public SQLParameter(NpgsqlParameter<T> value)
+    {
         _value = value;
     }
 
     public override string GetName()
     {
-        var n = "@" + _value.ParameterName; 
-        if (UseBrackets){
-            return "(" + n +")";
+        var n = "@" + _value.ParameterName;
+        if (UseBrackets)
+        {
+            return "(" + n + ")";
         }
         return n;
     }
@@ -70,21 +79,23 @@ public class SQLParameter<T> : SQLParameter {
     public override NpgsqlParameter ToNpgsqlParameter()
     {
         return _value;
-    }   
+    }
 }
 
 public class BoxedSqlParameter : SQLParameter
 {
     private NpgsqlParameter _value;
-    public BoxedSqlParameter(NpgsqlParameter value){
+    public BoxedSqlParameter(NpgsqlParameter value)
+    {
         _value = value;
     }
 
     public override string GetName()
     {
-        var n = "@" + _value.ParameterName; 
-        if (UseBrackets){
-            return "(" + n +")";
+        var n = "@" + _value.ParameterName;
+        if (UseBrackets)
+        {
+            return "(" + n + ")";
         }
         return n;
     }

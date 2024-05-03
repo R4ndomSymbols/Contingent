@@ -1,6 +1,6 @@
-using StudentTracking.Models.Domain.Groups;
+using Contingent.Models.Domain.Groups;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 [Serializable]
 public class GroupMinimalDTO

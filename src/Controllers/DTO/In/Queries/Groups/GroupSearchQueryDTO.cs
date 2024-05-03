@@ -1,13 +1,15 @@
 using System.Text.Json.Serialization;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 [Serializable]
-public class GroupSearchQueryDTO {
-    public GroupSearchQueryDTO(){
+public class GroupSearchQueryDTO
+{
+    public GroupSearchQueryDTO()
+    {
         GroupName = null;
     }
 
-    public string? GroupName {get; set;}
+    public string? GroupName { get; set; }
     [JsonRequired]
-    public bool IsActive {get; set;}
+    public bool IsActive { get; set; }
 }

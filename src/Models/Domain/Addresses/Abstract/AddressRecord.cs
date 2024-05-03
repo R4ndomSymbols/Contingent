@@ -1,8 +1,9 @@
-namespace  StudentTracking.Models.Domain.Address;
+namespace Contingent.Models.Domain.Address;
 
 // id = 0 - id не указан
 //
-public class AddressRecord {
+public class AddressRecord
+{
 
     // уникальный идентификатор кусочка адреса
     public int AddressPartId;
@@ -15,10 +16,11 @@ public class AddressRecord {
     // название структуры
     public string AddressName;
 
-    public AddressRecord(){
+    public AddressRecord()
+    {
         AddressName = string.Empty;
     }
-    
+
 
 }
 

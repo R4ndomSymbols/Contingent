@@ -1,10 +1,10 @@
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Specialities;
-using StudentTracking.SQL;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Specialities;
+using Contingent.SQL;
 
-namespace StudentTracking.Statistics.Tables;
+namespace Contingent.Statistics.Tables;
 
 public class AgeTable : ITable
 {
@@ -254,6 +254,13 @@ public class AgeTable : ITable
                 ageFilter
             );
         }
+        var finalAgeCell = new RowHeaderCell<StudentFlowRecord>(
+            "Старше 30 лет",
+            horizontalRoot,
+            new Filter<StudentFlowRecord>(
+                (students) => students.Where(std => std.Student.GetAgeOnDate(ageDate) > 30)
+            )
+        );
         var found = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000), (false, false));
         var verticalHeader = new TableColumnHeader<StudentFlowRecord>(verticalRoot, true);
         var horizontalHeader = new TableRowHeader<StudentFlowRecord>(horizontalRoot, verticalHeader, true);

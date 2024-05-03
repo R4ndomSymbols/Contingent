@@ -1,4 +1,4 @@
-namespace StudentTracking.Models;
+namespace Contingent.Models;
 
 public class ErrorViewModel
 {

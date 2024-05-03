@@ -1,6 +1,6 @@
-using StudentTracking.Models.Domain.Citizenship;
+using Contingent.Models.Domain.Citizenship;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 public class RussianCitizenshipDTO
 {

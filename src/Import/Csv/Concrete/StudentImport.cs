@@ -1,11 +1,11 @@
 using System.Data.Common;
-using StudentTracking.Controllers.DTO;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Controllers.DTO;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models;
+using Contingent.Models.Domain.Students;
 using Utilities;
 
-namespace StudentTracking.Import.Concrete;
+namespace Contingent.Import.Concrete;
 
 public class StudentImport : IFromCSV<StudentImport>
 {

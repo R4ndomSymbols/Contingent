@@ -1,13 +1,13 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Specialities;
 using Utilities;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 public class StudentController : Controller
 {
     private readonly ILogger<HomeController> _logger;
@@ -83,7 +83,6 @@ public class StudentController : Controller
         {
             return BadRequest("Ошибка десериализации");
         }
-
         using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
         using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
         var studentResult = StudentModel.Build(dto);
@@ -91,37 +90,14 @@ public class StudentController : Controller
         if (studentResult.IsFailure)
         {
             return Json(new ErrorsDTO(studentResult.Errors));
-            var errors = studentResult.Errors.ToList();
-
         }
-
         var student = studentResult.ResultObject;
-
-
         try
         {
-            var studentSaveResult = await student.Save(savingTransaction);
+            var studentSaveResult = student.Save(savingTransaction);
             if (studentSaveResult.IsFailure)
             {
                 return Json(new ErrorsDTO(studentSaveResult.Errors));
-            }
-            // внутренняя зависимость, студент должен быть сохранен прежде запроса тегов
-            var studentTagsResults = dto.Education.Select(x => StudentEducationalLevelRecord.Create(x, student));
-            if (studentTagsResults.Any(x => x.IsFailure))
-            {
-                return Json(new ErrorsDTO(studentTagsResults.Where(x => x.IsFailure).First().Errors));
-            }
-            var tags = studentTagsResults.Select(x => x.ResultObject);
-            var records = await StudentEducationalLevelRecord.GetByOwner(student);
-            Console.WriteLine(student.Id.Value);
-            // пропуск имеющийся тегов
-            if (records.Any())
-            {
-                tags = tags.Where(x => !records.Any(y => y.Level == x.Level));
-            }
-            foreach (var tag in tags)
-            {
-                await tag.SaveRecord(savingTransaction);
             }
         }
         catch (Exception e)

@@ -1,12 +1,12 @@
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialities;
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
-using StudentTracking.SQL;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Flow.History;
+using Contingent.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Flow.History;
 
-namespace StudentTracking.Models.Domain.Groups;
+namespace Contingent.Models.Domain.Groups;
 
 // при записи в базу создается не группа, а целый набор групп до выпускного курса
 // пользователь может создавать только группы начального курса
@@ -276,16 +276,21 @@ public class GroupModel
         {
             return Result<IReadOnlyCollection<GroupModel>>.Failure(new ValidationError("Такую группу невозможно сохранить данным образом"));
         }
+        var toSave = GenerateGroupSequence();
         var saved = new List<GroupModel>();
-        var currentGroup = this;
-        for (int i = 1; i <= currentGroup._educationProgram.CourseCount; i++)
+        for (int i = 0; i < toSave.Length; i++)
         {
-            if (currentGroup.SaveBase(scope).IsSuccess)
+            var result = toSave[i].SaveBase(scope);
+            if (result.IsSuccess)
             {
-                saved.Add(currentGroup);
+                saved.Add(toSave[i]);
             }
-            currentGroup = currentGroup.Copy();
-            currentGroup._courseOn++;
+            else
+            {
+                scope?.RollbackAsync()?.Wait();
+                return Result<IReadOnlyCollection<GroupModel>>.Failure(result.Errors);
+            }
+
         }
         return Result<IReadOnlyCollection<GroupModel>>.Success(saved);
     }
@@ -378,7 +383,9 @@ public class GroupModel
             {
                 return result;
             }
-            result = ((char)(((string)reader["letter"])[0] + 1)).ToString();
+            result = (string)reader["letter"];
+            result = result == string.Empty ? "Я" : result;
+            result = ((char)(result[0] + 1)).ToString();
         }
         conn?.Dispose();
         return result;
@@ -436,28 +443,22 @@ public class GroupModel
 
     public static IReadOnlyCollection<GroupModel> FindGroupsByName(QueryLimits limits, string? name, bool onlyActive)
     {
-        var where = onlyActive ? new ComplexWhereCondition(new WhereCondition(new Column("is_active", "educational_group"))) : null;
+        var where = onlyActive ? new ComplexWhereCondition(new WhereCondition(new Column("is_active", "educational_group"))) : ComplexWhereCondition.Empty;
         if (name == string.Empty || string.IsNullOrWhiteSpace(name) || name.Length < 2)
         {
             return FindGroups(limits, additionalConditions: where).Result;
         }
         var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add<string>(name.ToLower() + "%");
-        var secondWhere = new ComplexWhereCondition(
+        var p1 = parameters.Add<string>(name.Trim().ToLower() + "%");
+        where = where.Unite(
+            ComplexWhereCondition.ConditionRelation.AND,
+            new ComplexWhereCondition(
             new WhereCondition(
                 new Column("lower", "group_name", "educational_group", null),
                 p1,
                 WhereCondition.Relations.Like
             )
-        );
-        if (where is not null)
-        {
-            where = new ComplexWhereCondition(where, secondWhere, ComplexWhereCondition.ConditionRelation.AND);
-        }
-        else
-        {
-            where = secondWhere;
-        }
+        ));
         return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
     }
 
@@ -496,6 +497,30 @@ public class GroupModel
                 _formatOfEducation.GroupNamePostfix +
                 _groupSponsorship.GroupNamePostfix;
         }
+    }
+
+    public GroupModel[] GenerateGroupSequence()
+    {
+        if (!_nameGenerated)
+        {
+            return new[] { this };
+        }
+        var groups = new GroupModel[_educationProgram.CourseCount];
+        for (int course = 1; course < groups.Length + 1; course++)
+        {
+            int index = course - 1;
+            if (course == _courseOn)
+            {
+                groups[index] = this;
+            }
+            else
+            {
+                groups[index] = this.Copy();
+                groups[index]._courseOn = course;
+                groups[index]._groupName = groups[index].GenerateGroupName();
+            }
+        }
+        return groups;
     }
 
 }

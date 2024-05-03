@@ -1,8 +1,8 @@
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Specialities;
 using Utilities;
 
-namespace StudentTracking.Import;
+namespace Contingent.Import;
 
 public class SpecialityImport : IFromCSV<SpecialityImport>
 {

@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Import;
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Import;
+using Contingent.Models.Domain.Specialities;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
 public class SpecialityDTO : IFromCSV<SpecialityDTO>

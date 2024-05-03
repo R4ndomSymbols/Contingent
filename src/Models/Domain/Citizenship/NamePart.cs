@@ -1,7 +1,7 @@
 using Utilities;
 using Utilities.Validation;
 
-namespace StudentTracking.Models.Domain.Citizenship;
+namespace Contingent.Models.Domain.Citizenship;
 
 public class NamePart
 {

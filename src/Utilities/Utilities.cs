@@ -1,6 +1,6 @@
 using System.Globalization;
 using Npgsql;
-using StudentTracking.Models;
+using Contingent.Models;
 
 namespace Utilities;
 

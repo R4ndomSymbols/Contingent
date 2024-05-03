@@ -1,14 +1,14 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Infrastruture;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Infrastruture;
+using Contingent.SQL;
 using Utilities;
 
-namespace StudentTracking.Controllers.Search;
+namespace Contingent.Controllers.Search;
 
 public class OrderSearchController : Controller
 {
@@ -62,14 +62,14 @@ public class OrderSearchController : Controller
         int offset = 0;
         while (found.Count < dto.PageSize && offset < tableSize)
         {
-            offset = page*dto.PageSize;
+            offset = page * dto.PageSize;
             found.AddRange(
                 filter.Execute(
                     Order.FindOrders(new QueryLimits(page, dto.PageSize),
                     orderBy: orderBy
             ).Result).Select(x => new OrderSearchDTO(x)));
             page++;
-            
+
         }
         return Json(found);
     }

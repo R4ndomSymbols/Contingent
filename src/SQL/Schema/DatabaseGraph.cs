@@ -1,11 +1,12 @@
-namespace StudentTracking.SQL;
+namespace Contingent.SQL;
 
 // граф отношений в базе данных для вопспроизводства JOIN операций
 public class DatabaseGraph
 {
     private List<SQLTable> _graph;
 
-    private DatabaseGraph(){
+    private DatabaseGraph()
+    {
 
         _graph = new List<SQLTable>();
 
@@ -13,7 +14,7 @@ public class DatabaseGraph
         studentTable.AddDataColumns(
             "date_of_birth"
         );
-        
+
 
         var specialityTable = new SQLTable("educational_program", "id");
         var groupTable = new SQLTable("educational_group", "group_id");
@@ -32,23 +33,29 @@ public class DatabaseGraph
          rusCitizenshipTable, ordersTable, studentFlowTable});
     }
 
-    public SQLTable? GetByName(string tableName){
+    public SQLTable? GetByName(string tableName)
+    {
         var found = _graph.Where(x => x.TableName == tableName);
-        if (found.Any()){
+        if (found.Any())
+        {
             return found.First();
         }
         return null;
     }
-    public IEnumerable<SQLTable> GetAllReferencesToPrimaryKey(SQLTable toThis){
+    public IEnumerable<SQLTable> GetAllReferencesToPrimaryKey(SQLTable toThis)
+    {
         return _graph.Where(t => t.ForeignKeys.Any(key => key.Reference == toThis.Primary));
 
     }
 
     private static DatabaseGraph _instance;
 
-    public static DatabaseGraph Instance {
-        get {
-            if (_instance is null){
+    public static DatabaseGraph Instance
+    {
+        get
+        {
+            if (_instance is null)
+            {
                 _instance = new DatabaseGraph();
             }
             return _instance;
@@ -58,27 +65,32 @@ public class DatabaseGraph
 }
 
 
-public class SQLTable {
+public class SQLTable
+{
 
     private List<ForeignKey> _outerKeys;
     private List<DataColumn> _dataColumns;
-    public string TableName {get; private set;}
-    public PrimaryKey Primary {get; private set;}
+    public string TableName { get; private set; }
+    public PrimaryKey Primary { get; private set; }
     public IReadOnlyCollection<ForeignKey> ForeignKeys => _outerKeys.AsReadOnly();
     public IReadOnlyCollection<DataColumn> DataColumns => _dataColumns.AsReadOnly();
 
 
-    public SQLTable(string name, string primaryKeyColName){
+    public SQLTable(string name, string primaryKeyColName)
+    {
         TableName = name;
         Primary = new PrimaryKey(primaryKeyColName, this);
     }
 
-    public void AddForeignKey(string colName, PrimaryKey referenceTo){
+    public void AddForeignKey(string colName, PrimaryKey referenceTo)
+    {
         _outerKeys.Add(new ForeignKey(colName, referenceTo));
     }
 
-    public void AddDataColumns(params string[] names){
-        foreach (var str in names){
+    public void AddDataColumns(params string[] names)
+    {
+        foreach (var str in names)
+        {
             _dataColumns.Add(new DataColumn(str));
         }
     }

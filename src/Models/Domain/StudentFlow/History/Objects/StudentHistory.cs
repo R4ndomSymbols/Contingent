@@ -1,12 +1,12 @@
 using Npgsql;
-using StudentTracking.Models.Domain.Flow.History;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.SQL;
+using Contingent.Models.Domain.Flow.History;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Groups;
+using Contingent.SQL;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Flow;
+namespace Contingent.Models.Domain.Flow;
 
 
 public class StudentHistory

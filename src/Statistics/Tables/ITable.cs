@@ -1,9 +1,10 @@
-namespace StudentTracking.Statistics.Tables;
+namespace Contingent.Statistics.Tables;
 
-public interface ITable {
+public interface ITable
+{
 
-    public string DisplayedName {get;}
-    public string Html{get;}
+    public string DisplayedName { get; }
+    public string Html { get; }
 
 
 }

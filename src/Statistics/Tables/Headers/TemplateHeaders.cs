@@ -1,9 +1,9 @@
-using StudentTracking.Models.Domain.Address;
-using StudentTracking.Models.Domain.Specialities;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Students;
+using Contingent.Models.Domain.Address;
+using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
 
-namespace StudentTracking.Statistics.Tables.Headers;
+namespace Contingent.Statistics.Tables.Headers;
 
 
 public static class TemplateHeaders

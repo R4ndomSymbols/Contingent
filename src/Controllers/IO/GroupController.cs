@@ -1,13 +1,13 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Controllers.DTO.Out;
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.Models.Domain.Flow.History;
+using Contingent.Controllers.DTO.In;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Flow.History;
 using Utilities;
 
-namespace StudentTracking.Controllers;
+namespace Contingent.Controllers;
 
 public class GroupController : Controller
 {
@@ -115,7 +115,7 @@ public class GroupController : Controller
         {
             return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(groupResult.Errors)));
         }
-        return Json(new { GroupName = groupResult.ResultObject.GroupName });
+        return Json(new { GroupName = string.Join(", ", groupResult.ResultObject.GenerateGroupSequence().Select(x => x.GroupName)) });
     }
 
     [HttpPost]

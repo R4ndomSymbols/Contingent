@@ -1,7 +1,7 @@
-using StudentTracking.Controllers.DTO.In;
+using Contingent.Controllers.DTO.In;
 using Tests;
 
-namespace StudentTracking.Tests;
+namespace Contingent.Tests;
 
 public class SpecialityDataSource : IRowSource
 {

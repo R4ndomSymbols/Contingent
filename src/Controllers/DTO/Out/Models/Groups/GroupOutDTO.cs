@@ -1,7 +1,7 @@
-using StudentTracking.Models.Domain.Groups;
-using StudentTracking.Models.Domain.Specialities;
+using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Specialities;
 
-namespace StudentTracking.Controllers.DTO.Out;
+namespace Contingent.Controllers.DTO.Out;
 
 public sealed class GroupOutDTO
 {

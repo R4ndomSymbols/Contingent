@@ -1,4 +1,4 @@
-@using StudentTracking.Controllers.DTO.Out;
+@using Contingent.Controllers.DTO.Out;
 
 @model object;
 
@@ -21,9 +21,9 @@
             </h5>
         </div>
         <div class="col-5">
-                <input type="text" placeholder="Группа" id="group_input" />
+            <input type="text" placeholder="Группа" id="group_input" />
         </div>
-    </div>        
+    </div>
 
     <div class="row my-4">
         <button class="btn btn-primary" id="perform_search">
@@ -39,22 +39,22 @@
                 <th>Группа</th>
                 <th>Действия</th>
             </thead>
-            <tbody id = "students_found">
-            
-            </tbody>    
+            <tbody id="students_found">
+
+            </tbody>
         </table>
-        
+
 
     </div>
     <div class="row">
-        <div id ="current_page" class="col-1">
+        <div id="current_page" class="col-1">
             <h3>1</h3>
         </div>
         <button id="previous_page" class="btn btn-secondary col-1">
             Предыдущая
         </button>
         <button id="next_page" class="btn btn-secondary col-1">
-                Следующая
+            Следующая
         </button>
     </div>
 </div>

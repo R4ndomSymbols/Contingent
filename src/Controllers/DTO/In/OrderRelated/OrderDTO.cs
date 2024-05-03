@@ -1,25 +1,27 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Import;
-using StudentTracking.Models.Domain.Orders;
-using StudentTracking.Models.Domain.Orders.OrderData;
+using Contingent.Import;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class OrderDTO : IFromCSV<OrderDTO>{
+public class OrderDTO : IFromCSV<OrderDTO>
+{
     [JsonRequired]
-    public string SpecifiedDate {get; set; }
+    public string SpecifiedDate { get; set; }
     [JsonRequired]
-    public string EffectiveDate {get; set; }
+    public string EffectiveDate { get; set; }
     [JsonRequired]
-    public string? OrderDescription {get; set; }
+    public string? OrderDescription { get; set; }
     [JsonRequired]
-    public string? OrderDisplayedName {get; set; }
+    public string? OrderDisplayedName { get; set; }
     [JsonRequired]
-    public int OrderType {get; set; }
+    public int OrderType { get; set; }
 
-    public OrderDTO(){
+    public OrderDTO()
+    {
         SpecifiedDate = "";
         EffectiveDate = "";
         OrderDescription = "";

@@ -1,10 +1,11 @@
-namespace StudentTracking.SQL;
+namespace Contingent.SQL;
 
 public class OrderByCondition : IQueryPart
 {
 
     private List<(Column col, OrderByTypes type)> _restrictedColumns;
-    private OrderByCondition(){
+    private OrderByCondition()
+    {
         _restrictedColumns = new List<(Column, OrderByTypes)>();
     }
 
@@ -13,7 +14,8 @@ public class OrderByCondition : IQueryPart
         AddColumn(restricted, type);
     }
 
-    public void AddColumn(Column restricted, OrderByTypes type){
+    public void AddColumn(Column restricted, OrderByTypes type)
+    {
         _restrictedColumns.Add((restricted, type));
     }
 

@@ -1,7 +1,7 @@
-using StudentTracking.Import;
+using Contingent.Import;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 public class GroupStatementDTO : IFromCSV<GroupStatementDTO>
 {
@@ -16,7 +16,7 @@ public class GroupStatementDTO : IFromCSV<GroupStatementDTO>
 
     public Result<GroupStatementDTO> MapFromCSV(CSVRow row)
     {
-        GroupName = row[Import.FlowImport.GradeBookFieldName]!;
+        GroupName = row[FlowImport.GroupFieldName]!;
         GroupName ??= "";
         return Result<GroupStatementDTO>.Success(this);
     }

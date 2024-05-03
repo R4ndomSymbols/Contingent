@@ -1,19 +1,23 @@
 using System.Text.Json.Serialization;
-using StudentTracking.Import;
+using Contingent.Import;
 using Utilities;
 
-namespace StudentTracking.Controllers.DTO.In;
+namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
 public class RussianCitizenshipInDTO : IFromCSV<RussianCitizenshipInDTO>
 {
-
+    public const string NameFieldName = "имя";
+    public const string SurnameFieldName = "фамилия";
+    public const string PatronymicFieldName = "отчество";
+    public const string LegalAddressFieldName = "прописка";
     public RussianCitizenshipInDTO()
     {
         Id = null;
         Name = "";
         Surname = "";
         Patronymic = null;
+        LegalAddress = new AddressInDTO();
 
     }
     public int? Id { get; set; }
@@ -28,12 +32,12 @@ public class RussianCitizenshipInDTO : IFromCSV<RussianCitizenshipInDTO>
 
     public Result<RussianCitizenshipInDTO> MapFromCSV(CSVRow row)
     {
-        Name = row["имя"]!;
-        Surname = row["фамилия"]!;
-        Patronymic = row["отчество"];
+        Name = row[NameFieldName]!;
+        Surname = row[SurnameFieldName]!;
+        Patronymic = row[PatronymicFieldName];
         LegalAddress = new AddressInDTO
         {
-            Address = row["прописка"]
+            Address = row[LegalAddressFieldName]
         };
         return Result<RussianCitizenshipInDTO>.Success(this);
     }

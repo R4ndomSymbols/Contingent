@@ -1,14 +1,16 @@
 using Npgsql;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders.Infrastructure;
+namespace Contingent.Models.Domain.Orders.Infrastructure;
 
-public class PaidOrderSequentialGuardian : OrderSequentialGuardian {
+public class PaidOrderSequentialGuardian : OrderSequentialGuardian
+{
 
     private List<(AdditionalContingentOrder order, int bias)> _foundPaid;
     private static PaidOrderSequentialGuardian? _instance;
 
-    private PaidOrderSequentialGuardian(){
+    private PaidOrderSequentialGuardian()
+    {
         _foundPaid = new List<(AdditionalContingentOrder order, int bias)>();
     }
 
@@ -86,7 +88,7 @@ public class PaidOrderSequentialGuardian : OrderSequentialGuardian {
 
     public override void Save()
     {
-       using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
         var cmdText = "UPDATE orders SET serial_number = @p1, org_id = @p3 WHERE id = @p2";
         for (int i = 0; i < _foundPaid.Count; i++)
         {
@@ -111,8 +113,9 @@ public class PaidOrderSequentialGuardian : OrderSequentialGuardian {
         SetSource(_yearStart, _yearEnd);
     }
 
-    private void SetSource(DateTime start, DateTime end){
+    private void SetSource(DateTime start, DateTime end)
+    {
         _foundPaid = Order.FindWithinRangeSortedByTime(start, end, SQL.OrderByCondition.OrderByTypes.ASC)
-        .Where(ord => ord is AdditionalContingentOrder).Select(o => ((AdditionalContingentOrder)o,0)).ToList();
+        .Where(ord => ord is AdditionalContingentOrder).Select(o => ((AdditionalContingentOrder)o, 0)).ToList();
     }
 }

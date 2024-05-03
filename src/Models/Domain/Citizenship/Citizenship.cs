@@ -1,6 +1,6 @@
-using StudentTracking.SQL;
+using Contingent.SQL;
 
-namespace StudentTracking.Models.Domain.Citizenship;
+namespace Contingent.Models.Domain.Citizenship;
 
 public abstract class Citizenship
 {

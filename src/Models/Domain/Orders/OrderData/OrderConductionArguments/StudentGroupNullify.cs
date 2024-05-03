@@ -1,11 +1,11 @@
 using System.Collections;
-using StudentTracking.Controllers.DTO.In;
-using StudentTracking.Models.Domain.Flow;
-using StudentTracking.Models.Domain.Students;
-using StudentTracking.SQL;
+using Contingent.Controllers.DTO.In;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Students;
+using Contingent.SQL;
 using Utilities;
 
-namespace StudentTracking.Models.Domain.Orders.OrderData;
+namespace Contingent.Models.Domain.Orders.OrderData;
 
 public class StudentGroupNullifyMove : StudentStatement
 {
