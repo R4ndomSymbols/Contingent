@@ -8,7 +8,7 @@ using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Specialities;
 
-public class SpecialityModel
+public class SpecialtyModel
 {
     public const int MINIMAL_COURSE_COUNT = 1;
     public const int MAXIMUM_COURSE_COUNT = 6;
@@ -70,7 +70,7 @@ public class SpecialityModel
         get => _trainingProgram;
     }
 
-    private SpecialityModel()
+    private SpecialtyModel()
     {
         _id = null;
         _fgosCode = "";
@@ -83,16 +83,16 @@ public class SpecialityModel
         _trainingProgram = TrainingProgram.None;
     }
 
-    public static Mapper<SpecialityModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
+    public static Mapper<SpecialtyModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
     {
-        var mapper = new Mapper<SpecialityModel>(
+        var mapper = new Mapper<SpecialtyModel>(
             (reader) =>
             {
                 if (reader["id_spec"].GetType() == typeof(DBNull))
                 {
-                    return QueryResult<SpecialityModel>.NotFound();
+                    return QueryResult<SpecialtyModel>.NotFound();
                 }
-                var mapped = new SpecialityModel();
+                var mapped = new SpecialtyModel();
                 mapped._id = (int)reader["id_spec"];
                 mapped._fgosCode = (string)reader["fgos_code"];
                 mapped._fgosName = (string)reader["fgos_name"];
@@ -104,7 +104,7 @@ public class SpecialityModel
                 mapped._levelIn = LevelOfEducation.GetByLevelCode((int)reader["speciality_in_education_level"]);
                 mapped._levelOut = LevelOfEducation.GetByLevelCode((int)reader["speciality_out_education_level"]);
                 mapped._trainingProgram = TrainingProgram.GetByType((int)reader["training_program_type"]);
-                return QueryResult<SpecialityModel>.Found(mapped);
+                return QueryResult<SpecialtyModel>.Found(mapped);
             }, new List<Column>(){
                 new Column("id", "id_spec", "educational_program"),
                 new Column("group_prefix", "educational_program"),
@@ -126,18 +126,18 @@ public class SpecialityModel
         return mapper;
     }
 
-    public static Result<SpecialityModel> Build(SpecialityDTO dto)
+    public static Result<SpecialtyModel> Build(SpecialityDTO dto)
     {
         if (dto is null)
         {
-            return Result<SpecialityModel>.Failure(new ValidationError("dto не может быть null"));
+            return Result<SpecialtyModel>.Failure(new ValidationError("dto не может быть null"));
         }
         IList<ValidationError?> errors = new List<ValidationError?>();
-        SpecialityModel model = new();
-        SpecialityModel? fromDb = null;
+        SpecialtyModel model = new();
+        SpecialtyModel? fromDb = null;
         if (dto.Id is not null)
         {
-            fromDb = SpecialityModel.GetById(dto.Id).Result;
+            fromDb = SpecialtyModel.GetById(dto.Id).Result;
             errors.IsValidRule(
                 fromDb is not null,
                 "Id специальности указан неверно",
@@ -253,19 +253,19 @@ public class SpecialityModel
         }
         if (errors.Any())
         {
-            return Result<SpecialityModel>.Failure(errors);
+            return Result<SpecialtyModel>.Failure(errors);
         }
         else
         {
-            return Result<SpecialityModel>.Success(model);
+            return Result<SpecialtyModel>.Success(model);
         }
     }
 
-    public static async Task<IReadOnlyCollection<SpecialityModel>> FindSpecialities(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null)
+    public static async Task<IReadOnlyCollection<SpecialtyModel>> FindSpecialities(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
-        var selectQuery = SelectQuery<SpecialityModel>.Init("educational_program")
+        var selectQuery = SelectQuery<SpecialtyModel>.Init("educational_program")
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
         .AddOrderByStatement(addtioinalOrderBy)
@@ -353,7 +353,7 @@ public class SpecialityModel
         }
     }
 
-    public static async Task<SpecialityModel?> GetById(int? id, ObservableTransaction? scope = null)
+    public static async Task<SpecialtyModel?> GetById(int? id, ObservableTransaction? scope = null)
     {
         if (id is null)
         {
@@ -463,10 +463,10 @@ public class SpecialityModel
 
     public bool IsStudentAllowedByEducationLevel(StudentModel student)
     {
-        return student.Education.IsHigherThan(_levelIn);
+        return student.Education.IsHigherOrEqualThan(_levelIn);
     }
 
-    public static IEnumerable<SpecialityModel> GetAll()
+    public static IEnumerable<SpecialtyModel> GetAll()
     {
         return FindSpecialities(new QueryLimits(0, 2000)).Result;
 
@@ -479,11 +479,11 @@ public class SpecialityModel
 
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != typeof(SpecialityModel))
+        if (obj is null || obj.GetType() != typeof(SpecialtyModel))
         {
             return false;
         }
-        return ((SpecialityModel)obj)._id == this._id;
+        return ((SpecialtyModel)obj)._id == this._id;
     }
 
 }

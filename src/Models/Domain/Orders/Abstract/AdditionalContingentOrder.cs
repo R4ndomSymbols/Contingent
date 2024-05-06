@@ -8,7 +8,7 @@ public abstract class AdditionalContingentOrder : Order
 {
     public override string OrderOrgId
     {
-        get => _orderNumber + "-ДК";
+        get => _orderNumber + "-дк";
     }
 
     protected AdditionalContingentOrder() : base()
@@ -24,7 +24,7 @@ public abstract class AdditionalContingentOrder : Order
 
     internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
     {
-        var upperCheck = base.CheckConductionPossibility(toCheck);
+        var upperCheck = base.CheckBasicConductionPossibility(toCheck);
         if (upperCheck.IsFailure || toCheck is null)
         {
             return upperCheck;
@@ -36,9 +36,7 @@ public abstract class AdditionalContingentOrder : Order
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} не может быть проведен по приказу, т.к. у него отсутствует договор о платном обучении", std.GetName())
-                    )
-                );
+                        "не может быть проведен по приказу, т.к. у него отсутствует договор о платном обучении", std));
             }
         }
         var lowerCheck = this.CheckSpecificConductionPossibility();

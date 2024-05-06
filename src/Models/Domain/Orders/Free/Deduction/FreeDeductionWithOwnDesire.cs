@@ -4,6 +4,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -31,7 +32,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     public static QueryResult<FreeDeductionWithOwnDesireOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeDeductionWithOwnDesireOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public static Result<FreeDeductionWithOwnDesireOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
@@ -53,13 +54,8 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
 
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = base.CheckConductionPossibility(_desiredToDeduct.Select(s => s.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_desiredToDeduct.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -75,13 +71,14 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     }
     // приказ об отчислении по собственному желанию
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    // проверка на бесплатную группу не нужна, т.к. студент не может быть зачислен в такую группу
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var graduate in _desiredToDeduct)
         {
             if (!graduate.Student.History.IsStudentEnlisted())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен прежде собственного зачисления", graduate.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -97,5 +94,10 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
         }
         _desiredToDeduct.Add(desired.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _desiredToDeduct.Select(s => s.Student);
     }
 }

@@ -4,11 +4,11 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
 // приказ о переводе на следующий курс
-// 
 
 public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
 {
@@ -48,16 +48,11 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     public static QueryResult<FreeTransferToTheNextCourseOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeTransferToTheNextCourseOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var checkResult = base.CheckConductionPossibility(_moves.Select(x => x.Student));
-        if (checkResult.IsFailure)
-        {
-            return checkResult;
-        }
         ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -76,31 +71,31 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     // одинаковая последовательность
     // отличия в курсе строго 1
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var move in _moves.Moves)
         {
 
-            var history = StudentHistory.Create(move.Student);
+            var history = move.Student.History;
             var currentGroup = history.GetCurrentGroup();
             if (currentGroup is null)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", move.Student.GetName())
+                        "указанный в приказе студент еще не зачислен ни в какую группу", move.Student
                     )
                 );
             }
             var targetGroup = move.GroupTo;
-            if (
-                currentGroup.SponsorshipType.IsPaid() || currentGroup.CourseOn == currentGroup.EducationProgram.CourseCount
-                || targetGroup.SponsorshipType.IsPaid() || targetGroup.CourseOn - currentGroup.CourseOn != 1 || currentGroup.HistoricalSequenceId != targetGroup.HistoricalSequenceId)
+            var groupCheck = targetGroup.GetRelationTo(currentGroup) == Groups.GroupRelations.DirectChild
+            && targetGroup.SponsorshipType.IsFree();
+            if (!groupCheck)
             {
-                return ResultWithoutValue.Failure(new ValidationError(nameof(_moves),
+                return ResultWithoutValue.Failure(new OrderValidationError(
                     string.Format(
-                        "Студента {0} невозможно перевести на следующий курс({1} => {2})",
+                        "студента невозможно перевести на следующий курс({1} => {2})",
                             move.Student.GetName(), currentGroup.GroupName, move.GroupTo.GroupName
-                        ))
+                        ), move.Student)
                     );
             }
         }
@@ -118,5 +113,10 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         }
         _moves.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _moves.Select(x => x.Student);
     }
 }

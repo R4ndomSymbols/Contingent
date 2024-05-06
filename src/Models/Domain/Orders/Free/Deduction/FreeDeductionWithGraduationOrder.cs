@@ -4,6 +4,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -45,17 +46,12 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     public static QueryResult<FreeDeductionWithGraduationOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeDeductionWithGraduationOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var result = base.CheckConductionPossibility(_graduates.Select(x => x.Student));
-        if (result.IsFailure)
-        {
-            return result;
-        }
         ConductBase(_graduates.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -69,16 +65,15 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     {
         base.Save(scope);
     }
-
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    // выпускная группа
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
-        foreach (var i in _graduates)
+        foreach (var graduate in _graduates)
         {
-            var aggregate = StudentHistory.GetLastRecordOnStudent(i.Student);
-            var group = aggregate?.GroupTo;
-            if (group is null || group.CourseOn != group.EducationProgram.CourseCount || group.SponsorshipType.IsPaid())
+            var group = graduate.Student.History.GetCurrentGroup();
+            if (group is null || !group.IsGraduationGroup())
             {
-                return ResultWithoutValue.Failure(new ValidationError(nameof(_graduates), "Один или несколько студентов в приказе не соответствуют критериям"));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не учится в выпуской группе", graduate.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -87,12 +82,17 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     public override Result<Order> MapFromCSV(CSVRow row)
     {
         var graduateDto = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
-        var gradute = StudentGroupNullifyMove.Create(graduateDto);
-        if (gradute.IsFailure)
+        var graduate = StudentGroupNullifyMove.Create(graduateDto);
+        if (graduate.IsFailure)
         {
-            return Result<Order>.Failure(gradute.Errors);
+            return Result<Order>.Failure(graduate.Errors);
         }
-        _graduates.Add(gradute.ResultObject);
+        _graduates.Add(graduate.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _graduates.Select(x => x.Student);
     }
 }

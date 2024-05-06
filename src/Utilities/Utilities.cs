@@ -12,7 +12,6 @@ public static class Utils
 
 
     public const int INVALID_ID = 0;
-    public const int ORG_CREATION_YEAR = 1972;
 
     public static string FormatDateTime(DateTime? date, bool expand = false)
     {

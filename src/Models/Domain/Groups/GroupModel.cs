@@ -5,6 +5,7 @@ using Utilities.Validation;
 using Contingent.SQL;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow.History;
+using Contingent.Models.Infrastructure;
 
 namespace Contingent.Models.Domain.Groups;
 
@@ -18,7 +19,7 @@ public class GroupModel
 {
     public static string InvalidNamePlaceholder => "Нет";
     private int _id;
-    private SpecialityModel _educationProgram;
+    private SpecialtyModel _educationProgram;
     private int _courseOn;
     private string _groupName;
     private GroupEducationFormat _formatOfEducation;
@@ -26,7 +27,7 @@ public class GroupModel
     private int _creationYear;
     private string? _sequenceLetter;
     private bool _nameGenerated;
-    private int _historySequenceId;
+    private int _historyThreadId;
     // поле отвечает за упрощение поисковой выдачи
     // группа активна тогда и только тогда, когда:
     // это группа первого курса
@@ -40,7 +41,7 @@ public class GroupModel
     {
         get => _id;
     }
-    public SpecialityModel EducationProgram
+    public SpecialtyModel EducationProgram
     {
         get => _educationProgram;
     }
@@ -59,7 +60,7 @@ public class GroupModel
 
     public int HistoricalSequenceId
     {
-        get => _historySequenceId;
+        get => _historyThreadId;
     }
     public string GroupName
     {
@@ -81,7 +82,7 @@ public class GroupModel
 
     public static Mapper<GroupModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
     {
-        var specialityMapper = SpecialityModel.GetMapper(new Column("program_id", "educational_group"), JoinSection.JoinType.LeftJoin);
+        var specialtyMapper = SpecialtyModel.GetMapper(new Column("program_id", "educational_group"), JoinSection.JoinType.LeftJoin);
         var usedCols = new List<Column>(){
                 new Column("group_id", "educational_group"),
                 new Column("program_id", "educational_group"),
@@ -113,9 +114,9 @@ public class GroupModel
                 group._sequenceLetter = reader["letter"].GetType() == typeof(DBNull) ? null : (string)reader["letter"];
                 group._nameGenerated = (bool)reader["name_generated"];
                 group._groupName = (string)reader["group_name"];
-                var speciality = specialityMapper.Map(reader);
-                group._educationProgram = speciality.ResultObject;
-                group._historySequenceId = (int)reader["group_sequence_id"];
+                var specialty = specialtyMapper.Map(reader);
+                group._educationProgram = specialty.ResultObject;
+                group._historyThreadId = (int)reader["group_sequence_id"];
                 group._groupSpecialTeachingCondition = (int)reader["education_program_type"];
                 group._isActive = (bool)reader["is_active"];
                 return QueryResult<GroupModel>.Found(group);
@@ -127,7 +128,7 @@ public class GroupModel
         {
             groupMapper.PathTo.AddHead(joinType, source, new Column("group_id", "educational_group"));
         }
-        groupMapper.AssumeChild(specialityMapper);
+        groupMapper.AssumeChild(specialtyMapper);
         return groupMapper;
     }
 
@@ -142,7 +143,7 @@ public class GroupModel
         IList<ValidationError?> errors = new List<ValidationError?>();
         GroupModel model = new();
         if (errors.IsValidRule(
-            dto.CreationYear >= Utils.ORG_CREATION_YEAR && dto.CreationYear <= DateTime.Now.Year + 1,
+            Period.OrganizationLifetime.IsWithin(new DateTime(dto.CreationYear, 1, 1)),
             message: "Дата создания указана неверно",
             propName: nameof(CreationYear)
         ))
@@ -166,7 +167,7 @@ public class GroupModel
             model._groupSponsorship = sponsorship!;
         }
 
-        var found = SpecialityModel.GetById(dto.EduProgramId).Result;
+        var found = SpecialtyModel.GetById(dto.EduProgramId).Result;
 
         if (errors.IsValidRule(
             found is not null,
@@ -191,7 +192,7 @@ public class GroupModel
             // порядковый номер группы среди других таких же групп (совпадает специальность и курс)
             model._courseOn = 1;
             model._isActive = true;
-            model._historySequenceId = GetNextSequenceId();
+            model._historyThreadId = GetNextSequenceId();
             model._nameGenerated = dto.AutogenerateName;
             model._sequenceLetter = model.GetSequenceLetter();
             model._groupName = model.GenerateGroupName();
@@ -224,7 +225,7 @@ public class GroupModel
                     propName: "AncestorGroup"
                     ))
                     {
-                        model._historySequenceId = GetNextSequenceId();
+                        model._historyThreadId = GetNextSequenceId();
                         model._isActive = true;
                     }
                 }
@@ -236,7 +237,7 @@ public class GroupModel
                     propName: "AncestorGroup"
                     ))
                     {
-                        model._historySequenceId = ancestor._historySequenceId;
+                        model._historyThreadId = ancestor._historyThreadId;
                         model._isActive = new GroupHistory(ancestor).GetStateOnDate(DateTime.Now).Any();
                     }
                 }
@@ -337,7 +338,7 @@ public class GroupModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p7", _creationYear));
         cmd.Parameters.Add(new NpgsqlParameter<string?>("p8", _sequenceLetter));
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p9", _nameGenerated));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p10", _historySequenceId));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p10", _historyThreadId));
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p11", _isActive));
         using (cmd)
         {
@@ -473,7 +474,7 @@ public class GroupModel
             _groupName = _groupName,
             _groupSpecialTeachingCondition = _groupSpecialTeachingCondition,
             _groupSponsorship = _groupSponsorship,
-            _historySequenceId = _historySequenceId,
+            _historyThreadId = _historyThreadId,
             _id = Utils.INVALID_ID,
             _nameGenerated = _nameGenerated,
             _sequenceLetter = _sequenceLetter
@@ -523,4 +524,46 @@ public class GroupModel
         return groups;
     }
 
+    public bool IsAllowedByEnrollmentPeriod(Period period)
+    {
+        var correctedDate = new DateTime(_creationYear, 1, 1).AddYears(_courseOn - 1);
+        return period.IsWithin(correctedDate);
+    }
+    public bool IsOnTheSameThread(GroupModel? group)
+    {
+        if (group is null)
+        {
+            return false;
+        }
+        return _historyThreadId == group._historyThreadId;
+    }
+    public bool IsGraduationGroup()
+    {
+        return _courseOn == _educationProgram.CourseCount;
+    }
+
+    public GroupRelations GetRelationTo(GroupModel? group)
+    {
+        if (group is null)
+        {
+            return GroupRelations.None;
+        }
+        if (!IsOnTheSameThread(group))
+        {
+            return GroupRelations.None;
+        }
+        if (_courseOn - group._courseOn == 1)
+        {
+            return GroupRelations.DirectChild;
+        }
+        if (_courseOn - group._courseOn == -1)
+        {
+            return GroupRelations.DirectParent;
+        }
+        return GroupRelations.Other;
+    }
+
+
 }
+
+

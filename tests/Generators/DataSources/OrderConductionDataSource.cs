@@ -49,6 +49,15 @@ public class OrderConductionDataSource : IRowSource
                 (o) => o.Where(order => order.GetOrderTypeDetails().Type == OrderTypes.FreeEnrollment)
             ).Execute(orders).ToList();
         }
+        else if (_mode == OrderTypes.PaidEnrollment)
+        {
+            _filtedStudents = new Filter<StudentModel>(
+                (s) => s.Where(student => student.PaidAgreement.IsConcluded())
+            ).Execute(students).ToList();
+            _filtedGroups = new Filter<GroupModel>(
+                (g) => g.Where(group => group.CourseOn == 1 && group.SponsorshipType.IsPaid())
+            ).Execute(groups).ToList();
+        }
         UpdateState();
 
     }

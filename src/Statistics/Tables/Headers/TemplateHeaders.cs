@@ -9,12 +9,12 @@ namespace Contingent.Statistics.Tables.Headers;
 public static class TemplateHeaders
 {
     public static TableRowHeader<T> GetSpecialityRowHeader<T>(
-        Func<T, SpecialityModel?> getter,
+        Func<T, SpecialtyModel?> getter,
         TableColumnHeader<T> vertical,
         RowHeaderCell<T>? root = null)
     {
         var rootNode = root ?? new RowHeaderCell<T>();
-        IEnumerable<SpecialityModel> allSpecialities = SpecialityModel.GetAll();
+        IEnumerable<SpecialtyModel> allSpecialities = SpecialtyModel.GetAll();
         foreach (var sp in allSpecialities)
         {
             var speciality = sp;

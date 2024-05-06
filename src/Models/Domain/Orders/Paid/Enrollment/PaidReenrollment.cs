@@ -6,27 +6,27 @@ using Utilities;
 
 namespace Contingent.Models.Domain.Orders;
 
-public class PaidReenrollmentOrder : AdditionalContingentOrder
+public class PaidReEnrollmentOrder : AdditionalContingentOrder
 {
-    private StudentToGroupMoveList _reenrollers;
-    protected PaidReenrollmentOrder() : base()
+    private StudentToGroupMoveList _reEnrollers;
+    protected PaidReEnrollmentOrder() : base()
     {
-        _reenrollers = StudentToGroupMoveList.Empty;
+        _reEnrollers = StudentToGroupMoveList.Empty;
     }
-    protected PaidReenrollmentOrder(int id) : base(id)
+    protected PaidReEnrollmentOrder(int id) : base(id)
     {
-        _reenrollers = StudentToGroupMoveList.Empty;
+        _reEnrollers = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<PaidReenrollmentOrder> Create(OrderDTO? order)
+    public static Result<PaidReEnrollmentOrder> Create(OrderDTO? order)
     {
-        var created = new PaidReenrollmentOrder();
+        var created = new PaidReEnrollmentOrder();
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static Result<PaidReenrollmentOrder> Create(int id, StudentToGroupMovesDTO? dto)
+    public static Result<PaidReEnrollmentOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
-        var result = MapFromDbBaseForConduction<PaidReenrollmentOrder>(id);
+        var result = MapFromDbBaseForConduction<PaidReEnrollmentOrder>(id);
         if (result.IsFailure)
         {
             return result;
@@ -35,55 +35,56 @@ public class PaidReenrollmentOrder : AdditionalContingentOrder
         var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
-            return dtoAsModelResult.RetraceFailure<PaidReenrollmentOrder>();
+            return dtoAsModelResult.RetraceFailure<PaidReEnrollmentOrder>();
         }
-        order._reenrollers = dtoAsModelResult.ResultObject;
+        order._reEnrollers = dtoAsModelResult.ResultObject;
         return result;
     }
 
-    public static QueryResult<PaidReenrollmentOrder?> Create(int id, NpgsqlDataReader reader)
+    public static QueryResult<PaidReEnrollmentOrder?> Create(int id, NpgsqlDataReader reader)
     {
-        var order = new PaidReenrollmentOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        var order = new PaidReEnrollmentOrder(id);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
     {
-        var check = base.CheckConductionPossibility(_reenrollers?.Select(x => x.Student));
+        var check = base.CheckConductionPossibility(_reEnrollers?.Select(x => x.Student));
         if (check.IsFailure)
         {
             return check;
         }
-        ConductBase(_reenrollers?.ToRecords(this));
+        ConductBase(_reEnrollers?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
     protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.PaidReenrollment;
+        return OrderTypes.PaidReEnrollment;
     }
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
     {
-        foreach (var move in _reenrollers)
+        foreach (var move in _reEnrollers)
         {
             var history = move.Student.History;
-            if (!(history.IsStudentNotRecorded() || history.IsStudentDeducted()))
+            var lastOrder = history.GetLastRecord()?.ByOrder;
+            var orderCheck = lastOrder is not null && lastOrder.GetOrderTypeDetails().CanBePreviousToReEnrollment();
+            var deductionGroup = history.GetGroupFromStudentWasDeducted();
+            var groupCheck = move.GroupTo.SponsorshipType.IsPaid()
+            && deductionGroup is not null && deductionGroup.CourseOn == move.GroupTo.CourseOn;
+            var timeSinceDeduction = history.GetTimeSinceLastAction(_effectiveDate);
+            var timeCheck = timeSinceDeduction is not null && timeSinceDeduction.Value.TotalDays / 365 <= 5;
+            if (orderCheck && groupCheck && timeCheck)
             {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус", move.Student.GetName())
-                    )
-                );
+                continue;
             }
-            var group = move.GroupTo;
-            if (group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student))
+            else
             {
                 return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} не соответствует критериям зачисления в группу {1}", move.Student.GetName(), group.GroupName)
-                    )
-                );
+                new OrderValidationError(
+                    "не может быть восстановлен из-за несоблюдения условий восстановления", move.Student
+                ));
             }
         }
         return ResultWithoutValue.Success();
@@ -98,7 +99,7 @@ public class PaidReenrollmentOrder : AdditionalContingentOrder
         {
             return Result<Order>.Failure(result.Errors);
         }
-        _reenrollers.Add(result.ResultObject);
+        _reEnrollers.Add(result.ResultObject);
         return Result<Order>.Success(this);
     }
 }

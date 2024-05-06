@@ -6,7 +6,7 @@ namespace Contingent.Import;
 
 public class SpecialityImport : IFromCSV<SpecialityImport>
 {
-    public SpecialityModel? Speciality { get; private set; }
+    public SpecialtyModel? Speciality { get; private set; }
     public SpecialityImport()
     {
         Speciality = null;
@@ -14,7 +14,7 @@ public class SpecialityImport : IFromCSV<SpecialityImport>
     public Result<SpecialityImport> MapFromCSV(CSVRow row)
     {
         var specialityDTO = new SpecialityDTO().MapFromCSV(row).ResultObject;
-        var speciality = SpecialityModel.Build(specialityDTO);
+        var speciality = SpecialtyModel.Build(specialityDTO);
         if (speciality.IsFailure)
         {
             return Result<SpecialityImport>.Failure(speciality.Errors);

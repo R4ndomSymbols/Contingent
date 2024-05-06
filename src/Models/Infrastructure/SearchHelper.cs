@@ -5,7 +5,7 @@ using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Specialities;
 using Contingent.Statistics;
 
-namespace Contingent.Models.Infrastruture;
+namespace Contingent.Models.Infrastructure;
 
 
 public class SearchHelper
@@ -110,9 +110,9 @@ public class SearchHelper
         return null;
     }
 
-    public Filter<SpecialityModel> GetFilterForSpecialities(SpecialitySearchQueryDTO dto)
+    public Filter<SpecialtyModel> GetFilterForSpecialities(SpecialitySearchQueryDTO dto)
     {
-        var filter = Filter<SpecialityModel>.Empty;
+        var filter = Filter<SpecialtyModel>.Empty;
         if (dto is null)
         {
             return filter;
@@ -120,7 +120,7 @@ public class SearchHelper
         if (dto.SearchString is not null && dto.SearchString.Length >= 3)
         {
             filter = filter.Include(
-                new Filter<SpecialityModel>(
+                new Filter<SpecialtyModel>(
                     (spec) => spec.Where(
                         s => s.FgosCode.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase)
                         || s.FgosName.Contains(dto.SearchString, StringComparison.OrdinalIgnoreCase)

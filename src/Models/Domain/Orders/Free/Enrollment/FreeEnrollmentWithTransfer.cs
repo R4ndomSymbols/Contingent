@@ -5,6 +5,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
@@ -29,7 +30,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     public static QueryResult<FreeEnrollmentWithTransferOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeEnrollmentWithTransferOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public static Result<FreeEnrollmentWithTransferOrder> Create(int id, StudentToGroupMovesDTO? data)
@@ -49,13 +50,8 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         return result;
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = CheckConductionPossibility(_toEnroll?.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_toEnroll?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -69,17 +65,19 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     {
         return OrderTypes.FreeEnrollmentWithTransfer;
     }
-    // добавить проверки на группу и уровень образования
-    // на тип группы и т.д
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    // 
+    // приказ о переводе с другой организации
+    // бесплатная группа, студент незачислен
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var rec in _toEnroll)
         {
-            var history = StudentHistory.Create(rec.Student);
-            var groupCheck = rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student);
+            var history = new StudentHistory(rec.Student);
+            var groupCheck = rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student)
+                && rec.GroupTo.SponsorshipType.IsFree();
             if (history.IsStudentEnlisted() || !groupCheck)
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов в приказе на зачисление не соответствуют требованиям"));
+                return ResultWithoutValue.Failure(new OrderValidationError("Переводящийся студент либо переводится не в ту группу, либо не соотвествует критериям зачисления на специальность", rec.Student));
             }
 
         }
@@ -98,5 +96,10 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         }
         _toEnroll.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _toEnroll.Select(x => x.Student);
     }
 }

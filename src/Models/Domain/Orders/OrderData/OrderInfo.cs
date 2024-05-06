@@ -100,17 +100,17 @@ public class OrderTypeInfo
             )
         },
         {
-            OrderTypes.PaidReenrollment,
+            OrderTypes.PaidReEnrollment,
             new(
-                OrderTypes.PaidReenrollment,
+                OrderTypes.PaidReEnrollment,
                 "Зачисление в порядке восстановления (внебюджет)",
                 GroupDisplayBehaviour.MustChange
             )
         },
         {
-            OrderTypes.PaidTransferBetweenSpecialities,
+            OrderTypes.PaidTransferBetweenSpecialties,
             new(
-                OrderTypes.PaidTransferBetweenSpecialities,
+                OrderTypes.PaidTransferBetweenSpecialties,
                 "Перевод внутри организации (между специальностями) (внебюджет)",
                 GroupDisplayBehaviour.MustChange
             )
@@ -124,9 +124,9 @@ public class OrderTypeInfo
             )
         },
         {
-            OrderTypes.PaidTransferFromPaidToFree,
+            OrderTypes.FreeTransferFromPaidToFree,
             new(
-                OrderTypes.PaidTransferFromPaidToFree,
+                OrderTypes.FreeTransferFromPaidToFree,
                 "Перевод на бюджет (внебюджет)",
                 GroupDisplayBehaviour.MustChange
             )
@@ -199,6 +199,10 @@ public class OrderTypeInfo
     public bool IsAnyDeduction()
     {
         return Type.ToString().Contains("Deduction");
+    }
+    public bool CanBePreviousToReEnrollment()
+    {
+        return IsAnyDeduction() && Type != OrderTypes.FreeDeductionWithGraduation && Type != OrderTypes.PaidDeductionWithGraduation;
     }
 
     public static int ImportOrderType(string? v)

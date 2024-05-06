@@ -6,34 +6,35 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
-public class FreeReenrollmentOrder : FreeContingentOrder
+public class FreeReEnrollmentOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _enrollers;
 
-    private FreeReenrollmentOrder() : base()
+    private FreeReEnrollmentOrder() : base()
     {
         _enrollers = StudentToGroupMoveList.Empty;
     }
-    private FreeReenrollmentOrder(int id) : base(id)
+    private FreeReEnrollmentOrder(int id) : base(id)
     {
         _enrollers = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<FreeReenrollmentOrder> Create(OrderDTO? dto)
+    public static Result<FreeReEnrollmentOrder> Create(OrderDTO? dto)
     {
-        var created = new FreeReenrollmentOrder();
+        var created = new FreeReEnrollmentOrder();
         return MapBase(dto, created);
     }
-    public static QueryResult<FreeReenrollmentOrder?> Create(int id, NpgsqlDataReader reader)
+    public static QueryResult<FreeReEnrollmentOrder?> Create(int id, NpgsqlDataReader reader)
     {
-        var order = new FreeReenrollmentOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        var order = new FreeReEnrollmentOrder(id);
+        return MapPartialFromDbBase(reader, order);
     }
-    public static Result<FreeReenrollmentOrder> Create(int orderId, StudentToGroupMovesDTO? dto)
+    public static Result<FreeReEnrollmentOrder> Create(int orderId, StudentToGroupMovesDTO? dto)
     {
-        var orderResult = MapFromDbBaseForConduction<FreeReenrollmentOrder>(orderId);
+        var orderResult = MapFromDbBaseForConduction<FreeReEnrollmentOrder>(orderId);
         if (orderResult.IsFailure)
         {
             return orderResult;
@@ -41,20 +42,15 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         var dtoResult = StudentToGroupMoveList.Create(dto);
         if (dtoResult.IsFailure)
         {
-            return dtoResult.RetraceFailure<FreeReenrollmentOrder>();
+            return dtoResult.RetraceFailure<FreeReEnrollmentOrder>();
         }
         var order = orderResult.ResultObject;
         order._enrollers = dtoResult.ResultObject;
         return orderResult;
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = base.CheckConductionPossibility(_enrollers.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_enrollers.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -69,23 +65,36 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         return OrderTypes.FreeReenrollment;
     }
     // восстановление требует, чтобы студент был отчислен по собственному желанию
-    // зачисление в бесплатную группу
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    // зачисление в бесплатную группу, с тем же курсом
+    // не более 5 лет после отчисления
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var move in _enrollers)
         {
-            var history = StudentHistory.Create(move.Student);
-            if (history.GetLastRecord()?.ByOrder?.GetOrderTypeDetails().Type != OrderTypes.FreeDeductionWithOwnDesire
-            || move.GroupTo.SponsorshipType.IsPaid()
-            )
+            var history = move.Student.History;
+            var lastOrder = history.GetLastRecord()?.ByOrder;
+            var orderCheck = lastOrder is not null && lastOrder.GetOrderTypeDetails().CanBePreviousToReEnrollment();
+            var deductionGroup = history.GetGroupFromStudentWasDeducted();
+            var groupCheck = move.GroupTo.SponsorshipType.IsFree()
+            && deductionGroup is not null && deductionGroup.CourseOn == move.GroupTo.CourseOn;
+            var timeSinceDeduction = history.GetTimeSinceLastAction(_effectiveDate);
+            var timeCheck = timeSinceDeduction is not null && timeSinceDeduction.Value.TotalDays / 365 <= 5;
+            if (orderCheck && groupCheck && timeCheck)
+            {
+                continue;
+            }
+            else
             {
                 return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} в приказе на восстановление не имеет условий для восстановелния", move.Student.GetName())
-                    ));
+                new OrderValidationError(
+                    "не может быть восстановлен из-за несоблюдения условий восстановления", move.Student
+                ));
             }
+
+
         }
         return ResultWithoutValue.Success();
+
     }
 
     public override Result<Order> MapFromCSV(CSVRow row)
@@ -99,5 +108,10 @@ public class FreeReenrollmentOrder : FreeContingentOrder
         }
         _enrollers.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _enrollers.Select(x => x.Student);
     }
 }

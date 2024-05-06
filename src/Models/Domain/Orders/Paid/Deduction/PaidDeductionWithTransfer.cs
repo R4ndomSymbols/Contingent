@@ -46,7 +46,7 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
     public static QueryResult<PaidDeductionWithTransferOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidDeductionWithTransferOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -73,9 +73,8 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} должен быть зачислен прежде, чем быть отчисленным", student.Student.GetName())
-                    )
-                );
+                        "студент  должен быть зачислен прежде, чем быть отчисленным", student.Student)
+                    );
             }
         }
         return ResultWithoutValue.Success();

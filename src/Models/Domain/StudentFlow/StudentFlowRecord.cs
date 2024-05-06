@@ -15,8 +15,7 @@ public class StudentFlowRecord
     public Order? ByOrder { get; private init; }
     public StudentModel? Student { get; private init; }
     public GroupModel? GroupTo { get; private init; }
-
-    public Order OrderNullRestict => ByOrder is null ? throw new Exception("Приказ должен быть указан") : ByOrder;
+    public Order OrderNullRestrict => ByOrder is null ? throw new Exception("Приказ должен быть указан") : ByOrder;
     public StudentModel StudentNullRestrict => Student is null ? throw new Exception("Студент должен быть указан") : Student;
     public GroupModel GroupToNullRestrict => GroupTo is null ? throw new Exception("Группа должен быть указана") : GroupTo;
 

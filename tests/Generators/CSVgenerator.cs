@@ -60,9 +60,9 @@ public class CSVGenerator
         var source = new SpecialityDataSource();
         return GenerateBase(source, source.Length);
     }
-    public string GenerateFlow(int count)
+    public string GenerateFlow(int count, OrderTypes type)
     {
-        var source = new OrderConductionDataSource(OrderTypes.FreeEnrollment);
+        var source = new OrderConductionDataSource(type);
         return GenerateBase(source, count);
     }
 }

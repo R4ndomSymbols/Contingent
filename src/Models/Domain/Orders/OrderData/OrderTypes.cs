@@ -68,7 +68,7 @@ public enum OrderTypes
     //      отчислен или не светился в истории
     //      группа:
     //      любой курс 
-    PaidReenrollment = 31,
+    PaidReEnrollment = 31,
 
     // На первый курс
     //      студент:
@@ -94,13 +94,13 @@ public enum OrderTypes
     //      любой зачисленный
     //      группа: 
     //      имеет ту же специальность, что текущая группа и тот же курс, 
-    PaidTransferBetweenSpecialities = 34,
+    PaidTransferBetweenSpecialties = 34,
     // Перевод с платного на бесплатное (только ДК)
     //      студент: 
     //      зачислен
     //      группа:
     //      тот же курс, та же специальность, но бесплатная, совпадение года создания
-    PaidTransferFromPaidToFree = 35,
+    FreeTransferFromPaidToFree = 35,
 
 
     // 

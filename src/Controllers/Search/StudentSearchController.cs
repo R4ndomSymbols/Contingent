@@ -7,7 +7,7 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Models;
 using Contingent.Models.Domain;
 using Contingent.Models.Domain.Flow;
-using Contingent.Models.Infrastruture;
+using Contingent.Models.Infrastructure;
 using Contingent.SQL;
 using Contingent.Statistics;
 using Utilities;

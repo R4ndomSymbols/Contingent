@@ -27,7 +27,7 @@ public class SpecialityController : Controller
         }
         else if (int.TryParse(query, out int id))
         {
-            var got = SpecialityModel.GetById(id, null).Result;
+            var got = SpecialtyModel.GetById(id, null).Result;
             if (got != null)
             {
                 return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO(got));
@@ -61,7 +61,7 @@ public class SpecialityController : Controller
 
         if (dto != null)
         {
-            var result = SpecialityModel.Build(dto);
+            var result = SpecialtyModel.Build(dto);
             if (result.IsFailure)
             {
                 return Json(new ErrorsDTO(result.Errors));
@@ -81,7 +81,7 @@ public class SpecialityController : Controller
     {
         if (int.TryParse(query, out int id))
         {
-            var got = SpecialityModel.GetById(id, null).Result;
+            var got = SpecialtyModel.GetById(id, null).Result;
             if (got != null)
             {
                 return View(@"Views/Observe/Speciality.cshtml", new SpecialityOutDTO(got));

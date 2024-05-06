@@ -7,28 +7,28 @@ using Utilities;
 namespace Contingent.Models.Domain.Orders;
 
 
-public class PaidTransferBetweenSpecialitiesOrder : AdditionalContingentOrder
+public class PaidTransferBetweenSpecialtiesOrder : AdditionalContingentOrder
 {
     private StudentToGroupMoveList _transfer;
 
-    protected PaidTransferBetweenSpecialitiesOrder() : base()
+    protected PaidTransferBetweenSpecialtiesOrder() : base()
     {
         _transfer = StudentToGroupMoveList.Empty;
     }
-    protected PaidTransferBetweenSpecialitiesOrder(int id) : base(id)
+    protected PaidTransferBetweenSpecialtiesOrder(int id) : base(id)
     {
         _transfer = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<PaidTransferBetweenSpecialitiesOrder> Create(OrderDTO? order)
+    public static Result<PaidTransferBetweenSpecialtiesOrder> Create(OrderDTO? order)
     {
-        var created = new PaidTransferBetweenSpecialitiesOrder();
+        var created = new PaidTransferBetweenSpecialtiesOrder();
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static Result<PaidTransferBetweenSpecialitiesOrder> Create(int id, StudentToGroupMovesDTO? dto)
+    public static Result<PaidTransferBetweenSpecialtiesOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
-        var result = MapFromDbBaseForConduction<PaidTransferBetweenSpecialitiesOrder>(id);
+        var result = MapFromDbBaseForConduction<PaidTransferBetweenSpecialtiesOrder>(id);
         if (result.IsFailure)
         {
             return result;
@@ -37,16 +37,16 @@ public class PaidTransferBetweenSpecialitiesOrder : AdditionalContingentOrder
         var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
-            return dtoAsModelResult.RetraceFailure<PaidTransferBetweenSpecialitiesOrder>();
+            return dtoAsModelResult.RetraceFailure<PaidTransferBetweenSpecialtiesOrder>();
         }
         order._transfer = dtoAsModelResult.ResultObject;
         return result;
     }
 
-    public static QueryResult<PaidTransferBetweenSpecialitiesOrder?> Create(int id, NpgsqlDataReader reader)
+    public static QueryResult<PaidTransferBetweenSpecialtiesOrder?> Create(int id, NpgsqlDataReader reader)
     {
-        var order = new PaidTransferBetweenSpecialitiesOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        var order = new PaidTransferBetweenSpecialtiesOrder(id);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -62,7 +62,7 @@ public class PaidTransferBetweenSpecialitiesOrder : AdditionalContingentOrder
 
     protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.PaidTransferBetweenSpecialities;
+        return OrderTypes.PaidTransferBetweenSpecialties;
     }
 
     protected override ResultWithoutValue CheckSpecificConductionPossibility()
@@ -70,25 +70,14 @@ public class PaidTransferBetweenSpecialitiesOrder : AdditionalContingentOrder
         foreach (var move in _transfer)
         {
             var history = move.Student.History;
-            if (!history.IsStudentEnlisted())
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", move.Student.GetName())
-                    )
-                );
-            }
             var group = move.GroupTo;
-            var lastRecord = history.GetLastRecord();
-            if (lastRecord is not null && (
-                lastRecord.GroupToNullRestrict.CourseOn != group.CourseOn ||
-                lastRecord.GroupToNullRestrict.EducationProgram.Equals(group.EducationProgram)
-                ))
+            var currentGroup = history.GetCurrentGroup();
+            var groupCheck = currentGroup is not null && !currentGroup.IsOnTheSameThread(group) && group.SponsorshipType.IsPaid() && group.CourseOn == currentGroup.CourseOn;
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("{0} переводится в группу не того же курса или специальности ({1})", move.Student.GetName(), group.GroupName)
-                    )
+                        "студент не может быть переведен в эту группу (не зачислен/группа не удовлетворяет условиям)", move.Student)
                 );
             }
         }

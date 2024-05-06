@@ -5,6 +5,7 @@ using Contingent.Models.Domain.Orders.OrderData;
 using Npgsql;
 using System.Net.Http.Headers;
 using Contingent.Import;
+using Contingent.Models.Domain.Students;
 
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,7 +51,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     public static QueryResult<FreeEnrollmentOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeEnrollmentOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
 
     }
 
@@ -66,29 +67,23 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     // зачисление возможно только на ту специальность, которой соответствует уровень 
     // образования студента
     // группа должна быть бесплатной
+    // первый курс для группы необязателен
 
-    // TODO:
-    // сейчас возможна запись только одного приказа в день на каждого студента
-    // нет проверки на совпадение даты, спросить у предст. предметной области
-
-
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var stm in _moves.Moves)
         {
-
-            var history = StudentHistory.Create(stm.Student);
+            var history = new StudentHistory(stm.Student);
             var targetGroup = stm.GroupTo;
             var validMove =
-                history.IsStudentNotRecorded() &&
+                (history.IsStudentNotRecorded() || history.IsStudentDeducted()) &&
                 targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) &&
                 targetGroup.SponsorshipType.IsFree();
             if (!validMove)
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления"));
+                return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления", stm.Student));
             }
         }
-        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
 
@@ -97,13 +92,8 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         return OrderTypes.FreeEnrollment;
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var result = base.CheckConductionPossibility(_moves.Select(x => x.Student));
-        if (result.IsFailure)
-        {
-            return result;
-        }
         ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -119,6 +109,11 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         }
         _moves.Add(move.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _moves.Select(x => x.Student);
     }
 }
 

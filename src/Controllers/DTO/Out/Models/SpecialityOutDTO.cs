@@ -21,7 +21,7 @@ public class SpecialityOutDTO
     public int ProgramType { get; set; }
     public string ProgramTypeName { get; set; }
 
-    public SpecialityOutDTO(SpecialityModel model)
+    public SpecialityOutDTO(SpecialtyModel model)
     {
         Id = model.Id;
         FgosCode = model.FgosCode;

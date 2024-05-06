@@ -12,7 +12,7 @@ public class SpecialitySearchResultDTO
     public string QualificationName { get; set; }
     public string LinkToModify { get; set; }
     public string LinkToView { get; set; }
-    public SpecialitySearchResultDTO(SpecialityModel model)
+    public SpecialitySearchResultDTO(SpecialtyModel model)
     {
         Id = model.Id;
         FgosName = model.FgosName;

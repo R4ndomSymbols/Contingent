@@ -44,7 +44,7 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
     public static QueryResult<PaidEnrollmentWithTransferOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidEnrollmentWithTransferOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
 
     }
 
@@ -69,21 +69,13 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
         foreach (var move in _enrollers)
         {
             var history = move.Student.History;
-            if (!(history.IsStudentNotRecorded() || history.IsStudentDeducted()))
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                         string.Format("Студент {0} имеет недопустимый статус", move.Student.GetName())
-                    )
-                );
-            }
             var group = move.GroupTo;
-            if (!(group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student) && group.SponsorshipType.IsPaid()))
+            var stateCheck = history.IsStudentDeducted() || history.IsStudentNotRecorded();
+            var groupCheck = group.SponsorshipType.IsPaid() && group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student);
+            if (!stateCheck || !groupCheck)
             {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                         string.Format("Студент {0} не соответствует критериям перевода в группу {1}", move.Student.GetName(), group.GroupName)
-                    )
+                return ResultWithoutValue.Failure(new OrderValidationError(
+                    "студент имеет недопустимый статус или не соответствует критериям группы или группа бесплатная", move.Student)
                 );
             }
         }

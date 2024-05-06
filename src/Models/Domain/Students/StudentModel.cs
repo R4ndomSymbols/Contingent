@@ -127,7 +127,7 @@ public class StudentModel
         {
             if (_history is null)
             {
-                _history = StudentHistory.Create(this);
+                _history = new StudentHistory(this);
             }
             return _history;
         }
@@ -541,6 +541,26 @@ public class StudentModel
             await cmd.ExecuteNonQueryAsync();
         }
     }
+
+    public void TerminatePaidEducationAgreement()
+    {
+        if (_id is null || _id == Utils.INVALID_ID)
+        {
+            throw new Exception("Студент не сохранен, невозможно расторгнуть договор");
+        }
+        if (!_paidAgreementType.IsConcluded())
+        {
+            return;
+        }
+        _paidAgreementType = PaidEduAgreement.GetByTypeCode((int)PaidEducationAgreementTypes.NotMentioned);
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        string cmdText = "UPDATE students SET paid_education_agreement = @p1 WHERE id = @p2";
+        using var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)_paidAgreementType.AgreementType));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_id!));
+        cmd.ExecuteNonQuery();
+    }
+
 }
 
 

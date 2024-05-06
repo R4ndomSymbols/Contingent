@@ -11,22 +11,18 @@ namespace Contingent.Models.Domain.Flow;
 
 public class StudentHistory
 {
-    private HistoryByOrderEffectiveDate _history;
+    private HistoryByOrderEffectiveDateAsc _history;
     private StudentModel _byStudent;
-    public HistoryByOrderEffectiveDate History => _history;
-    private StudentHistory()
+    public HistoryByOrderEffectiveDateAsc History => _history;
+    public StudentHistory(StudentModel student)
     {
-        _history = new HistoryByOrderEffectiveDate();
+        if (student is null || student.Id is null || student.Id == Utils.INVALID_ID)
+        {
+            throw new Exception("Студент должен быть сохранен прежде получения истории на него");
+        }
+        _byStudent = student;
+        _history = new HistoryByOrderEffectiveDateAsc(GetHistory(student));
     }
-
-    public static StudentHistory Create(StudentModel student)
-    {
-        var result = new StudentHistory();
-        result._byStudent = student;
-        result._history = new HistoryByOrderEffectiveDate(GetHistory(result._byStudent));
-        return result;
-    }
-
     public Order? GetNextGroupChangingOrder(GroupModel groupFrom)
     {
         // история отсортирована
@@ -92,7 +88,15 @@ public class StudentHistory
             return null;
         }
         return _history.Last();
-
+    }
+    public TimeSpan? GetTimeSinceLastAction(DateTime countTo)
+    {
+        var last = GetLastRecord();
+        if (last is null || last.OrderNullRestrict.EffectiveDate > countTo)
+        {
+            return null;
+        }
+        return countTo - last.OrderNullRestrict.EffectiveDate;
     }
 
     public void RevertHistory(Order startingPoint)
@@ -142,6 +146,17 @@ public class StudentHistory
     public GroupModel? GetCurrentGroup()
     {
         return GetLastRecord()?.GroupTo;
+    }
+    public GroupModel? GetGroupFromStudentWasDeducted()
+    {
+        for (int i = _history.Count() - 1; i >= 0; i--)
+        {
+            if (_history[i].OrderNullRestrict.GetOrderTypeDetails().IsAnyDeduction())
+            {
+                return _history[i - 1].GroupToNullRestrict;
+            }
+        }
+        return null;
     }
 
     private StudentStates GetStudentState(out int cycleCount)
@@ -207,10 +222,6 @@ public class StudentHistory
             }
         }
         return false;
-    }
-    public bool IsEnlistedInStandardPeriod()
-    {
-        return IsEnlistedInPeriod(FlowHistory.CurrentPeriodStartDate, FlowHistory.CurrentPeriodStartDate);
     }
     // параметер оставлен в случае, если потребуется
     // добавить опциональные приказы

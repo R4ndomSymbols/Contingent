@@ -24,32 +24,28 @@ public abstract class FreeContingentOrder : Order
     }
     // проверяет отсутствие у студента договора о платном обучении
     // а так же проводит базовую проверку, свойственную любому приказу
-    internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
+    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck)
     {
-        var baseCheck = base.CheckConductionPossibility(toCheck);
-        if (baseCheck.IsFailure || toCheck is null)
-        {
-            return baseCheck;
-        }
+        // приказ о переводе на бюджет требует того, чтобы у студента был договор,
+        // но он к
+        var alternateCheck = this.GetOrderTypeDetails().Type != OrderTypes.FreeTransferFromPaidToFree;
         foreach (var std in toCheck)
         {
-            if (std.PaidAgreement.IsConcluded())
+            if (std.PaidAgreement.IsConcluded() || (alternateCheck && !std.PaidAgreement.IsConcluded()))
             {
                 return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} имеет договор о платном обучении, это недопустимо для данного приказа", std.GetName())
-                        )
+                    new OrderValidationError("имеет договор о платном обучении, это недопустимо для приказа", std)
                 );
             }
         }
-        var lowerCheck = CheckSpecificConductionPossibility();
+        var lowerCheck = CheckTypeSpecificConductionPossibility();
         if (lowerCheck.IsFailure)
         {
             return lowerCheck;
         }
         return ResultWithoutValue.Success();
     }
-    protected abstract ResultWithoutValue CheckSpecificConductionPossibility();
+    protected abstract ResultWithoutValue CheckTypeSpecificConductionPossibility();
 
     public override void Save(ObservableTransaction? scope)
     {

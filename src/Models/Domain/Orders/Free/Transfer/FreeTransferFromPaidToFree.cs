@@ -3,10 +3,11 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
-public class PaidTransferFromPaidToFreeOrder : AdditionalContingentOrder
+public class PaidTransferFromPaidToFreeOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _transfer;
 
@@ -45,53 +46,45 @@ public class PaidTransferFromPaidToFreeOrder : AdditionalContingentOrder
     public static QueryResult<PaidTransferFromPaidToFreeOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidTransferFromPaidToFreeOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var upperCheck = base.CheckConductionPossibility(_transfer.Select(x => x.Student));
-        if (upperCheck.IsFailure)
+        ConductBase(_transfer.ToRecords(this));
+        foreach (var move in _transfer)
         {
-            return upperCheck;
+            move.Student.TerminatePaidEducationAgreement();
         }
-        ConductBase(_transfer?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
 
     protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.PaidTransferFromPaidToFree;
+        return OrderTypes.FreeTransferFromPaidToFree;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var move in _transfer)
         {
             var history = move.Student.History;
-            if (!history.IsStudentEnlisted())
+            var groupNow = history.GetCurrentGroup();
+            var groupTo = move.GroupTo;
+            var groupCheck =
+                groupNow is not null && groupNow.GetRelationTo(groupTo) == Groups.GroupRelations.None
+                && groupTo.CreationYear == groupNow.CreationYear
+                && groupTo.CourseOn == groupNow.CourseOn
+                && groupNow.EducationProgram.Equals(groupTo.EducationProgram)
+                && groupTo.SponsorshipType.IsFree();
+
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", move.Student.GetName())
-                    )
-                );
-            }
-            var group = move.GroupTo;
-            var lastRecord = history.GetLastRecord();
-            var groupNow = lastRecord.GroupToNullRestrict;
-            if (groupNow.CourseOn != group.CourseOn
-                || !groupNow.EducationProgram.Equals(group.EducationProgram)
-                || group.CreationYear != groupNow.CreationYear
-                || groupNow.SponsorshipType.IsFree() || group.SponsorshipType.IsPaid()
-                )
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("{0} переводится в группу {1}, которая не соответствует условиям", move.Student.GetName(), lastRecord.GroupToNullRestrict.GroupName)
-                    )
-                );
+                        "студента нельзя перевести на бесплатное либо группа указана неверно", move.Student)
+                    );
             }
         }
         return ResultWithoutValue.Success();
@@ -108,5 +101,10 @@ public class PaidTransferFromPaidToFreeOrder : AdditionalContingentOrder
         }
         _transfer.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _transfer.Select(x => x.Student);
     }
 }

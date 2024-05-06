@@ -140,7 +140,7 @@ public class StudentEducation : IEnumerable<StudentEducationalLevelRecord>
         return _levels.GetEnumerator();
     }
 
-    public bool IsHigherThan(LevelOfEducation level)
+    public bool IsHigherOrEqualThan(LevelOfEducation level)
     {
         return _levels.Any(x => x.Level >= level);
     }

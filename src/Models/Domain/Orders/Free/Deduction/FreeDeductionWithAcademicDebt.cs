@@ -4,6 +4,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -31,7 +32,7 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     public static QueryResult<FreeDeductionWithAcademicDebtOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new FreeDeductionWithAcademicDebtOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public static Result<FreeDeductionWithAcademicDebtOrder> Create(int id, StudentGroupNullifyMovesDTO? dto)
@@ -52,13 +53,8 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         return result;
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = CheckConductionPossibility(_debtHolders.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_debtHolders.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -72,17 +68,16 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     {
         return OrderTypes.FreeDeductionWithAcademicDebt;
     }
-    // приказ об отчислении по собственному желанию
-    // не имеет ограничений вообще, главное, чтобы студент был зачислен и имел бесплатную группу
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    // приказ об отчислении в связи с неуспеваемостью
+    // не имеет ограничений вообще, главное, чтобы студент был зачислен
+    // не нужна проверка группы
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
         foreach (var debtHolder in _debtHolders)
         {
-            var aggregate = StudentHistory.Create(debtHolder.Student).GetLastRecord();
-            var paidGroup = aggregate?.GroupTo?.SponsorshipType?.IsFree();
-            if (paidGroup is null || (bool)paidGroup)
+            if (!new StudentHistory(debtHolder.Student).IsStudentEnlisted())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Один или несколько студентов, указаных в приказе, не были зачислены"));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен раньше своего зачисления", debtHolder.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -99,5 +94,10 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         }
         _debtHolders.Add(holder.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _debtHolders.Select(x => x.Student);
     }
 }

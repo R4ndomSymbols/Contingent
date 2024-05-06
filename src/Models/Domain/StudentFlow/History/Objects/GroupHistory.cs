@@ -17,7 +17,7 @@ public class GroupHistory
     // подгружены приказы и студенты
     public IEnumerable<StudentFlowRecord> GetStateOnDate(DateTime onDate)
     {
-        var before = _history.Where(x => x.OrderNullRestict.EffectiveDate <= onDate);
+        var before = _history.Where(x => x.OrderNullRestrict.EffectiveDate <= onDate);
         List<StudentFlowRecord> stateNow = new List<StudentFlowRecord>();
         foreach (var rec in before)
         {

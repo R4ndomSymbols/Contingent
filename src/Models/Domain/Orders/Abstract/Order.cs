@@ -85,13 +85,13 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.FreeEnrollmentWithTransfer, FreeEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.FreeReenrollment, FreeReenrollmentOrder.Create
+            OrderTypes.FreeReenrollment, FreeReEnrollmentOrder.Create
         },
         {
             OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create
         },
         {
-            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferBetweenSpecialitiesOrder.Create
+            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferWithinCourseOrder.Create
         },
         {
             OrderTypes.FreeDeductionWithAcademicDebt, FreeDeductionWithAcademicDebtOrder.Create
@@ -110,16 +110,16 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.PaidEnrollmentWithTransfer, PaidEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.PaidReenrollment, PaidReenrollmentOrder.Create
+            OrderTypes.PaidReEnrollment, PaidReEnrollmentOrder.Create
         },
         {
             OrderTypes.PaidTransferNextCourse, PaidTransferNextCourseOrder.Create
         },
         {
-            OrderTypes.PaidTransferBetweenSpecialities, PaidTransferBetweenSpecialitiesOrder.Create
+            OrderTypes.PaidTransferBetweenSpecialties, PaidTransferBetweenSpecialtiesOrder.Create
         },
         {
-            OrderTypes.PaidTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
+            OrderTypes.FreeTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
         },
         {
             OrderTypes.PaidDeductionWithAcademicDebt, PaidDeductionWithAcademicDebtOrder.Create
@@ -146,7 +146,7 @@ public abstract class Order : IFromCSV<Order>
         },
         {
             OrderTypes.FreeReenrollment,
-            (id, jsonString) => FreeReenrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (id, jsonString) => FreeReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
             OrderTypes.FreeTransferNextCourse,
@@ -154,7 +154,7 @@ public abstract class Order : IFromCSV<Order>
         },
         {
             OrderTypes.FreeTransferBetweenSpecialities,
-            (id, jsonString) => FreeTransferBetweenSpecialitiesOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (id, jsonString) => FreeTransferWithinCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
             OrderTypes.FreeDeductionWithAcademicDebt,
@@ -178,19 +178,19 @@ public abstract class Order : IFromCSV<Order>
             (id, jsonString) => PaidEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
-            OrderTypes.PaidReenrollment,
-            (id, jsonString) => PaidReenrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            OrderTypes.PaidReEnrollment,
+            (id, jsonString) => PaidReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
             OrderTypes.PaidTransferNextCourse,
             (id, jsonString) => PaidTransferNextCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
-            OrderTypes.PaidTransferBetweenSpecialities,
-            (id, jsonString) => PaidTransferBetweenSpecialitiesOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            OrderTypes.PaidTransferBetweenSpecialties,
+            (id, jsonString) => PaidTransferBetweenSpecialtiesOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
-            OrderTypes.PaidTransferFromPaidToFree,
+            OrderTypes.FreeTransferFromPaidToFree,
             (id, jsonString) => PaidTransferFromPaidToFreeOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
@@ -219,13 +219,13 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.FreeEnrollmentWithTransfer, FreeEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.FreeReenrollment, FreeReenrollmentOrder.Create
+            OrderTypes.FreeReenrollment, FreeReEnrollmentOrder.Create
         },
         {
             OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create
         },
         {
-            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferBetweenSpecialitiesOrder.Create
+            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferWithinCourseOrder.Create
         },
         {
             OrderTypes.FreeDeductionWithAcademicDebt, FreeDeductionWithAcademicDebtOrder.Create
@@ -244,16 +244,16 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.PaidEnrollmentWithTransfer, PaidEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.PaidReenrollment, PaidReenrollmentOrder.Create
+            OrderTypes.PaidReEnrollment, PaidReEnrollmentOrder.Create
         },
         {
             OrderTypes.PaidTransferNextCourse, PaidTransferNextCourseOrder.Create
         },
         {
-            OrderTypes.PaidTransferBetweenSpecialities, PaidTransferBetweenSpecialitiesOrder.Create
+            OrderTypes.PaidTransferBetweenSpecialties, PaidTransferBetweenSpecialtiesOrder.Create
         },
         {
-            OrderTypes.PaidTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
+            OrderTypes.FreeTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
         },
         {
             OrderTypes.PaidDeductionWithAcademicDebt, PaidDeductionWithAcademicDebtOrder.Create
@@ -341,7 +341,7 @@ public abstract class Order : IFromCSV<Order>
         var errors = new List<ValidationError?>();
         if (source is null)
         {
-            return Result<T>.Failure(new OrderValidationError("DTO приказа не может быть пустым"));
+            return Result<T>.Failure(new ValidationError("DTO приказа не может быть пустым"));
         }
 
         if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate),
@@ -391,7 +391,7 @@ public abstract class Order : IFromCSV<Order>
             return Result<T>.Success(model);
         }
     }
-    protected static QueryResult<T?> MapParticialFromDbBase<T>(NpgsqlDataReader reader, T model) where T : Order
+    protected static QueryResult<T?> MapPartialFromDbBase<T>(NpgsqlDataReader reader, T model) where T : Order
     {
         OrderTypes typeGot = (OrderTypes)(int)reader["type"];
         if (model.GetOrderTypeDetails().Type != typeGot)
@@ -425,6 +425,7 @@ public abstract class Order : IFromCSV<Order>
         }
         return Result<T>.Success((T)got);
     }
+    // все проводимые приказы всегда будут хронологически последними на каждого из студентов, входящих в приказ
     protected void ConductBase(IEnumerable<StudentFlowRecord>? records)
     {
         if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || IsClosed)
@@ -506,28 +507,29 @@ public abstract class Order : IFromCSV<Order>
     }
 
     // проверяет только студентов на предмет общих зависимостей
-    internal virtual ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
+    internal ResultWithoutValue CheckTreeConductionPossibility()
     {
+        var toCheck = GetStudentsForCheck();
         // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
         // для закрытых приказов проведение невозможно
         if (toCheck is null || !toCheck.Any())
         {
-            return ResultWithoutValue.Failure(new OrderValidationError("Приказ не может быть проведен без указания студентов"));
+            return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Приказ не может быть проведен без указания студентов"));
         }
         if (IsClosed)
         {
-            return ResultWithoutValue.Failure(new OrderValidationError("Провдение для закрытого приказа невозможно"));
+            return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Провдение для закрытого приказа невозможно"));
         }
-        foreach (var s in toCheck)
+        foreach (var student in toCheck)
         {
-            var record = s.History.GetLastRecord();
+            var record = student.History.GetLastRecord();
             if (record is not null)
             {
-                var order = record.OrderNullRestict;
+                var order = record.OrderNullRestrict;
                 // если предыдущий приказ открыт, то проведение невозможно
                 if (order.IsOpen)
                 {
-                    return ResultWithoutValue.Failure(new OrderValidationError(string.Format("Cтудент {0} зарегистрирован в незакрытом приказе {1}", s.GetName(), order.OrderDisplayedName)));
+                    return ResultWithoutValue.Failure(new OrderValidationError(string.Format("зарегистрирован в незакрытом приказе {0}", order.OrderDisplayedName), student));
                 }
                 if (order._effectiveDate > _effectiveDate
                     || (order._effectiveDate == _effectiveDate && order._creationTimestamp > _creationTimestamp)
@@ -535,21 +537,39 @@ public abstract class Order : IFromCSV<Order>
                 {
                     ResultWithoutValue.Failure(
                         new OrderValidationError(
-                            string.Format("Приказ {0} от {1} не является хронологически последовательным для студента {2}, ему предшествует приказ {3} от {4}",
-                                this.OrderDisplayedName, Utils.FormatDateTime(this.SpecifiedDate), s.GetName(), order.OrderDisplayedName, Utils.FormatDateTime(order.SpecifiedDate))
-                            )
+                            string.Format("Приказ {0} от {1} не является хронологически последовательным для студента, ему предшествует приказ {2} от {3}",
+                                this.OrderDisplayedName, Utils.FormatDateTime(this.SpecifiedDate), order.OrderDisplayedName, Utils.FormatDateTime(order.SpecifiedDate))
+                            , student)
                         );
                 }
             }
         }
+        var subclassCheck = CheckOrderClassSpecificConductionPossibility(toCheck);
+        if (subclassCheck.IsFailure)
+        {
+            return subclassCheck;
+        }
+        _conductionStatus = OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
     }
+
+    protected abstract ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck);
+    protected abstract IEnumerable<StudentModel>? GetStudentsForCheck();
 
     public OrderTypeInfo GetOrderTypeDetails()
     {
         return OrderTypeInfo.GetByType(GetOrderType());
     }
-    public abstract ResultWithoutValue ConductByOrder();
+    public ResultWithoutValue ConductByOrder()
+    {
+        var check = CheckTreeConductionPossibility();
+        if (check.IsFailure)
+        {
+            return check;
+        }
+        return ConductByOrderInternal();
+    }
+    protected abstract ResultWithoutValue ConductByOrderInternal();
     public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
@@ -646,12 +666,12 @@ public abstract class Order : IFromCSV<Order>
 
         if (mapped is null)
         {
-            return Result<Order>.Failure(new OrderValidationError("Ошибка при маппинге json"));
+            return Result<Order>.Failure(new ValidationError("Ошибка при маппинге json"));
         }
 
         if (!TryParseOrderType(mapped.OrderType))
         {
-            return Result<Order>.Failure(new OrderValidationError("Неверно указан тип приказа"));
+            return Result<Order>.Failure(new ValidationError("Неверно указан тип приказа"));
         }
 
         OrderTypes type = (OrderTypes)mapped.OrderType;
@@ -662,7 +682,7 @@ public abstract class Order : IFromCSV<Order>
         }
         catch
         {
-            return Result<Order>.Failure(new OrderValidationError("Данный тип приказа не поддерживается"));
+            return Result<Order>.Failure(new ValidationError("Данный тип приказа не поддерживается"));
         }
         if (result.IsFailure)
         {

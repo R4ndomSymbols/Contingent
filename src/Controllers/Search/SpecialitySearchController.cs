@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Specialities;
-using Contingent.Models.Infrastruture;
+using Contingent.Models.Infrastructure;
 using Contingent.SQL;
 
 namespace Contingent.Controllers.Search;
@@ -46,7 +46,7 @@ public class SpecialitySearchController : Controller
         {
             return Json(new ErrorsDTO(new ValidationError("Десериализация поискового запроса провалилась")));
         }
-        var found = await SpecialityModel.FindSpecialities(new QueryLimits(0, 100));
+        var found = await SpecialtyModel.FindSpecialities(new QueryLimits(0, 100));
         var filter = new SearchHelper().GetFilterForSpecialities(dto);
         return Json(filter.Execute(found).Select(x => new SpecialitySearchResultDTO(x)));
     }
@@ -55,7 +55,7 @@ public class SpecialitySearchController : Controller
     [Route("specialities/suggest/{query?}")]
     public async Task<JsonResult> GetSuggestions(string? query)
     {
-        return Json(await SpecialityModel.GetSuggestions(query, null));
+        return Json(await SpecialtyModel.GetSuggestions(query, null));
     }
 
 }

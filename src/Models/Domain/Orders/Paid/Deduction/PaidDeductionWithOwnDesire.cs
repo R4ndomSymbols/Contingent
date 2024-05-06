@@ -46,7 +46,7 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
     public static QueryResult<PaidDeductionWithOwnDesireOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidDeductionWithOwnDesireOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -73,7 +73,7 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} должен быть зачислен прежде, чем быть отчисленным", student.Student.GetName())
+                        "студент должен быть зачислен прежде, чем быть отчисленным", student.Student
                     )
                 );
             }

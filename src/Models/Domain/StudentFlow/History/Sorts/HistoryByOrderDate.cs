@@ -1,49 +1,50 @@
 using Contingent.Models.Domain.Flow.Abstract;
 using Contingent.Models.Domain.Orders;
+using Npgsql.Replication;
 
 namespace Contingent.Models.Domain.Flow.History;
 
 // порядок хронологический
-public class HistoryByOrderEffectiveDate : OrderedHistory
+public class HistoryByOrderEffectiveDateAsc : OrderedHistory
 {
 
     private Comparison<StudentFlowRecord> _defaultComparer => (left, right) =>
     {
         var orderLeft = left.ByOrder;
-        var orderRigth = right.ByOrder;
-        if (orderLeft is null || orderRigth is null)
+        var orderRight = right.ByOrder;
+        if (orderLeft is null || orderRight is null)
         {
             throw new Exception("Приказ должен быть указан");
         }
-        if (orderLeft.Equals(orderRigth))
+        if (orderLeft.Equals(orderRight))
         {
             return 0;
         }
-        if (orderLeft.EffectiveDate == orderRigth.EffectiveDate)
+        if (orderLeft.EffectiveDate == orderRight.EffectiveDate)
         {
-            if (orderLeft.OrderCreationDate == orderRigth.OrderCreationDate)
+            if (orderLeft.OrderCreationDate == orderRight.OrderCreationDate)
             {
                 return 0;
             }
-            else if (orderLeft.OrderCreationDate > orderRigth.OrderCreationDate)
+            else if (orderLeft.OrderCreationDate > orderRight.OrderCreationDate)
             {
                 return 1;
             }
             return -1;
         }
-        else if (orderLeft.EffectiveDate > orderRigth.EffectiveDate)
+        else if (orderLeft.EffectiveDate > orderRight.EffectiveDate)
         {
             return 1;
         }
         return -1;
     };
 
-    public HistoryByOrderEffectiveDate(IEnumerable<StudentFlowRecord> records) : base(records)
+    public HistoryByOrderEffectiveDateAsc(IEnumerable<StudentFlowRecord> records) : base(records)
     {
         _history.Sort(_defaultComparer);
     }
 
-    public HistoryByOrderEffectiveDate() : base()
+    public HistoryByOrderEffectiveDateAsc() : base()
     {
 
     }
@@ -72,7 +73,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory
         StudentFlowRecord? toReturn = null;
         for (int i = _history.Count - 1; i >= 0; i--)
         {
-            if (_history[i].OrderNullRestict.EffectiveDate < dateTime)
+            if (_history[i].OrderNullRestrict.EffectiveDate < dateTime)
             {
                 toReturn = _history[i];
                 break;
@@ -82,7 +83,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory
     }
     public StudentFlowRecord? GetClosestBefore(Order byOrder)
     {
-        int index = _history.FindIndex(x => x.OrderNullRestict.Equals(byOrder));
+        int index = _history.FindIndex(x => x.OrderNullRestrict.Equals(byOrder));
         if (index > 0)
         {
             return _history[index - 1];
@@ -97,7 +98,7 @@ public class HistoryByOrderEffectiveDate : OrderedHistory
         StudentFlowRecord? toReturn = null;
         for (int i = 0; i < _history.Count; i++)
         {
-            if (_history[i].OrderNullRestict.EffectiveDate > dateTime)
+            if (_history[i].OrderNullRestrict.EffectiveDate > dateTime)
             {
                 toReturn = _history[i];
                 break;
@@ -114,8 +115,11 @@ public class HistoryByOrderEffectiveDate : OrderedHistory
 
     public override StudentFlowRecord Last()
     {
-        Console.WriteLine(string.Join("\n", _history.Select(x => x.OrderNullRestict.EffectiveDate)));
         return _history.Last();
+    }
+    public StudentFlowRecord this[int index]
+    {
+        get => _history[index];
     }
 }
 

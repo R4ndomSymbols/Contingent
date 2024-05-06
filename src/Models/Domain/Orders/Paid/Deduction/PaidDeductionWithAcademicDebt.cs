@@ -46,7 +46,7 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
     public static QueryResult<PaidDeductionWithAcademicDebtOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidDeductionWithAcademicDebtOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -73,9 +73,8 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} должен быть зачислен прежде, чем быть отчисленным", student.Student.GetName())
-                    )
-                );
+                        "Студент должен быть зачислен прежде, чем быть отчисленным", student.Student)
+                    );
             }
         }
         return ResultWithoutValue.Success();

@@ -3,6 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -45,7 +46,7 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
     public static QueryResult<PaidTransferNextCourseOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidTransferNextCourseOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -69,32 +70,16 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         foreach (var move in _transfer)
         {
             var history = move.Student.History;
-            if (!history.IsStudentEnlisted())
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус", move.Student.GetName())
-                    )
-                );
-            }
-            var lastRecord = history.GetLastRecord();
-            if (lastRecord is not null && lastRecord.GroupToNullRestrict.CourseOn == lastRecord.GroupToNullRestrict.EducationProgram.CourseCount)
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("{0} имеет выпусную группу {1}", move.Student.GetName(), lastRecord.GroupToNullRestrict.GroupName)
-                    )
-                );
-            }
             var group = move.GroupTo;
-            if (!(group.HistoricalSequenceId == lastRecord.GroupToNullRestrict.HistoricalSequenceId
-            && group.CourseOn - lastRecord.GroupToNullRestrict.CourseOn == 1))
+            var groupCheck = group.GetRelationTo(history.GetCurrentGroup()) == Groups.GroupRelations.DirectChild;
+            // группа студента элиминирует почти все проверки:
+            // она null, если он не зачислен
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Группа {0}, куда зачисляется студент {1}, не сооствествует критериям", group.GroupName, move.Student.GetName())
-                    )
-                );
+                        "студент имеет недопустимый статус или группа указана неверно", move.Student)
+                    );
             }
         }
         return ResultWithoutValue.Success();

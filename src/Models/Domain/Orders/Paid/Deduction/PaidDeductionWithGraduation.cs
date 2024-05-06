@@ -4,6 +4,8 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using System.Text.RegularExpressions;
+using Contingent.Models.Domain.Groups;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -46,7 +48,7 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
     public static QueryResult<PaidDeductionWithGraduationOrder?> Create(int id, NpgsqlDataReader reader)
     {
         var order = new PaidDeductionWithGraduationOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        return MapPartialFromDbBase(reader, order);
     }
 
     public override ResultWithoutValue ConductByOrder()
@@ -69,23 +71,14 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
     {
         foreach (var student in _graduates)
         {
-            var history = student.Student.History;
-            if (history.IsStudentEnlisted())
+            var group = student.Student.History.GetCurrentGroup();
+            var check = group is not null && group.IsGraduationGroup();
+            if (!check)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("Студент {0} не имеет недопустимый статус (не зачислен)", student.Student.GetName())
-                    )
-                );
-            }
-            var group = history.GetLastRecord().GroupToNullRestrict;
-            if (group.EducationProgram.CourseCount != group.CourseOn)
-            {
-                return ResultWithoutValue.Failure(
-                    new OrderValidationError(
-                        string.Format("Группа {0} не является выпускной для студента {1}", group.GroupName, student.Student.GetName())
-                    )
-                );
+                        string.Format("cтудент не может быть отчислен из группы {0}", group is null ? GroupModel.InvalidNamePlaceholder : group.GroupName), student.Student)
+                    );
             }
         }
         return ResultWithoutValue.Success();

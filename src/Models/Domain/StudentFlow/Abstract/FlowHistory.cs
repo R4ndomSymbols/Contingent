@@ -11,22 +11,6 @@ namespace Contingent.Models.Domain.Flow;
 // общие запросы по таблице истории студентов
 public static class FlowHistory
 {
-    public static DateTime CurrentPeriodStartDate
-    {
-        get
-        {
-            var now = DateTime.Now;
-            return new DateTime(now.Year - 1, 10, 1);
-        }
-    }
-    public static DateTime CurrentPeriodEndDate
-    {
-        get
-        {
-            var now = DateTime.Now;
-            return new DateTime(now.Year, 9, 30);
-        }
-    }
 
     private static SelectQuery<DateTime> GetLastOrderDateSubquery(string outerTableName)
     {

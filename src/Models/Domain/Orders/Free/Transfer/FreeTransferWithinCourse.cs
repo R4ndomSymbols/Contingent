@@ -4,39 +4,40 @@ using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
-public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
+public class FreeTransferWithinCourseOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _moves;
 
-    private FreeTransferBetweenSpecialitiesOrder() : base()
+    private FreeTransferWithinCourseOrder() : base()
     {
         _moves = StudentToGroupMoveList.Empty;
     }
 
-    private FreeTransferBetweenSpecialitiesOrder(int id) : base(id)
+    private FreeTransferWithinCourseOrder(int id) : base(id)
     {
         _moves = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<FreeTransferBetweenSpecialitiesOrder> Create(OrderDTO? orderDTO)
+    public static Result<FreeTransferWithinCourseOrder> Create(OrderDTO? orderDTO)
     {
-        var created = new FreeTransferBetweenSpecialitiesOrder();
+        var created = new FreeTransferWithinCourseOrder();
         var result = MapBase(orderDTO, created);
         return result;
     }
-    public static QueryResult<FreeTransferBetweenSpecialitiesOrder?> Create(int id, NpgsqlDataReader reader)
+    public static QueryResult<FreeTransferWithinCourseOrder?> Create(int id, NpgsqlDataReader reader)
     {
-        var order = new FreeTransferBetweenSpecialitiesOrder(id);
-        return MapParticialFromDbBase(reader, order);
+        var order = new FreeTransferWithinCourseOrder(id);
+        return MapPartialFromDbBase(reader, order);
     }
 
 
-    public static Result<FreeTransferBetweenSpecialitiesOrder> Create(int id, StudentToGroupMovesDTO? moves)
+    public static Result<FreeTransferWithinCourseOrder> Create(int id, StudentToGroupMovesDTO? moves)
     {
-        var result = MapFromDbBaseForConduction<FreeTransferBetweenSpecialitiesOrder>(id);
+        var result = MapFromDbBaseForConduction<FreeTransferWithinCourseOrder>(id);
         if (result.IsFailure)
         {
             return result;
@@ -45,20 +46,15 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         var data = StudentToGroupMoveList.Create(moves);
         if (data.IsFailure)
         {
-            return data.RetraceFailure<FreeTransferBetweenSpecialitiesOrder>();
+            return data.RetraceFailure<FreeTransferWithinCourseOrder>();
         }
         got._moves = data.ResultObject;
         return result;
 
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var checkResult = CheckConductionPossibility(_moves.Select(x => x.Student));
-        if (checkResult.IsFailure)
-        {
-            return checkResult;
-        }
         ConductBase(_moves.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -76,19 +72,18 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
     // приказ о переводе внутри колледжа 
     // тот же курс тот же год поступления, различие в специальности не обязательно (???)
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
     {
-        // проверка на конечный момент времени, без учета альтернативной истории
         foreach (var move in _moves)
         {
             var currentStudentGroup = move.Student.History.GetCurrentGroup();
             var conditionsSatisfied = currentStudentGroup is not null &&
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn
-                && currentStudentGroup.CreationYear == move.GroupTo.CreationYear;
+                && currentStudentGroup.CreationYear == move.GroupTo.CreationYear && move.GroupTo.SponsorshipType.IsFree();
             if (!conditionsSatisfied)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError(
-                    string.Format("Студент {0} не может быть переведен в группу {1}", move.Student.GetName(), move.GroupTo.GroupName))
+                    string.Format("не может быть переведен в группу {0}", move.GroupTo.GroupName), move.Student)
                 );
             }
         }
@@ -105,5 +100,10 @@ public class FreeTransferBetweenSpecialitiesOrder : FreeContingentOrder
         }
         _moves.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _moves.Select(x => x.Student);
     }
 }
