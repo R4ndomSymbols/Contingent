@@ -49,6 +49,15 @@ public class GroupEducationFormat
     {
         return FormatType != GroupEducationFormatTypes.NotMentioned;
     }
+    public static bool operator ==(GroupEducationFormat left, GroupEducationFormat right)
+    {
+        return left.FormatType == right.FormatType;
+    }
+    public static bool operator !=(GroupEducationFormat left, GroupEducationFormat right)
+    {
+        return left.FormatType != right.FormatType;
+    }
+
 }
 
 

@@ -121,7 +121,7 @@ public class OrderController : Controller
         var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();
         foreach (var record in found.History)
         {
-            var history = StudentHistory.Create(record.StudentNullRestrict);
+            var history = new StudentHistory(record.StudentNullRestrict);
             var byAnchor = history.GetByOrder(order);
             var previous = history.GetClosestBefore(order);
             studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.StudentNullRestrict, byAnchor?.GroupTo, previous?.GroupTo, order));

@@ -24,6 +24,7 @@ public class PaidEduAgreement
         {"", PaidEducationAgreementTypes.NotMentioned},
         {"нет", PaidEducationAgreementTypes.NotMentioned},
         {"да", PaidEducationAgreementTypes.LegalRepresentative},
+        {"есть", PaidEducationAgreementTypes.LegalRepresentative},
         {"за счет средств иного физического лица", PaidEducationAgreementTypes.OtherIndividual},
         {"за счет средств юридического лица", PaidEducationAgreementTypes.Entity}
     };
@@ -43,7 +44,7 @@ public class PaidEduAgreement
         {
             return (int)PaidEducationAgreementTypes.NotMentioned;
         }
-        if (_importDictionary.TryGetValue(typeName, out PaidEducationAgreementTypes found))
+        if (_importDictionary.TryGetValue(typeName.ToLower(), out PaidEducationAgreementTypes found))
         {
             return (int)found;
         }

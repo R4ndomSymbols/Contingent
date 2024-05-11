@@ -4,6 +4,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 using Microsoft.AspNetCore.Components.Forms;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -49,13 +50,8 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = base.CheckConductionPossibility(_transfer.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_transfer.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -97,4 +93,10 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         _transfer.Add(result.ResultObject);
         return Result<Order>.Success(this);
     }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _transfer.Select(x => x.Student);
+    }
+
 }

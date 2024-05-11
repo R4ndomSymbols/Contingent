@@ -1,5 +1,5 @@
 
-namespace Contingent.Models.Domain.Specialities;
+namespace Contingent.Models.Domain.Specialties;
 
 public class TeachingDepth
 {

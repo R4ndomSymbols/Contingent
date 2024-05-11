@@ -12,7 +12,7 @@ public class Period
     public readonly DateTime Start;
     public readonly DateTime End;
 
-    public static Period CurrentOrderPeriodPeriodEndDate => GetOrderPeriodByYear(DateTime.Now.Year);
+    public static Period CurrentOrderPeriod => GetOrderPeriodByYear(DateTime.Now.Year);
 
     public static Period CurrentReportingPeriod
     {

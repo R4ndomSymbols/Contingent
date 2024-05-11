@@ -22,13 +22,8 @@ public abstract class AdditionalContingentOrder : Order
 
     protected override OrderSequentialGuardian SequentialGuardian => PaidOrderSequentialGuardian.Instance;
 
-    internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
+    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck)
     {
-        var upperCheck = base.CheckBasicConductionPossibility(toCheck);
-        if (upperCheck.IsFailure || toCheck is null)
-        {
-            return upperCheck;
-        }
         // проверка на наличие договора о платном обучении для всех студентов, без его наличия невозможно проведение по этим приказам
         foreach (var std in toCheck)
         {
@@ -44,7 +39,6 @@ public abstract class AdditionalContingentOrder : Order
         {
             return lowerCheck;
         }
-        this._conductionStatus = OrderData.OrderConductionStatus.ConductionReady;
         return ResultWithoutValue.Success();
 
     }

@@ -6,7 +6,7 @@ using Contingent.Models.Domain.Citizenship;
 using Contingent.SQL;
 using Utilities;
 using Utilities.Validation;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using System.Runtime.InteropServices;
 
 namespace Contingent.Models.Domain.Students;
@@ -125,10 +125,7 @@ public class StudentModel
     {
         get
         {
-            if (_history is null)
-            {
-                _history = new StudentHistory(this);
-            }
+            _history ??= new StudentHistory(this);
             return _history;
         }
     }

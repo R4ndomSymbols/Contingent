@@ -10,9 +10,9 @@ public enum OrderTypes
     //    Список всех видов приказов
     //    **Зачисление**:
     //    Переводом
-    FreeEnrollmentWithTransfer = 17,
+    FreeEnrollmentFromAnotherOrg = 17,
     //    В порядке восстановления
-    FreeReenrollment = 18,
+    FreeReEnrollment = 18,
     //    На первый курс
     FreeEnrollment = 11,
 

@@ -65,4 +65,9 @@ public class CSVGenerator
         var source = new OrderConductionDataSource(type);
         return GenerateBase(source, count);
     }
+    public string GenerateGroups(int count)
+    {
+        var source = new GroupRowDataSource();
+        return GenerateBase(source, count);
+    }
 }

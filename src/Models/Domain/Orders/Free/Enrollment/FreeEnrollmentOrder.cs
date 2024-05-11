@@ -73,13 +73,11 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     {
         foreach (var stm in _moves.Moves)
         {
-            var history = new StudentHistory(stm.Student);
+            var history = stm.Student.History;
+            var studentCheck = !history.IsStudentEnlisted();
             var targetGroup = stm.GroupTo;
-            var validMove =
-                (history.IsStudentNotRecorded() || history.IsStudentDeducted()) &&
-                targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) &&
-                targetGroup.SponsorshipType.IsFree();
-            if (!validMove)
+            var groupCheck = targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) && targetGroup.SponsorshipType.IsFree();
+            if (!studentCheck || !groupCheck)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления", stm.Student));
             }
@@ -95,6 +93,18 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     protected override ResultWithoutValue ConductByOrderInternal()
     {
         ConductBase(_moves.ToRecords(this));
+        // делает активной группы, куда зачислены студенты и группу после
+        foreach (var group in _moves.Select(x => x.GroupTo).Distinct())
+        {
+            var suc = group.GetSuccessor();
+            group.IsActive = true;
+            if (suc is not null)
+            {
+                suc.IsActive = true;
+                suc.Save();
+            }
+            group.Save();
+        }
         return ResultWithoutValue.Success();
     }
 

@@ -1,5 +1,5 @@
 using Npgsql;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.Controllers.DTO.In;
 using Utilities;
 using System.Collections;

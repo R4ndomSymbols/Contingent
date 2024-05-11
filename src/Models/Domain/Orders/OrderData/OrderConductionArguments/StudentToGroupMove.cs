@@ -47,6 +47,15 @@ public class StudentToGroupMove : StudentStatement
         return Result<StudentToGroupMove>.Success(model);
     }
 
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj is not StudentToGroupMove)
+        {
+            return false;
+        }
+        return ((StudentToGroupMove)obj).Student.Equals(Student);
+    }
+
 }
 
 public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>
@@ -106,6 +115,10 @@ public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>
     }
     public void Add(StudentToGroupMove move)
     {
+        if (_moves.Any(x => x.Equals(move)))
+        {
+            return;
+        }
         _moves.Add(move);
     }
 }

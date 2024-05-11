@@ -1,5 +1,7 @@
 using Contingent.Import;
 using Contingent.Import.Concrete;
+using Contingent.Models.Domain.Orders;
+using Contingent.Models.Domain.Orders.OrderData;
 using System.ComponentModel;
 using System.Text;
 using Utilities;
@@ -8,7 +10,7 @@ namespace Tests;
 
 public class Tests
 {
-    private void GenerateTable()
+    public void GenerateTable()
     {
         var csv = new CSVGenerator().GenerateStudents(500);
         Console.WriteLine(csv);
@@ -51,10 +53,25 @@ public class Tests
             }
         }
     }
-    [Fact]
-    private void FlowImportTest()
+    public void GroupImportTest()
     {
-        var csv = new CSVGenerator().GenerateFlow(150);
+        var csv = new CSVGenerator().GenerateGroups(30);
+        Console.WriteLine(csv);
+        var result = ImportCSV<GroupImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new GroupImport());
+        Console.WriteLine(result);
+        if (result.IsSuccess)
+        {
+            foreach (var group in result.ResultObject)
+            {
+                group.Group!.Save();
+            }
+        }
+    }
+
+    [Fact]
+    public void FlowImportTest()
+    {
+        var csv = new CSVGenerator().GenerateFlow(150, OrderTypes.FreeEnrollmentFromAnotherOrg);
         var batch = new FlowImportBatch();
         Console.WriteLine(csv);
         var result = ImportCSV<FlowImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new FlowImport(batch));
@@ -64,6 +81,18 @@ public class Tests
             batch.MassConduct();
         }
     }
+
+    public void OrderTypesTest()
+    {
+        Console.WriteLine(
+            string.Join(
+                "\n",
+                OrderTypeInfo.GetAllTypes().Select(x => x.Type.ToString() + " " + x.IsAnyDeduction().ToString() + " " + x.IsAnyEnrollment().ToString())
+            )
+
+        );
+    }
+
 
 }
 

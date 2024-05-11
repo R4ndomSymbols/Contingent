@@ -1,4 +1,4 @@
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 
 namespace Contingent.Controllers.DTO.Out;
 

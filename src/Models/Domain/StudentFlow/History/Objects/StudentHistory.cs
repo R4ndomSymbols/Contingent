@@ -159,7 +159,7 @@ public class StudentHistory
         return null;
     }
 
-    private StudentStates GetStudentState(out int cycleCount)
+    public StudentStates GetStudentState(out int cycleCount)
     {
         // если баланс = 0, студент не зачислен и не отчислен
         // если баланс %10 == 1 , то студент зачислен, но не отчислен
@@ -167,7 +167,7 @@ public class StudentHistory
         int balance = 0;
         foreach (var record in _history)
         {
-            var details = record.ByOrder.GetOrderTypeDetails();
+            var details = record.OrderNullRestrict.GetOrderTypeDetails();
             if (details.IsAnyEnrollment())
             {
                 balance += 1;

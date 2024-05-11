@@ -1,4 +1,4 @@
-﻿@using Contingent.Models.Domain.Flow;
+﻿@using Contingent.Models.Infrastructure;
 @using Utilities;
 @{
     ViewData["Title"] = "Домашняя";
@@ -8,9 +8,9 @@
     <h1 class="display-4">Статистика</h1>
     <p class="text-center" style="font-size:30px">
         За период с
-        @Utils.FormatDateTime(FlowHistory.CurrentPeriodStartDate, true)
+        @Utils.FormatDateTime(Period.CurrentOrderPeriod.Start, true)
         по
-        @Utils.FormatDateTime(FlowHistory.CurrentPeriodEndDate, true)
+        @Utils.FormatDateTime(Period.CurrentOrderPeriod.End, true)
     </p>
 </div>
 <div class="d-flex flex-column">

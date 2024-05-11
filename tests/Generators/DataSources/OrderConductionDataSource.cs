@@ -11,20 +11,23 @@ namespace Tests;
 public class OrderConductionDataSource : IRowSource
 {
     private static string[] _headers = new[] {
+        "Индекс",
         FlowImport.GradeBookFieldName,
         FlowImport.StudentFullNameFieldName,
         FlowImport.GroupFieldName,
         FlowImport.OrderFieldOrgIdName,
-        FlowImport.OrderFieldDateName
+        FlowImport.OrderFieldDateName,
+        "Статус"
     };
     private string[] _data;
     private static List<StudentModel> students;
     private static List<GroupModel> groups;
     private static List<Order> orders;
     private OrderTypes _mode;
-    private IList<StudentModel> _filtedStudents;
-    private IList<GroupModel> _filtedGroups;
-    private IList<Order> _filtedOrders;
+    private IList<StudentModel> _filteredStudents;
+    private IList<GroupModel> _filteredGroups;
+    private IList<Order> _filteredOrders;
+    private int _index = 0;
 
     static OrderConductionDataSource()
     {
@@ -39,25 +42,33 @@ public class OrderConductionDataSource : IRowSource
         _mode = mode;
         if (_mode == OrderTypes.FreeEnrollment)
         {
-            _filtedStudents = new Filter<StudentModel>(
-                (s) => s.Where(student => !student.PaidAgreement.IsConcluded())
+            _filteredStudents = new Filter<StudentModel>(
+                (s) => s.Where(student => !student.PaidAgreement.IsConcluded() && !student.History.IsStudentEnlisted())
             ).Execute(students).ToList();
-            _filtedGroups = new Filter<GroupModel>(
+            _filteredGroups = new Filter<GroupModel>(
                 (g) => g.Where(group => group.CourseOn == 1)
             ).Execute(groups).ToList();
-            _filtedOrders = new Filter<Order>(
+            _filteredOrders = new Filter<Order>(
                 (o) => o.Where(order => order.GetOrderTypeDetails().Type == OrderTypes.FreeEnrollment)
             ).Execute(orders).ToList();
         }
-        else if (_mode == OrderTypes.PaidEnrollment)
+        else if (_mode == OrderTypes.FreeEnrollmentFromAnotherOrg)
         {
-            _filtedStudents = new Filter<StudentModel>(
-                (s) => s.Where(student => student.PaidAgreement.IsConcluded())
+            _filteredStudents = new Filter<StudentModel>(
+                (s) => s.Where(student => !student.PaidAgreement.IsConcluded() && !student.History.IsStudentEnlisted())
             ).Execute(students).ToList();
-            _filtedGroups = new Filter<GroupModel>(
-                (g) => g.Where(group => group.CourseOn == 1 && group.SponsorshipType.IsPaid())
+            _filteredGroups = new Filter<GroupModel>(
+                (g) => g.Where(group => (group.CourseOn == 1 || group.CourseOn == 2) && group.SponsorshipType.IsFree())
             ).Execute(groups).ToList();
+            _filteredOrders = new Filter<Order>(
+                (o) => o.Where(order => order.GetOrderTypeDetails().Type == OrderTypes.FreeEnrollmentFromAnotherOrg)
+            ).Execute(orders).ToList();
         }
+        Console.WriteLine(
+            string.Format(
+                "{0} students, {1} groups, {2} orders", _filteredStudents!.Count, _filteredGroups!.Count, _filteredOrders!.Count
+            )
+        );
         UpdateState();
 
     }
@@ -77,13 +88,16 @@ public class OrderConductionDataSource : IRowSource
     public void UpdateState()
     {
         _data = new string[_headers.Length];
-        var student = RandomPicker<StudentModel>.Pick(_filtedStudents);
-        var group = RandomPicker<GroupModel>.Pick(_filtedGroups);
-        var order = RandomPicker<Order>.Pick(_filtedOrders);
-        _data[0] = student.GradeBookNumber;
-        _data[1] = student.GetName();
-        _data[2] = group.GroupName;
-        _data[3] = order.OrderOrgId;
-        _data[4] = order.SpecifiedDate.Year.ToString();
+        _index++;
+        var student = RandomPicker<StudentModel>.Pick(_filteredStudents);
+        var group = RandomPicker<GroupModel>.Pick(_filteredGroups);
+        var order = RandomPicker<Order>.Pick(_filteredOrders);
+        _data[0] = _index.ToString();
+        _data[1] = student.GradeBookNumber;
+        _data[2] = student.GetName();
+        _data[3] = group.GroupName;
+        _data[4] = order.OrderOrgId;
+        _data[5] = order.SpecifiedDate.Year.ToString();
+        _data[6] = student.History.GetStudentState(out int cc).ToString();
     }
 }

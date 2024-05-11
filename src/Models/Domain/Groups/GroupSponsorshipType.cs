@@ -32,7 +32,7 @@ public class GroupSponsorship
         new() {
             RussianName = "Местный бюджет",
             GroupNamePostfix = "",
-            TypeOfSponsorship = GroupSponsorshipTypes.LocalGovenmentSponsorship
+            TypeOfSponsorship = GroupSponsorshipTypes.LocalGovernmentSponsorship
         },
         new() {
             RussianName = "Внебюджет",
@@ -46,7 +46,7 @@ public class GroupSponsorship
         return
         TypeOfSponsorship == GroupSponsorshipTypes.FederalGovernmentSponsorship ||
         TypeOfSponsorship == GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship ||
-        TypeOfSponsorship == GroupSponsorshipTypes.LocalGovenmentSponsorship;
+        TypeOfSponsorship == GroupSponsorshipTypes.LocalGovernmentSponsorship;
     }
     public bool IsPaid()
     {
@@ -66,6 +66,15 @@ public class GroupSponsorship
     {
         return TypeOfSponsorship != GroupSponsorshipTypes.NotMentioned;
     }
+    public static bool operator ==(GroupSponsorship left, GroupSponsorship right)
+    {
+        return left.TypeOfSponsorship == right.TypeOfSponsorship;
+    }
+    public static bool operator !=(GroupSponsorship left, GroupSponsorship right)
+    {
+        return left.TypeOfSponsorship != right.TypeOfSponsorship;
+    }
+
 }
 
 
@@ -74,7 +83,7 @@ public enum GroupSponsorshipTypes
     NotMentioned = -1,
     FederalGovernmentSponsorship = 1,
     FederalSubjectGovernmentSponsorship = 2,
-    LocalGovenmentSponsorship = 3,
+    LocalGovernmentSponsorship = 3,
     IndividualSponsorship = 4
 }
 

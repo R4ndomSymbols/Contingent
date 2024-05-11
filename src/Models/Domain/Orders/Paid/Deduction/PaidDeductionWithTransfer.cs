@@ -3,6 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -49,13 +50,8 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = base.CheckConductionPossibility(_studentLeaving.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_studentLeaving.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -91,5 +87,10 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
         }
         _studentLeaving.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _studentLeaving.Select(x => x.Student).ToList();
     }
 }

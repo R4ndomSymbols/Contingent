@@ -6,6 +6,7 @@ using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 using System.Text.RegularExpressions;
 using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -51,13 +52,8 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var checkResult = base.CheckConductionPossibility(_graduates.Select(x => x.Student));
-        if (checkResult.IsFailure)
-        {
-            return checkResult;
-        }
         ConductBase(_graduates?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -95,5 +91,10 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
         }
         _graduates.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _graduates.Select(x => x.Student);
     }
 }

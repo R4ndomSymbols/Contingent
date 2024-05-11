@@ -197,6 +197,10 @@ public class ResultWithoutValue : IResult
     {
         return Errors;
     }
+    public override string ToString()
+    {
+        return IsSuccess ? "Success" : string.Join("\n", Errors);
+    }
 }
 
 

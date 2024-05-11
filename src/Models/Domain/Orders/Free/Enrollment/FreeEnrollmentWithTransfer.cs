@@ -52,7 +52,19 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 
     protected override ResultWithoutValue ConductByOrderInternal()
     {
-        ConductBase(_toEnroll?.ToRecords(this));
+        ConductBase(_toEnroll.ToRecords(this));
+        // делает активной группы, куда зачислены студенты и группу после
+        foreach (var group in _toEnroll.Select(x => x.GroupTo).Distinct())
+        {
+            var suc = group.GetSuccessor();
+            group.IsActive = true;
+            if (suc is not null)
+            {
+                suc.IsActive = true;
+                suc.Save();
+            }
+            group.Save();
+        }
         return ResultWithoutValue.Success();
     }
 
@@ -63,7 +75,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 
     protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.FreeEnrollmentWithTransfer;
+        return OrderTypes.FreeEnrollmentFromAnotherOrg;
     }
     // 
     // приказ о переводе с другой организации
@@ -72,7 +84,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     {
         foreach (var rec in _toEnroll)
         {
-            var history = new StudentHistory(rec.Student);
+            var history = rec.Student.History;
             var groupCheck = rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student)
                 && rec.GroupTo.SponsorshipType.IsFree();
             if (history.IsStudentEnlisted() || !groupCheck)

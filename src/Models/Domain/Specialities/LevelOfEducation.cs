@@ -1,4 +1,4 @@
-namespace Contingent.Models.Domain.Specialities;
+namespace Contingent.Models.Domain.Specialties;
 public class LevelOfEducation
 {
 
@@ -50,25 +50,25 @@ public class LevelOfEducation
     }
     public static bool TryGetByLevelCode(int code, out LevelOfEducation? type)
     {
-        type = ListOfLevels.FirstOrDefault(x => (int)x.LevelCode == code, null);
+        type = ListOfLevels.FirstOrDefault(x => (int)x!.LevelCode == code, null);
         return type is not null;
     }
 
-    public static bool operator ==(LevelOfEducation left, LevelOfEducation rigth)
+    public static bool operator ==(LevelOfEducation left, LevelOfEducation right)
     {
-        return left.LevelCode == rigth.LevelCode;
+        return left.LevelCode == right.LevelCode;
     }
-    public static bool operator !=(LevelOfEducation left, LevelOfEducation rigth)
+    public static bool operator !=(LevelOfEducation left, LevelOfEducation right)
     {
-        return !(left == rigth);
+        return !(left == right);
     }
-    public static bool operator >=(LevelOfEducation left, LevelOfEducation rigth)
+    public static bool operator >=(LevelOfEducation left, LevelOfEducation right)
     {
-        return left.Weight >= rigth.Weight;
+        return left.Weight >= right.Weight;
     }
-    public static bool operator <=(LevelOfEducation left, LevelOfEducation rigth)
+    public static bool operator <=(LevelOfEducation left, LevelOfEducation right)
     {
-        return left.Weight <= rigth.Weight;
+        return left.Weight <= right.Weight;
     }
 
     public static int ImportLevelCode(string? name)
@@ -77,7 +77,7 @@ public class LevelOfEducation
         {
             return (int)LevelsOfEducation.NotMentioned;
         }
-        var found = ListOfLevels.FirstOrDefault(t => t.RussianName.ToLower() == name.ToLower() || t._aliases.Any(x => x.ToLower() == name.ToLower()), null);
+        var found = ListOfLevels.FirstOrDefault(t => t!.RussianName.ToLower() == name.ToLower() || t._aliases.Any(x => x.ToLower() == name.ToLower()), null);
         if (found is not null)
         {
             return (int)found.LevelCode;

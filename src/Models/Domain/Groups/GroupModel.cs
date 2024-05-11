@@ -1,4 +1,4 @@
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Npgsql;
 using Utilities;
 using Utilities.Validation;
@@ -17,6 +17,8 @@ namespace Contingent.Models.Domain.Groups;
 
 public class GroupModel
 {
+    private static List<GroupModel> _saveQueue = new List<GroupModel>();
+    private bool _changed = false;
     public static string InvalidNamePlaceholder => "Нет";
     private int _id;
     private SpecialtyModel _educationProgram;
@@ -74,10 +76,20 @@ public class GroupModel
     {
         get => _nameGenerated;
     }
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            _changed = true;
+            _isActive = value;
+        }
+
+    }
 
     private GroupModel()
     {
-
+        _id = Utils.INVALID_ID;
     }
 
     public static Mapper<GroupModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
@@ -249,6 +261,7 @@ public class GroupModel
         }
         else
         {
+            _saveQueue.Add(model);
             return Result<GroupModel>.Success(model);
         }
 
@@ -297,6 +310,10 @@ public class GroupModel
     }
     public ResultWithoutValue Save(ObservableTransaction? scope = null)
     {
+        if (_id != Utils.INVALID_ID)
+        {
+            return Update(scope);
+        }
         if (_courseOn == 1 && _nameGenerated)
         {
             var result = SaveGroupSequence(scope);
@@ -304,9 +321,15 @@ public class GroupModel
             {
                 return ResultWithoutValue.Failure(result.Errors);
             }
+            UpdateSavingQueue(this);
             return ResultWithoutValue.Success();
         }
-        return SaveBase(scope);
+        var resultSingle = SaveBase(scope);
+        if (resultSingle.IsSuccess)
+        {
+            UpdateSavingQueue(this);
+        }
+        return resultSingle;
     }
 
     private ResultWithoutValue SaveBase(ObservableTransaction? scope)
@@ -346,8 +369,37 @@ public class GroupModel
             reader.Read();
             _id = (int)reader["group_id"];
         }
+        conn?.Dispose();
         return ResultWithoutValue.Success();
     }
+    private ResultWithoutValue Update(ObservableTransaction? scope = null)
+    {
+        if (!_changed)
+        {
+            return ResultWithoutValue.Success();
+        }
+        var connection = Utils.GetAndOpenConnectionFactory().Result;
+        string cmdText = "UPDATE educational_group SET is_active = @p1 WHERE group_id = @p2";
+        NpgsqlCommand cmd;
+        if (scope is null)
+        {
+            cmd = new NpgsqlCommand(cmdText, connection);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        cmd.Parameters.Add(new NpgsqlParameter<bool>("p1", _isActive));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _id));
+        using (cmd)
+        {
+            cmd.ExecuteNonQuery();
+        }
+        connection.Dispose();
+        _changed = false;
+        return ResultWithoutValue.Success();
+    }
+
 
     // хранить букву в базе
     // если не получается получить последнюю, то буква не указывается
@@ -442,7 +494,7 @@ public class GroupModel
         return await buildResult.ResultObject.Execute(conn, limits);
     }
 
-    public static IReadOnlyCollection<GroupModel> FindGroupsByName(QueryLimits limits, string? name, bool onlyActive)
+    public static IReadOnlyCollection<GroupModel> FindGroupsByName(QueryLimits limits, string? name, bool onlyActive, bool strict = false)
     {
         var where = onlyActive ? new ComplexWhereCondition(new WhereCondition(new Column("is_active", "educational_group"))) : ComplexWhereCondition.Empty;
         if (name == string.Empty || string.IsNullOrWhiteSpace(name) || name.Length < 2)
@@ -450,7 +502,7 @@ public class GroupModel
             return FindGroups(limits, additionalConditions: where).Result;
         }
         var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add<string>(name.Trim().ToLower() + "%");
+        var p1 = parameters.Add<string>(name.Trim().ToLower() + (strict ? "" : "%"));
         where = where.Unite(
             ComplexWhereCondition.ConditionRelation.AND,
             new ComplexWhereCondition(
@@ -460,6 +512,31 @@ public class GroupModel
                 WhereCondition.Relations.Like
             )
         ));
+        return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
+    }
+    public static IReadOnlyCollection<GroupModel> FindGroupsByThread(QueryLimits limits, int threadId, int? courseOn = null)
+    {
+        var parameters = new SQLParameterCollection();
+        var where = courseOn is not null ?
+            new ComplexWhereCondition(
+                new WhereCondition(
+                    new Column("course_on", "educational_group"),
+                    parameters.Add((int)courseOn),
+                    WhereCondition.Relations.Equal
+                    )
+                )
+        : ComplexWhereCondition.Empty;
+
+        where = where.Unite(
+            ComplexWhereCondition.ConditionRelation.AND,
+            new ComplexWhereCondition(
+                new WhereCondition(
+                    new Column("group_sequence_id", "educational_group"),
+                    parameters.Add(threadId),
+                    WhereCondition.Relations.Equal
+                    )
+                )
+        );
         return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
     }
 
@@ -550,6 +627,15 @@ public class GroupModel
         }
         if (!IsOnTheSameThread(group))
         {
+            if (_educationProgram.Equals(group._educationProgram)
+            && _courseOn == group._courseOn
+            && _creationYear == group._creationYear
+            && _formatOfEducation.GroupNamePostfix == group._formatOfEducation.GroupNamePostfix
+            && _groupSponsorship.GroupNamePostfix == group._groupSponsorship.GroupNamePostfix
+            )
+            {
+                return GroupRelations.Sibling;
+            }
             return GroupRelations.None;
         }
         if (_courseOn - group._courseOn == 1)
@@ -563,7 +649,50 @@ public class GroupModel
         return GroupRelations.Other;
     }
 
+    public GroupModel? GetSuccessor()
+    {
+        if (_id == Utils.INVALID_ID)
+        {
+            return null;
+        }
+        if (IsGraduationGroup())
+        {
+            return null;
+        }
+        return FindGroupsByThread(new QueryLimits(0, _educationProgram.CourseCount), _historyThreadId, _courseOn + 1).FirstOrDefault();
 
+    }
+    // потенциально, это
+    // может привести к утечке памяти
+    // обновляет айдишку потока всех в очереди
+    private static void UpdateSavingQueue(GroupModel groupModel)
+    {
+        var index = _saveQueue.FindIndex(x => object.ReferenceEquals(x, groupModel));
+        if (index != -1)
+        {
+            _saveQueue.RemoveAt(index);
+        }
+        if (groupModel._id == Utils.INVALID_ID)
+        {
+            return;
+        }
+
+        if (_saveQueue.Any())
+        {
+            var id = GetNextSequenceId();
+            var nextLetter = groupModel.GetSequenceLetter();
+            foreach (var group in _saveQueue)
+            {
+                if (groupModel.GetRelationTo(group) == GroupRelations.Sibling)
+                {
+                    group._sequenceLetter = nextLetter;
+                }
+                group._historyThreadId = id;
+
+            }
+
+        }
+    }
 }
 
 

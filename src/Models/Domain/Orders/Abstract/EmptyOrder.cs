@@ -13,9 +13,8 @@ public sealed class EmptyOrder : Order
     {
         get => "[Не может быть определен на данный момент]";
     }
-    private EmptyOrder()
+    private EmptyOrder() : base()
     {
-        _conductionStatus = OrderConductionStatus.ConductionNotAllowed;
         _effectiveDate = DateTime.Today;
         _specifiedDate = DateTime.Today;
         _id = Utils.INVALID_ID;
@@ -28,9 +27,9 @@ public sealed class EmptyOrder : Order
 
     protected override OrderSequentialGuardian SequentialGuardian => throw new NotImplementedException();
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> students)
     {
-        throw new NotImplementedException("Невозможно провести пустой приказ");
+        throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
     }
 
     protected override OrderTypes GetOrderType()
@@ -43,13 +42,18 @@ public sealed class EmptyOrder : Order
         throw new NotImplementedException("Невозможно сохранить пустой приказ");
     }
 
-    internal override ResultWithoutValue CheckConductionPossibility(IEnumerable<StudentModel>? toCheck)
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
+        throw new NotImplementedException("Невозможно провести пустой приказ");
     }
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
         throw new NotImplementedException("Невозможно загрузить пустой приказ из CSV");
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        throw new NotImplementedException("Невозможно получить студентов у пустого приказа");
     }
 }

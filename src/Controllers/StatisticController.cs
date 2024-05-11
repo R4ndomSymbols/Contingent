@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.Statistics.Tables;
 
 namespace Contingent.Controllers;

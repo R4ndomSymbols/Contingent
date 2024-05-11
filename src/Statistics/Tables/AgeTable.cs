@@ -1,7 +1,7 @@
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.SQL;
 
 namespace Contingent.Statistics.Tables;
@@ -132,7 +132,7 @@ public class AgeTable : ITable
         var enlistedFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.History.IsEnlistedInStandardPeriod();
+                return std.Student.History.IsStudentEnlisted();
             })
         );
         var enlistedWomanFilter3 = new Filter<StudentFlowRecord>(

@@ -17,7 +17,6 @@ public abstract class StudentStatement
         var student = StudentModel.GetStudentById(dto.StudentId).Result;
         if (student is null)
         {
-            Console.WriteLine("Имя:" + dto.Name + " " + dto.StudentGradeBookNumber);
             var nameSplit = dto.Name.Split(' ');
             var whereClauseForCitizenship = RussianCitizenship.GetFilterClause(new RussianCitizenshipInDTO()
             {
@@ -63,7 +62,8 @@ public abstract class StudentStatement
             var groupsFound = GroupModel.FindGroupsByName(
                 new QueryLimits(0, 2),
                 dto.GroupName,
-                false
+                false,
+                true
             );
             if (groupsFound.Count == 0)
             {

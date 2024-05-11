@@ -62,7 +62,7 @@ public class FreeReEnrollmentOrder : FreeContingentOrder
 
     protected override OrderTypes GetOrderType()
     {
-        return OrderTypes.FreeReenrollment;
+        return OrderTypes.FreeReEnrollment;
     }
     // восстановление требует, чтобы студент был отчислен по собственному желанию
     // зачисление в бесплатную группу, с тем же курсом

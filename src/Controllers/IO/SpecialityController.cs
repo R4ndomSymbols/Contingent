@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 
 namespace Contingent.Controllers;
 

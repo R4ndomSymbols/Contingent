@@ -22,7 +22,7 @@ public abstract class Order : IFromCSV<Order>
     protected int _orderNumber;
     protected string? _orderDescription;
     protected string _orderDisplayedName;
-    protected OrderConductionStatus _conductionStatus;
+    private OrderConductionStatus _conductionStatus;
     protected bool _isClosed;
     // время создания приказа пользователем
     protected DateTime _creationTimestamp;
@@ -82,10 +82,10 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.FreeEnrollment, FreeEnrollmentOrder.Create
         },
         {
-            OrderTypes.FreeEnrollmentWithTransfer, FreeEnrollmentWithTransferOrder.Create
+            OrderTypes.FreeEnrollmentFromAnotherOrg, FreeEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.FreeReenrollment, FreeReEnrollmentOrder.Create
+            OrderTypes.FreeReEnrollment, FreeReEnrollmentOrder.Create
         },
         {
             OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create
@@ -141,11 +141,11 @@ public abstract class Order : IFromCSV<Order>
             (id, jsonString) => FreeEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
-            OrderTypes.FreeEnrollmentWithTransfer,
+            OrderTypes.FreeEnrollmentFromAnotherOrg,
             (id, jsonString) => FreeEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
-            OrderTypes.FreeReenrollment,
+            OrderTypes.FreeReEnrollment,
             (id, jsonString) => FreeReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
         },
         {
@@ -216,10 +216,10 @@ public abstract class Order : IFromCSV<Order>
             OrderTypes.FreeEnrollment, FreeEnrollmentOrder.Create
         },
         {
-            OrderTypes.FreeEnrollmentWithTransfer, FreeEnrollmentWithTransferOrder.Create
+            OrderTypes.FreeEnrollmentFromAnotherOrg, FreeEnrollmentWithTransferOrder.Create
         },
         {
-            OrderTypes.FreeReenrollment, FreeReEnrollmentOrder.Create
+            OrderTypes.FreeReEnrollment, FreeReEnrollmentOrder.Create
         },
         {
             OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create

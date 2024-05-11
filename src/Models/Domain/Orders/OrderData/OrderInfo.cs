@@ -28,17 +28,17 @@ public class OrderTypeInfo
             GroupDisplayBehaviour.MustChange
         )},
         {
-            OrderTypes.FreeEnrollmentWithTransfer,
+            OrderTypes.FreeEnrollmentFromAnotherOrg,
             new(
-                OrderTypes.FreeEnrollmentWithTransfer,
+                OrderTypes.FreeEnrollmentFromAnotherOrg,
                 "Зачисление в порядке перевода (бюджет)",
                 GroupDisplayBehaviour.MustChange
             )
         },
         {
-            OrderTypes.FreeReenrollment,
+            OrderTypes.FreeReEnrollment,
             new(
-                OrderTypes.FreeReenrollment,
+                OrderTypes.FreeReEnrollment,
                 "Зачисление в порядке восстановления (бюджет)",
                 GroupDisplayBehaviour.MustChange
             )
@@ -194,11 +194,11 @@ public class OrderTypeInfo
 
     public bool IsAnyEnrollment()
     {
-        return Type.ToString().Contains("Enrollment");
+        return Type.ToString().Contains("Enrollment", StringComparison.OrdinalIgnoreCase);
     }
     public bool IsAnyDeduction()
     {
-        return Type.ToString().Contains("Deduction");
+        return Type.ToString().Contains("Deduction", StringComparison.OrdinalIgnoreCase);
     }
     public bool CanBePreviousToReEnrollment()
     {

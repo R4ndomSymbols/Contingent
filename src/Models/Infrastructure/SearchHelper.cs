@@ -2,7 +2,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Groups;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.Statistics;
 
 namespace Contingent.Models.Infrastructure;

@@ -28,10 +28,16 @@ public abstract class FreeContingentOrder : Order
     {
         // приказ о переводе на бюджет требует того, чтобы у студента был договор,
         // но он к
-        var alternateCheck = this.GetOrderTypeDetails().Type != OrderTypes.FreeTransferFromPaidToFree;
+        var suppressCheck = this.GetOrderTypeDetails().Type == OrderTypes.FreeTransferFromPaidToFree;
         foreach (var std in toCheck)
         {
-            if (std.PaidAgreement.IsConcluded() || (alternateCheck && !std.PaidAgreement.IsConcluded()))
+            if (suppressCheck && !std.PaidAgreement.IsConcluded())
+            {
+                return ResultWithoutValue.Failure(
+                    new OrderValidationError("имеет не имеет договора о платном обучении, это недопустимо для приказа о переводе на бюджет", std)
+                );
+            }
+            if (std.PaidAgreement.IsConcluded())
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError("имеет договор о платном обучении, это недопустимо для приказа", std)
@@ -39,11 +45,7 @@ public abstract class FreeContingentOrder : Order
             }
         }
         var lowerCheck = CheckTypeSpecificConductionPossibility();
-        if (lowerCheck.IsFailure)
-        {
-            return lowerCheck;
-        }
-        return ResultWithoutValue.Success();
+        return lowerCheck;
     }
     protected abstract ResultWithoutValue CheckTypeSpecificConductionPossibility();
 

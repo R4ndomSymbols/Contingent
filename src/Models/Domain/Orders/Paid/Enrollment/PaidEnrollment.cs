@@ -4,6 +4,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
 using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -57,13 +58,8 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
     }
 
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = base.CheckConductionPossibility(_enrollers.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_enrollers.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -84,7 +80,7 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
     {
         foreach (var move in _enrollers)
         {
-            var history = new StudentHistory(move.Student);
+            var history = move.Student.History;
             var lastRecord = history.GetLastRecord();
             var orderCheck = lastRecord is not null && ForbiddenPreviousOrderTypes.All(x => lastRecord.OrderNullRestrict.GetOrderTypeDetails().Type != x);
             // разница более чем в 5 лет между приказами является основанием для игнорирования статуса
@@ -118,5 +114,10 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
         }
         _enrollers.Add(result.ResultObject);
         return Result<Order>.Success(this);
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _enrollers.Select(s => s.Student);
     }
 }

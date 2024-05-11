@@ -159,7 +159,7 @@ public class SelectQuery<T> : SelectQuery
         return queryBuilder.ToString();
     }
 
-    public async Task<IReadOnlyCollection<T>> Execute(NpgsqlConnection conn, QueryLimits limits, ObservableTransaction? scope = null)
+    public async Task<IReadOnlyCollection<T>> Execute(NpgsqlConnection conn, QueryLimits limits, ObservableTransaction? scope = null, bool suppressLogs = false)
     {
         if (!_finished)
         {
@@ -173,7 +173,10 @@ public class SelectQuery<T> : SelectQuery
         }
 
         // логирование
-        Console.WriteLine(cmdText);
+        if (!suppressLogs)
+        {
+            Console.WriteLine(cmdText);
+        }
         NpgsqlCommand cmd;
         if (scope is null)
         {

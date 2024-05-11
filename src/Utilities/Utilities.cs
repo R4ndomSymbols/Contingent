@@ -11,7 +11,7 @@ public static class Utils
     private static string? DatabaseConnectionString = null;
 
 
-    public const int INVALID_ID = 0;
+    public const int INVALID_ID = -1;
 
     public static string FormatDateTime(DateTime? date, bool expand = false)
     {

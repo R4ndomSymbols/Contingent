@@ -1,5 +1,5 @@
 using Contingent.Controllers.DTO.In;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Utilities;
 
 namespace Contingent.Import;

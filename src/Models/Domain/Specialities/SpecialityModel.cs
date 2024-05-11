@@ -1,12 +1,11 @@
 using Npgsql;
 using Contingent.Controllers.DTO.In;
-using Contingent.Models.JSON;
 using Contingent.SQL;
 using Utilities;
 using Utilities.Validation;
 using Contingent.Models.Domain.Students;
 
-namespace Contingent.Models.Domain.Specialities;
+namespace Contingent.Models.Domain.Specialties;
 
 public class SpecialtyModel
 {
@@ -261,7 +260,7 @@ public class SpecialtyModel
         }
     }
 
-    public static async Task<IReadOnlyCollection<SpecialtyModel>> FindSpecialities(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null)
+    public static async Task<IReadOnlyCollection<SpecialtyModel>> FindSpecialties(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
@@ -366,7 +365,7 @@ public class SpecialtyModel
             p1,
             WhereCondition.Relations.Equal
         ));
-        var found = await FindSpecialities(new QueryLimits(0, 1), additionalParameters: parameters, addtioinalWhere: where);
+        var found = await FindSpecialties(new QueryLimits(0, 1), additionalParameters: parameters, addtioinalWhere: where);
         if (found.Any())
         {
             return found.First();
@@ -403,63 +402,6 @@ public class SpecialtyModel
         }
         return result;
     }
-    public static async Task<List<SpecialitySuggestionJSON>> GetSuggestions(string? searchText, ObservableTransaction? scope)
-    {
-
-
-        NpgsqlConnection? conn = scope == null ? await Utils.GetAndOpenConnectionFactory() : null;
-        string cmdText = "";
-        if (searchText != null)
-        {
-            cmdText = "SELECT id, fgos_code, fgos_name, qualification FROM public.educational_program WHERE " +
-            " fgos_name || ' ' || qualification  || ' ' || fgos_code LIKE @p1";
-        }
-        else
-        {
-            cmdText = "SELECT id, fgos_code, fgos_name, qualification FROM public.educational_program";
-        }
-
-        NpgsqlCommand cmd;
-        if (scope != null)
-        {
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
-        }
-        else
-        {
-            cmd = new NpgsqlCommand(cmdText, conn);
-        }
-        if (searchText != null)
-        {
-            cmd.Parameters.Add(new NpgsqlParameter<string>("p1", "%" + searchText + "%"));
-        }
-
-        List<SpecialitySuggestionJSON> result = new List<SpecialitySuggestionJSON>();
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!reader.HasRows)
-            {
-                return result;
-            }
-            while (await reader.ReadAsync())
-            {
-                result.Add(
-                    new SpecialitySuggestionJSON(
-                        (int)reader["id"],
-                        (string)reader["fgos_name"],
-                        (string)reader["qualification"],
-                        (string)reader["fgos_code"]
-                    )
-                );
-            };
-
-        }
-        if (conn != null)
-        {
-            await conn.DisposeAsync();
-        }
-        return result;
-    }
 
     public bool IsStudentAllowedByEducationLevel(StudentModel student)
     {
@@ -468,7 +410,7 @@ public class SpecialtyModel
 
     public static IEnumerable<SpecialtyModel> GetAll()
     {
-        return FindSpecialities(new QueryLimits(0, 2000)).Result;
+        return FindSpecialties(new QueryLimits(0, 2000)).Result;
 
     }
 

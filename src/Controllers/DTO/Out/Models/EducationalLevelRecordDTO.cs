@@ -1,4 +1,4 @@
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Controllers.DTO.Out;

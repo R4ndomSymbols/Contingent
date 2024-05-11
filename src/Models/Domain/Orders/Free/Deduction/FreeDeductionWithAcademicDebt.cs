@@ -75,7 +75,7 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     {
         foreach (var debtHolder in _debtHolders)
         {
-            if (!new StudentHistory(debtHolder.Student).IsStudentEnlisted())
+            if (debtHolder.Student.History.IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен раньше своего зачисления", debtHolder.Student));
             }

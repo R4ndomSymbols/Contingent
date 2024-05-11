@@ -3,12 +3,12 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Utilities;
+using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
 public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
 {
-
     private StudentGroupNullifyMoveList _studentLeaving;
 
     private PaidDeductionWithOwnDesireOrder() : base()
@@ -49,13 +49,8 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    public override ResultWithoutValue ConductByOrder()
+    protected override ResultWithoutValue ConductByOrderInternal()
     {
-        var check = CheckConductionPossibility(_studentLeaving?.Select(x => x.Student));
-        if (check.IsFailure)
-        {
-            return check;
-        }
         ConductBase(_studentLeaving?.ToRecords(this));
         return ResultWithoutValue.Success();
     }
@@ -92,5 +87,10 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
         }
         _studentLeaving.Add(result.ResultObject);
         return Result<Order>.Success(this); throw new NotImplementedException();
+    }
+
+    protected override IEnumerable<StudentModel>? GetStudentsForCheck()
+    {
+        return _studentLeaving.Select(x => x.Student).ToList();
     }
 }

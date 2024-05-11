@@ -1,5 +1,5 @@
 using Contingent.Models.Domain.Address;
-using Contingent.Models.Domain.Specialities;
+using Contingent.Models.Domain.Specialties;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
 
