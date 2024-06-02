@@ -22,38 +22,34 @@ public class AddressController : Controller
     }
     [HttpGet]
     [Route("/addresses/explain/{address?}")]
-    public JsonResult GetAddressInfo(string? address)
+    public IActionResult GetAddressInfo(string? address)
     {
         Result<AddressModel?> result = AddressModel.Create(new AddressInDTO() { Address = address });
         if (result.IsFailure)
         {
-            return Json(new ErrorsDTO(result.Errors));
+            return BadRequest(new ErrorCollectionDTO(result.Errors));
         }
         return Json(new { AddressState = result.ResultObject?.GetAddressInfo() ?? "" });
     }
 
     [HttpPost]
     [Route("/addresses/save/{address?}")]
-    public async Task<JsonResult> CreateAddress(string? address)
+    public async Task<IActionResult> CreateAddress(string? address)
     {
 
         var result = AddressModel.Create(new AddressInDTO() { Address = address });
         if (result.IsFailure)
         {
-            return Json(new ErrorsDTO(result.Errors));
+            return BadRequest(new ErrorCollectionDTO(result.Errors));
         }
-        if (result.ResultObject is null)
-        {
-            throw new Exception("Suppression");
-        }
-        var built = result.ResultObject;
+        var built = result.ResultObject!;
         using var connection = await Utils.GetAndOpenConnectionFactory();
         using var transaction = await connection.BeginTransactionAsync();
         using ObservableTransaction savingTransaction = new ObservableTransaction(transaction, connection);
         var savingResult = await built.Save(savingTransaction);
         if (savingResult.IsFailure)
         {
-            return Json(new ErrorsDTO(savingResult.Errors));
+            return BadRequest(new ErrorCollectionDTO(savingResult.Errors));
         }
         return Json(new { AddressId = built });
     }

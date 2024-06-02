@@ -6,88 +6,79 @@
 @{
     ViewData["Title"] = "Студент";
 }
-<div class="container">
+<div class="d-flex flex-column p-5">
     <div class="d-flex flex-row">
-        <div class="d-flex flex-column">
-            <h5 class="mx-0">Номер зачетки</h5>
-            <input id="GradeBookNumber" value="@Model.GradeBookNumber" />
-            <small class="accent_color" id="GradeBookNumber_err"></small>
-        </div>
-        <div class="d-flex flex-column">
-            <h5 class="mx-0">Снилс</h5>
-            <input id="Snils" value="@Model.Snils" />
-            <small class="accent_color" id="Snils_err"></small>
-        </div>
+        <h3 class="group-title flex-fill">
+            Данные студента
+        </h3>
+        <button id="save" class="col-2 standard-button-prim">
+            Сохранить
+        </button>
     </div>
-    <div class="d-flex flex-row">
-        <div class="d-flex flex-column">
-            <h5>Дата Рождения</h5>
-            <input id="DateOfBirth" value="@Model.DateOfBirth" />
-            <small class="accent_color" id="DateOfBirth_err"></small>
-        </div>
-        <div class="d-flex flex-column">
-            <h5>Пол</h5>
-            <select id="Gender" class="col-3">
-                @foreach (var g in Genders.Names)
-                {
-                    var code = (int)g.Key;
-                    if (code == Model.Gender)
-                    {
-                        <option value="@code" selected>@g.Value</option>
-                    }
-                    else
-                    {
-                        <option value="@code">@g.Value</option>
-                    }
 
-                }
-            </select>
+    <div class="d-flex item-input-group flex-column">
+        <div class="d-flex flex-row flex-grow-1 mb-3">
+            <div class="d-flex flex-column flex-fill">
+                <h5>Номер зачетки</h5>
+                <input id="GradeBookNumber" class="standard-input" value="@Model.GradeBookNumber" />
+                <small class="accent_color" id="GradeBookNumber_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5 class="mx-0">Снилс</h5>
+                <input id="Snils" class="standard-input" value="@Model.Snils" />
+                <small class="accent_color" id="Snils_err"></small>
+            </div>
         </div>
-    </div>
-    <div class="d-flex flex-row">
-        <div class="d-flex flex-column">
-            <h5>Вступительный (конкурсный) балл</h5>
-            <input id="AdmissionScore" class="col-5" value="@Model.AdmissionScore" />
-            <small class="accent_color" id="AdmissionScore_err"></small>
-        </div>
-        <div class="d-flex flex-column">
-            <h5>Балл ГИА</h5>
-            <input id="GiaMark" class="col-5" value="@Model.GiaMark" />
-            <small class="accent_color" id="GiaMark_err"></small>
-        </div>
-        <div class="d-flex flex-column">
-            <h5>Балл ГИА (демэкзамен)</h5>
-            <input id="GiaDemoExamMark" class="col-5" value="@Model.GiaDemoExamMark" />
-            <small class="accent_color" id="GiaDemoExamMark_err"></small>
-        </div>
-    </div>
-    <div class="d-flex flex-row">
-        <div class="d-flex flex-column">
-            <h5>Договор о целевом обучении</h5>
-            <select id="TargetAgreementType" class="col-5">
-                @foreach (var g in TargetEduAgreement.ListOfTypes)
-                {
-                    var code = (int)g.AgreementType;
-                    if (code == Model.TargetAgreementType)
+        <div class="d-flex flex-row mb-3">
+            <div class="d-flex flex-column flex-fill">
+                <h5>Дата Рождения</h5>
+                <input id="DateOfBirth" class="standard-input" value="@Model.DateOfBirth" />
+                <small class="accent_color" id="DateOfBirth_err"></small>
+            </div>
+            <div class="d-flex flex-column">
+                <h5>Пол</h5>
+                <select id="Gender" class="standard-select">
+                    @foreach (var g in Genders.Names)
                     {
-                        <option value="@code" selected>@g.RussianName</option>
+                        var code = (int)g.Key;
+                        if (code == Model.Gender)
+                        {
+                            <option value="@code" selected>@g.Value</option>
+                        }
+                        else
+                        {
+                            <option value="@code">@g.Value</option>
+                        }
+
                     }
-                    else
-                    {
-                        <option value="@code">@g.RussianName</option>
-                    }
-                }
-            </select>
+                </select>
+            </div>
         </div>
-        <div class="d-flex flex-column">
-            <h5>Договор об обучении на платной основе</h5>
-            @if (Model.Id is null)
-            {
-                <select id="PaidAgreementType" class="col-6">
-                    @foreach (var g in PaidEduAgreement.ListOfTypes)
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column flex-fill">
+                <h5>Вступительный (конкурсный) балл</h5>
+                <input id="AdmissionScore" class="standard-input" value="@Model.AdmissionScore" />
+                <small class="accent_color" id="AdmissionScore_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5>Балл ГИА</h5>
+                <input id="GiaMark" class="standard-input" value="@Model.GiaMark" />
+                <small class="accent_color" id="GiaMark_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5>Балл ГИА (демэкзамен)</h5>
+                <input id="GiaDemoExamMark" class="standard-input" value="@Model.GiaDemoExamMark" />
+                <small class="accent_color" id="GiaDemoExamMark_err"></small>
+            </div>
+        </div>
+        <div class="d-flex flex-row mb-3">
+            <div class="d-flex flex-column flex-fill">
+                <h5>Договор о целевом обучении</h5>
+                <select id="TargetAgreementType" class="standard-select">
+                    @foreach (var g in TargetEduAgreement.ListOfTypes)
                     {
                         var code = (int)g.AgreementType;
-                        if (code == Model.PaidAgreementType)
+                        if (code == Model.TargetAgreementType)
                         {
                             <option value="@code" selected>@g.RussianName</option>
                         }
@@ -97,101 +88,126 @@
                         }
                     }
                 </select>
-            }
-            else
-            {
-                <p class="mx-2">
-                    @PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName
-                </p>
-            }
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5>Договор об обучении на платной основе</h5>
+                @if (Model.Id is null)
+                {
+                    <select id="PaidAgreementType" class="standard-select">
+                        @foreach (var g in PaidEduAgreement.ListOfTypes)
+                        {
+                            var code = (int)g.AgreementType;
+                            if (code == Model.PaidAgreementType)
+                            {
+                                <option value="@code" selected>@g.RussianName</option>
+                            }
+                            else
+                            {
+                                <option value="@code">@g.RussianName</option>
+                            }
+                        }
+                    </select>
+                }
+                else
+                {
+                    <p class="mx-2">
+                        @PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName
+                    </p>
+                }
+            </div>
         </div>
-    </div>
 
-    <div class="d-flex flex-column">
-        <h5>Адрес</h5>
-        @{
-            string RealAddress = Model.ActualAddress.AddressName;
-        }
-        <div class="d-flex flex-row">
-            <input id="ActualAddress" class="me-2" value="@RealAddress" />
-            <button id="about" class="col-1">Разобрать</button>
+        <div class="d-flex flex-column">
+            <h5>Адрес</h5>
+            @{
+                string RealAddress = Model.ActualAddress.AddressName;
+            }
+            <div class="d-flex flex-row flex-fill">
+                <input id="ActualAddress" class="standard-input" value="@RealAddress" />
+                <button id="about" class="col-1 standard-button-sec">Разобрать</button>
+            </div>
+            <small class="accent_color" id="AboutAddress"></small>
+            <small class="accent_color" id="ActualAddress_err"></small>
         </div>
-        <small class="accent_color" id="AboutAddress"></small>
-        <small class="accent_color" id="ActualAddress_err"></small>
     </div>
 
     @{
         RussianCitizenshipDTO citizenship = Model.Citizenship;
     }
-    <h2 class=".my-4">Гражданство (РФ) (пока только оно)</h2>
-    <div class=".d-flex .flex-row">
-        <div class=".d-flex .flex-row">
-            <h5>Фамилия</h5>
-            <input id="Surname" value="@citizenship.Surname" />
-            <small class="accent_color" id="Surname_err"></small>
+    <h3 class="group-title mt-2">
+        Гражданство (РФ)
+    </h3>
+    <div class="item-input-group d-flex flex-column">
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column flex-fill">
+                <h5>Фамилия</h5>
+                <input id="Surname" class="standard-input" value="@citizenship.Surname" />
+                <small class="accent_color" id="Surname_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5>Имя</h5>
+                <input id="Name" class="standard-input" value="@citizenship.Name" />
+                <small class="accent_color" id="Name_err"></small>
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5>Отчество</h5>
+                <input id="Patronymic" class="standard-input" value="@citizenship.Patronymic" />
+                <small class="accent_color" id="Patronymic_err"></small>
+            </div>
         </div>
-        <div class=".d-flex .flex-row">
-            <h5>Имя</h5>
-            <input id="Name" value="@citizenship.Name" />
-            <small class="accent_color" id="Name_err"></small>
-        </div>
-        <div class=".d-flex .flex-row">
-            <h5>Отчество</h5>
-            <input id="Patronymic" value="@citizenship.Patronymic" />
-            <small class="accent_color" id="Patronymic_err"></small>
+        <div class="d-flex flex-column">
+            <h5>Прописка</h5>
+            <div class="d-flex flex-row flex-fill">
+                <input id="LegalAddress" class="standard-input" value="@citizenship.LegalAddress.AddressName" />
+                <button class="col-1 standard-button-sec" id="about_legal_address">
+                    Разобрать
+                </button>
+            </div>
+            <small class="accent_color" id="LegalAddress_err"></small>
+            <small class="accent_color" id="legal_address_info"></small>
         </div>
     </div>
-    <div class="d-flex flex-column">
-        <h5>Прописка</h5>
-        <div class=".d-flex .flex-row">
-            <input id="LegalAddress" value="@citizenship.LegalAddress.AddressName" />
-            <button class="col-1" id="about_legal_address">
-                Разобрать
-            </button>
-        </div>
-        <small class="accent_color" id="LegalAddress_err"></small>
-        <small class="accent_color" id="legal_address_info"></small>
+    <div class="d-flex flex-row mt-2">
+        <h3 class="group-title flex-fill">
+            Образование студента
+        </h3>
+        <button class="standard-button-sec col-3" id="add_education_level">
+            Добавить уровень образования
+        </button>
     </div>
+
     @{
         var tags = Model.EducationalLevels;
     }
-    <h2 class=".my-4">Образование студента</h2>
-    <button class="btn btn-primary .my-2 col-3" id="add_education_level">
-        Добавить уровень образования
-    </button>
-    <div class=".d-flex .flex-column" id="education_levels">
+    <div class="item-input-group d-flex flex-column" id="education_levels">
         @foreach (var t in tags)
         {
-            <div class="d-flex flex-row">
-                <div class="col-4">
-                    @t.TypeName
-                </div>
+            <div class="flex-fill">
+                @t.TypeName
             </div>
         }
     </div>
-    <div class="d-flex flex-row">
-        <button id="save" class="mt-4 btn btn-primary">
-            Сохранить
-        </button>
-    </div>
-    <div id="id_section">
-        @if (Model.Id is not null)
-        {
-            <input type="hidden" id="StudentId" value="@Model.Id.Value" />
-        }
-        @if (Model.ActualAddress.Id is not null)
-        {
-            <input type="hidden" id="AddressId" value="@Model.ActualAddress.Id.Value" />
-        }
-        @if (Model.Citizenship.Id is not null)
-        {
-            <input type="hidden" id="RussianCitizenshipId" value="@Model.Citizenship.Id.Value" />
-        }
-        @if (Model.Citizenship.LegalAddress.Id is not null)
-        {
-            <input type="hidden" id="RussianLegalAddressId" value="@Model.Citizenship.LegalAddress.Id.Value" />
-        }
 
-    </div>
 </div>
-<script src="~/js/modify/students.js"></script>
+
+<div id="id_section">
+    @if (Model.Id is not null)
+    {
+        <input type="hidden" id="StudentId" value="@Model.Id.Value" />
+    }
+    @if (Model.ActualAddress.Id is not null)
+    {
+        <input type="hidden" id="AddressId" value="@Model.ActualAddress.Id.Value" />
+    }
+    @if (Model.Citizenship.Id is not null)
+    {
+        <input type="hidden" id="RussianCitizenshipId" value="@Model.Citizenship.Id.Value" />
+    }
+    @if (Model.Citizenship.LegalAddress.Id is not null)
+    {
+        <input type="hidden" id="RussianLegalAddressId" value="@Model.Citizenship.LegalAddress.Id.Value" />
+    }
+
+</div>
+</div>
+<script src="~/js/modify/students.js" type="module"></script>

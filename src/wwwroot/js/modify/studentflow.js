@@ -1,52 +1,49 @@
-var orderSelectionSource = [];
-var orderTypesForDisplayingNames = [];
-var selectedOrder = undefined;
-var includePostfix = "_inc";
-var excludePostfix = "_ex";
-var identityIncludedPostfix = "_inc_id";
-var identityExcludedPostfix = "_ex_id";
-var currentGroupFlag = false;
-var studentPinnedGroupInputPostfix = "_n_group"
-var groupPolicy;
-var addressSearchLockCount = 0;
-var lastGroupSearchText = "";
+import { Utilities } from "../site";
+let utils = new Utilities();
+let includePostfix = "_inc";
+let excludePostfix = "_ex";
+let identityIncludedPostfix = "_inc_id";
+let identityExcludedPostfix = "_ex_id";
+let studentPinnedGroupInputPostfix = "_n_group"
+let groupPolicy;
+let addressSearchLockCount = 0;
+let lastGroupSearchText = "";
+let currentOrderId = null;
 
 // здесь хранятся все студенты
 // pinned - свойство, отвечающее за прикрепленность
-var students = [];
+let students = [];
 // студенты, числящиеся в приказе
 // removed - свойство, отвечающее за удаление
-var studentsInOrder = [];
-
-const invalidGroupId = "invalid_g"
+let studentsInOrder = [];
 
 $(document).ready(function () {
-    + String($("#current_order").prop("value")),
-        $.ajax({
-            type: "POST",
-            url: "/students/search/query",
-            data: JSON.stringify(
-                {
-                    Name: $("#fullname_filter").val(),
-                    GroupName: $("#group_filter").val(),
-                    Source: {
-                        OrderId: Number($("#current_order").prop("value")),
-                        OrderMode: "OnlyIncluded"
-                    },
-                    PageSize: 30,
-                    GlobalOffset: 0
+    currentOrderId = Number($("#current_order").prop("value"));
+    $.ajax({
+        type: "POST",
+        url: "/students/search/query",
+        data: JSON.stringify(
+            {
+                Name: $("#fullname_filter").val(),
+                GroupName: $("#group_filter").val(),
+                Source: {
+                    OrderId: currentOrderId,
+                    OrderMode: "OnlyIncluded"
+                },
+                PageSize: 30,
+                GlobalOffset: 0
+            }
+        ),
+        contentType: "application/json",
+        success: function (response) {
+            $.each(response, function (index, elem) {
+                studentsInOrder.push(elem);
+                if (elem["groupId"] === null) {
+                    elem["groupId"] = undefined
                 }
-            ),
-            contentType: "application/json",
-            success: function (response) {
-                $.each(response, function (index, elem) {
-                    studentsInOrder.push(elem);
-                    if (elem["groupId"] === null) {
-                        elem["groupId"] = undefined
-                    }
-                    let stdId = String(elem["studentId"])
-                    $("#students_in_order").append(
-                        `
+                let stdId = String(elem["studentId"])
+                $("#students_in_order").append(
+                    `
                     <tr> 
                         <td>
                             ${elem["studentFullName"]}
@@ -61,20 +58,20 @@ $(document).ready(function () {
                         </td>
                     </tr>
                     `
-                    ); 
-                    $("#" + stdId + excludePostfix).on("click", function () {
-                        this.remove();
-                       $("#" + stdId + identityExcludedPostfix).append(
-                            "<p>Будет исключен<p>"
-                       )
-                       let found = studentsInOrder.find((std) => std.studentId === Number(stdId));
-                       if (found !== undefined){
-                            found.removed = true;
-                       }
-                    });
+                );
+                $("#" + stdId + excludePostfix).on("click", function () {
+                    this.remove();
+                    $("#" + stdId + identityExcludedPostfix).append(
+                        "<p>Будет исключен<p>"
+                    )
+                    let found = studentsInOrder.find((std) => std.studentId === Number(stdId));
+                    if (found !== undefined) {
+                        found.removed = true;
+                    }
                 });
-            }
-        });
+            });
+        }
+    });
     $("#close_order").on("click", function () {
         closeOrder();
     });
@@ -114,7 +111,7 @@ $("#find_students").on("click", function () {
 // groupAfter - айди группы после регистрации в приказе
 
 function isStudentPinned(id = -1) {
-    var studentfound = students.find((x) => x.studentId == id);
+    let studentfound = students.find((x) => x.studentId == id);
     if (studentfound == undefined) {
         return false;
     }
@@ -219,27 +216,26 @@ function excludeStudent(student) {
 
 function registerSheduledAddressSearch(searchFunc) {
     addressSearchLockCount += 1;
-    var promise = new Promise(
-        (resolve, reject) =>
-            {
-                let now = addressSearchLockCount;
-                setTimeout(
-                    () => {
-                        if (now != addressSearchLockCount) {
-                            resolve();
-                        }
-                        else {
-                            searchFunc();
-                            resolve();
-                        }
-                    }, 400)
-            }
+    let promise = new Promise(
+        (resolve, reject) => {
+            let now = addressSearchLockCount;
+            setTimeout(
+                () => {
+                    if (now != addressSearchLockCount) {
+                        resolve();
+                    }
+                    else {
+                        searchFunc();
+                        resolve();
+                    }
+                }, 400)
+        }
     )
 }
 
 
 
-function findGroupsAndSetAutoComplete(student) { 
+function findGroupsAndSetAutoComplete(student) {
     let inputName = String(student.studentId) + studentPinnedGroupInputPostfix
     let request = (elem) => {
         let searchText = elem.val()
@@ -275,20 +271,20 @@ function findGroupsAndSetAutoComplete(student) {
     }
 
     $("#" + inputName).on("keyup", function () {
-        let element = $("#" + inputName); 
+        let element = $("#" + inputName);
         let searchTextGlobal = element.val();
-        if (String(searchTextGlobal) === String(lastGroupSearchText)){
+        if (String(searchTextGlobal) === String(lastGroupSearchText)) {
             return;
-        }   
-        else{
+        }
+        else {
             lastGroupSearchText = searchTextGlobal;
         }
-        registerSheduledAddressSearch(function(){ request(element) });
+        registerSheduledAddressSearch(function () { request(element) });
     });
 }
 
 $("#save_changes").on("click", function () {
-    var obj = getOrderJsonData();
+    let obj = getOrderJsonData();
     $.ajax({
         type: "POST",
         url: "/studentflow/save/" + String($("#current_order").prop("value")),
@@ -297,32 +293,32 @@ $("#save_changes").on("click", function () {
         success: function (response) {
             alert("Сохранение новых студентов прошло успешно")
         },
-        error: function (response, a,b) {
-            var err = (JSON.parse(response.responseText)).Errors[0].MessageForUser;
+        error: function (response, a, b) {
+            let err = (JSON.parse(response.responseText)).Errors[0].MessageForUser;
             alert("Сохранение провалилось: \n " + err);
         }
     });
 
-    $.each(studentsInOrder, function (indexInArray, valueOfElement) {   
-        if (valueOfElement.removed){
+    $.each(studentsInOrder, function (indexInArray, valueOfElement) {
+        if (valueOfElement.removed) {
             $.ajax({
                 type: "DELETE",
                 url: "/studentflow/revert/" + String($("#current_order").prop("value")) + "/" + String(valueOfElement.studentId),
-                success: function (response) {},
-                error: function(xhr, a,b) {
+                success: function (response) { },
+                error: function (xhr, a, b) {
                     alert("Студент не был удален из приказа")
                 }
-            });  
-        }     
+            });
+        }
     });
-  
+
 
 
 });
 
 function getOrderJsonData() {
-    var type = String($("#current_order").attr("order_type"));
-    var mainModel = students.filter((xo) => xo.pinned).map(
+    let type = String($("#current_order").attr("order_type"));
+    let mainModel = students.filter((xo) => xo.pinned).map(
         (x) => {
             return {
                 id: x.studentId,
@@ -347,7 +343,7 @@ function getOrderJsonData() {
             {
                 Moves: mainModel.map(
                     (x) => {
-                        if (x.newGroup === undefined){
+                        if (x.newGroup === undefined) {
                             alert("У студента " + x.name + " не указана группа")
                         }
 
@@ -382,7 +378,7 @@ function getOrderJsonData() {
 function closeOrder() {
     $.ajax({
         type: "GET",
-        url: "/orders/close/" + $("#current_order").attr("value"),
+        url: "/orders/close/" + String(currentOrderId),
         success: function (response) {
             alert("Приказ успешно закрыт")
         }

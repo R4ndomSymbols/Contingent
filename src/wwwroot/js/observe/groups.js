@@ -1,6 +1,8 @@
-var dateInput;
-var searchButton;
-var historyTable;
+import { Utilities } from "../site";
+let utils = new Utilities();
+let dateInput;
+let searchButton;
+let historyTable;
 
 $(document).ready(function () {
     dateInput = $("#date_input")
@@ -20,7 +22,7 @@ $(document).ready(function () {
     
             },
             error: function (jqXHR, status, error){
-                alert("Запрос истории провалился")
+                utils.readAndSetErrors(jqXHR)
                 resetHistory();
             }
         });

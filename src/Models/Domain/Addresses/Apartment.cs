@@ -39,14 +39,6 @@ public class Apartment : IAddressPart
     {
         get => _id;
     }
-    public Building ParentBuildingId
-    {
-        get => _parentBuilding;
-    }
-    public int ApartmentType
-    {
-        get => (int)_apartmentType;
-    }
 
     private Apartment(int id, Building parent, ApartmentTypes type, AddressNameToken name)
     {

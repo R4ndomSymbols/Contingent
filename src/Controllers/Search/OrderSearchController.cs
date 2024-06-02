@@ -29,18 +29,18 @@ public class OrderSearchController : Controller
     public async Task<IActionResult> GetOrdersByFilters()
     {
         using var stream = new StreamReader(Request.Body);
-        OrderSearchParamentersDTO? dto = null;
+        OrderSearchParametersDTO? dto = null;
         try
         {
-            dto = JsonSerializer.Deserialize<OrderSearchParamentersDTO>(await stream.ReadToEndAsync());
+            dto = JsonSerializer.Deserialize<OrderSearchParametersDTO>(await stream.ReadToEndAsync());
         }
         catch
         {
-            return BadRequest("Неверный поисковой запрос");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         if (dto is null)
         {
-            return BadRequest("Неверный поисковой запрос");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         var orderBy = new OrderByCondition(
             new Column("id", "orders"), OrderByCondition.OrderByTypes.ASC

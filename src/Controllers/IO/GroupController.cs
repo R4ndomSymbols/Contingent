@@ -6,6 +6,7 @@ using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Flow.History;
 using Utilities;
+using Utilities.Validation;
 
 namespace Contingent.Controllers;
 
@@ -74,13 +75,12 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
-            return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("Неверный формат JSON"))));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
         }
         var groupResult = GroupModel.Build(deserialized);
         if (groupResult.IsFailure)
         {
-            return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(groupResult.Errors)));
+            return BadRequest(groupResult.Errors.AsErrorCollection());
         }
         var group = groupResult.ResultObject;
         var saved = group.Save(null);
@@ -90,7 +90,7 @@ public class GroupController : Controller
         }
         else
         {
-            return BadRequest(Json(new ErrorsDTO(saved.Errors)));
+            return BadRequest(saved.Errors.AsErrorCollection());
         }
     }
     [HttpPost]
@@ -106,14 +106,13 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
-            return BadRequest("Неверный формат JSON");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
         }
         var groupResult = GroupModel.Build(deserialized);
 
         if (groupResult.IsFailure)
         {
-            return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(groupResult.Errors)));
+            return BadRequest(groupResult.Errors.AsErrorCollection());
         }
         return Json(new { GroupName = string.Join(", ", groupResult.ResultObject.GenerateGroupSequence().Select(x => x.GroupName)) });
     }
@@ -131,11 +130,11 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest("Неверный формат JSON");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
         }
         if (deserialized is null)
         {
-            return BadRequest("Неверный формат JSON");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
         }
         var groupResult = GroupModel.GetGroupById(deserialized.Id);
         if (groupResult is not null)
@@ -148,7 +147,7 @@ public class GroupController : Controller
                 return Json(toReturn.Select(x => new InGroupRelation(x.Student, x.ByOrder)));
             }
         }
-        return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("history", "Валидация параметров запроса истории не увенчалась успехом"))));
+        return BadRequest(new ValidationError("history", "Валидация параметров запроса истории не увенчалась успехом").AsErrorCollection());
     }
 }
 

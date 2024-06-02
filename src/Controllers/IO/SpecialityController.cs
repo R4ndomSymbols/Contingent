@@ -7,19 +7,19 @@ using Contingent.Models.Domain.Specialties;
 namespace Contingent.Controllers;
 
 
-public class SpecialityController : Controller
+public class SpecialtyController : Controller
 {
 
-    private readonly ILogger<SpecialityController> _logger;
+    private readonly ILogger<SpecialtyController> _logger;
 
-    public SpecialityController(ILogger<SpecialityController> logger)
+    public SpecialtyController(ILogger<SpecialtyController> logger)
     {
         _logger = logger;
     }
 
     [HttpGet]
     [Route("specialities/modify/{query}")]
-    public IActionResult ProcessSpeciality(string query)
+    public IActionResult ProcessSpecialty(string query)
     {
         if (query == "new")
         {
@@ -49,14 +49,14 @@ public class SpecialityController : Controller
     {
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync();
-        SpecialityDTO dto;
+        SpecialityDTO? dto;
         try
         {
             dto = JsonSerializer.Deserialize<SpecialityDTO>(body);
         }
         catch (Exception)
         {
-            return BadRequest("Неверный формат данных");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат данных"));
         }
 
         if (dto != null)
@@ -64,7 +64,7 @@ public class SpecialityController : Controller
             var result = SpecialtyModel.Build(dto);
             if (result.IsFailure)
             {
-                return Json(new ErrorsDTO(result.Errors));
+                return Json(new ErrorCollectionDTO(result.Errors));
             }
             else
             {
@@ -72,7 +72,7 @@ public class SpecialityController : Controller
                 return Json(new SpecialityOutDTO(result.ResultObject));
             }
         }
-        return BadRequest("Неверный формат данных");
+        return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат данных"));
     }
 
     [HttpGet]

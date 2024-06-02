@@ -45,11 +45,11 @@ public class StudentSearchController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest(e.Message);
+           return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         if (dto is null)
         {
-            return BadRequest("Неверный формат данных");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         var search = new SearchHelper();
         var source = search.GetSource(dto.Source);

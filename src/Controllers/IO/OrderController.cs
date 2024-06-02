@@ -50,7 +50,6 @@ public class OrderController : Controller
     [Route("/orders/view/{id:int?}")]
     public IActionResult ViewOrder(int id)
     {
-
         var order = Order.GetOrderById(id);
         if (order is not null)
         {
@@ -76,7 +75,7 @@ public class OrderController : Controller
                 order.Save(null);
                 return Ok(Json(new { OrderId = order.Id }).Value);
             }
-            return BadRequest(Json(new ErrorsDTO(built.Errors)).Value);
+            return BadRequest(new ErrorCollectionDTO(built.Errors));
         }
     }
     [HttpPost]
@@ -91,7 +90,7 @@ public class OrderController : Controller
             {
                 return Json(new { result.ResultObject.OrderOrgId });
             }
-            return BadRequest(Json(new ErrorsDTO(result.Errors)).Value);
+            return BadRequest(new ErrorCollectionDTO(result.Errors));
         }
     }
 
@@ -115,7 +114,7 @@ public class OrderController : Controller
         var order = Order.GetOrderById(id);
         if (order is null)
         {
-            return BadRequest("Несуществующий id");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Несуществующий приказ"));
         };
         var found = new OrderHistory(order);
         var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();

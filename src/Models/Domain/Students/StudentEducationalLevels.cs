@@ -127,11 +127,11 @@ public class StudentEducation : IEnumerable<StudentEducationalLevelRecord>
         return _levels.GetEnumerator();
     }
 
-    public void Save()
+    public void Save(ObservableTransaction? scope = null)
     {
         foreach (var level in _levels)
         {
-            level.SaveRecord();
+            level.SaveRecord(scope);
         }
     }
 

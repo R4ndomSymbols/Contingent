@@ -1,3 +1,6 @@
+import { Utilities } from "../site";
+let utils = new Utilities();
+
 $(document).ready(function () {
     $(".identity_dependency").blur(
         function(){
@@ -25,7 +28,7 @@ function updateIdentity(){
             document.getElementById("OrderOrgId").innerText = response["orderOrgId"];
         },
         error: function(xhr, textStatus, errThrown){
-            setErrors(JSON.parse(xhr.responseText));
+            utils.readAndSetErrors(xhr);
         }
     });
     
@@ -50,7 +53,7 @@ $("#save").click(function () {
             alert("Приказ успешно сохранен")
         },
         error: function(xhr, textStatus, errThrown){
-            setErrors(JSON.parse(xhr.responseText));
+            utils.readAndSetErrors(xhr);
         }
     });
 });

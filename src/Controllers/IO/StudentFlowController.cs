@@ -35,13 +35,11 @@ public class StudentFlowController : Controller
         bool parsed = int.TryParse(id, out int orderId);
         if (!parsed)
         {
-            return BadRequest("id is undefined");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("неверный номер приказа"));
         }
         using (var stream = new StreamReader(Request.Body))
         {
             var jsonString = await stream.ReadToEndAsync();
-            //try
-            //{
             var result = await Order.GetOrderForConduction(orderId, jsonString);
             if (result.IsSuccess)
             {
@@ -52,18 +50,14 @@ public class StudentFlowController : Controller
                 }
                 else
                 {
-                    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(conductionStatus.Errors)));
+                    return BadRequest(conductionStatus.Errors.AsErrorCollection());
                 }
 
             }
             else
             {
-                return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(result.Errors)));
+                return BadRequest(result.Errors.AsErrorCollection());
             }
-            //}
-            //catch (Exception e){
-            //    return BadRequest(JsonSerializer.Serialize(new ErrorsDTO(new ValidationError("GENERAL","Произошла непредвиденная ошибка"))));
-            //}
         }
     }
     // получение истории студента
@@ -75,7 +69,7 @@ public class StudentFlowController : Controller
         var student = await StudentModel.GetStudentById(id);
         if (student is null)
         {
-            return BadRequest("такого студента не существует");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("такого студента не существует"));
         }
         var history = student.History.History;
         List<StudentHistoryMoveDTO> moves = new();
@@ -102,14 +96,14 @@ public class StudentFlowController : Controller
         var order = Order.GetOrderById(orderId);
         if (order is null)
         {
-            return BadRequest("Id приказа указан неверно");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Id приказа указан неверно"));
         }
         if (studentId is not null)
         {
             var student = StudentModel.GetStudentById(studentId).Result;
             if (student is null)
             {
-                return BadRequest("Id студента указан неверно");
+                return BadRequest(ErrorCollectionDTO.GetGeneralError("Id студента указан неверно"));
             }
             order.RevertConducted(new StudentModel[] { student });
             return Ok();

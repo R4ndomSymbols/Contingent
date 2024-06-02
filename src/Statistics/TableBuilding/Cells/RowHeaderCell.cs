@@ -55,9 +55,3 @@ public class RowHeaderCell<T>
     }
 }
 
-public interface IContsraintTree
-{
-    public ComplexWhereCondition? GetTreeCondition();
-}
-
-

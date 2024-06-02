@@ -24,7 +24,7 @@ public class GroupSearchController : Controller
 
     [HttpPost]
     [Route("groups/search/query")]
-    public JsonResult Search()
+    public IActionResult Search()
     {
         var request = new StreamReader(Request.Body);
         GroupSearchQueryDTO? dto;
@@ -34,11 +34,11 @@ public class GroupSearchController : Controller
         }
         catch
         {
-            return Json(new ErrorsDTO(new ValidationError("Неверный поисковый запрос")));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         if (dto is null)
         {
-            return Json(new ErrorsDTO(new ValidationError("Неверный поисковый запрос (не разобран)")));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос, не удалось разобрать параметры"));
         }
         var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0, 30), dto.GroupName, dto.IsActive);
         return Json(searchResult.Select(x => new GroupSearchResultDTO(x)));

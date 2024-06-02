@@ -9,10 +9,10 @@ using Contingent.SQL;
 namespace Contingent.Controllers.Search;
 
 
-public class SpecialitySearchController : Controller
+public class SpecialtySearchController : Controller
 {
 
-    public SpecialitySearchController()
+    public SpecialtySearchController()
     {
 
     }
@@ -26,7 +26,7 @@ public class SpecialitySearchController : Controller
 
     [HttpPost]
     [Route("specialities/search/query")]
-    public async Task<JsonResult> SearchSpecialities()
+    public async Task<IActionResult> SearchSpecialities()
     {
         using var reader = new StreamReader(Request.Body);
         SpecialitySearchQueryDTO? dto = null;
@@ -36,18 +36,14 @@ public class SpecialitySearchController : Controller
         }
         catch (Exception e)
         {
-            return Json(
-                new ErrorsDTO(
-                    new ValidationError(e.Message)
-                )
-            );
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         if (dto is null)
         {
-            return Json(new ErrorsDTO(new ValidationError("Десериализация поискового запроса провалилась")));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         var found = await SpecialtyModel.FindSpecialties(new QueryLimits(0, 100));
-        var filter = new SearchHelper().GetFilterForSpecialities(dto);
-        return Json(filter.Execute(found).Select(x => new SpecialitySearchResultDTO(x)));
+        var filter = new SearchHelper().GetFilterForSpecialties(dto);
+        return Json(filter.Execute(found).Select(x => new SpecialtySearchResultDTO(x)));
     }
 }

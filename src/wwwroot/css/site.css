@@ -8,36 +8,131 @@ html {
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+/*
+Для отображения страницы по высоте
+*/
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+.body-wrapper {
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+}
+
+header {
+  flex: 0 1 auto
+}
+
+.content-wrapper {
+  background-color: #f2f2f3;
+  flex: 1 1 auto
+}
+
+footer {
+  flex: 0 1 40px
+}
+
+
+
 html {
-  position: relative;
   min-height: 100%;
 }
 
-body {
-  margin-bottom: 60px;
+.accent_color {
+  color: #d90209;
 }
 
-.accent_color {
-  color: #E88716;
-}
-.secondary_color{
-  color: #8c92a1;
-}
 .primary_color {
-  color: #929CB7;
+  color: #b1b6b9;
 }
-.background_color {
+
+.background_primary {
   color: #ffffff;
 }
+
+.background_secondary {
+  color: #f2f2f3;
+}
+
 .text_color {
   color: #181617;
 }
 
-.tableStats, .thStats, .tdStats {
+.tableStats,
+.thStats,
+.tdStats {
   border: 1px solid black;
   border-collapse: collapse;
+}
+
+.page-header {
+  border-bottom: 1px solid #d90209;
+  flex: 1 1 auto
+}
+
+.page-main-content {
+  background-color: #ffffff;
+}
+
+.standard-input {
+  margin-right: 0.5rem;
+  max-height: 35px;
+  min-height: 35px;
+  flex: 1 1 auto;
+  border: 1px solid #181617;
+  font-size: 20px;
+  border-radius: 5px;
+}
+
+.standard-select {
+  margin-right: 0.5rem;
+  max-height: 35px;
+  min-height: 35px;
+  flex: 1 1 auto;
+  border: 1px solid #181617;
+  border-radius: 5px;
+  background: #b1b6b9;
+}
+
+.standard-button-sec {
+  margin-left: 0.5rem;
+  max-height: 35px;
+  min-height: 35px;
+  border: 1px solid #181617;
+  background: #b1b6b9;
+  border-radius: 5px;
+}
+
+.standard-button-prim {
+  font-size: large;
+  margin-left: 0.5rem;
+  max-height: 35px;
+  min-height: 35px;
+  border: 1px solid #181617;
+  background: #d90209;
+  border-radius: 5px;
+  color: #f2f2f3;
+}
+
+.item-input-group {
+  border-radius: 10px;
+  border: 1px solid #d90209;
+  padding: 1rem;
+
+}
+
+.group-title {
+  margin-bottom: 1rem;
 }

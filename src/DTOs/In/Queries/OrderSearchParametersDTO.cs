@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Contingent.Controllers.DTO.In;
 
-public class OrderSearchParamentersDTO
+public class OrderSearchParametersDTO
 {
     public string SearchText { get; set; }
     public int? Year { get; set; }
@@ -10,7 +10,7 @@ public class OrderSearchParamentersDTO
     [JsonRequired]
     public int PageSize { get; set; }
 
-    public OrderSearchParamentersDTO()
+    public OrderSearchParametersDTO()
     {
         SearchText = "";
     }

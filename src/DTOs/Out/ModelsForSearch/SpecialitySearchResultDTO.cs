@@ -3,7 +3,7 @@ using Contingent.Models.Domain.Specialties;
 namespace Contingent.Controllers.DTO.Out;
 
 
-public class SpecialitySearchResultDTO
+public class SpecialtySearchResultDTO
 {
 
     public int? Id { get; set; }
@@ -12,7 +12,7 @@ public class SpecialitySearchResultDTO
     public string QualificationName { get; set; }
     public string LinkToModify { get; set; }
     public string LinkToView { get; set; }
-    public SpecialitySearchResultDTO(SpecialtyModel model)
+    public SpecialtySearchResultDTO(SpecialtyModel model)
     {
         Id = model.Id;
         FgosName = model.FgosName;

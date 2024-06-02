@@ -58,10 +58,6 @@ public class StudentController : Controller
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
         }
     }
-    // сначала идет адрес
-    // затем студент,
-    // затем прописка
-    // затем российское гражданство 
 
     [HttpPost]
     [Route("students/addcomplex")]
@@ -77,19 +73,19 @@ public class StudentController : Controller
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return BadRequest("Неверный формат данных");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат данных"));
         }
         if (dto is null)
         {
-            return BadRequest("Ошибка десериализации");
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Ошибка десериализации"));
         }
         using NpgsqlConnection connection = await Utils.GetAndOpenConnectionFactory();
         using ObservableTransaction savingTransaction = new ObservableTransaction(await connection.BeginTransactionAsync(), connection);
-        var studentResult = StudentModel.Build(dto);
+        var studentResult = StudentModel.Build(dto, savingTransaction);
 
         if (studentResult.IsFailure)
         {
-            return Json(new ErrorsDTO(studentResult.Errors));
+            return BadRequest(studentResult.Errors.AsErrorCollection());
         }
         var student = studentResult.ResultObject;
         try
@@ -97,13 +93,13 @@ public class StudentController : Controller
             var studentSaveResult = student.Save(savingTransaction);
             if (studentSaveResult.IsFailure)
             {
-                return Json(new ErrorsDTO(studentSaveResult.Errors));
+                return BadRequest(studentSaveResult.Errors.AsErrorCollection());
             }
         }
         catch (Exception e)
         {
             await savingTransaction.RollbackAsync();
-            return Json(new ErrorsDTO(new ValidationError("general", e.Message + " " + e.StackTrace)));
+            return BadRequest(ErrorCollectionDTO.GetCriticalError("Не удалось сохранить студента: " + e.Message));
         }
         await savingTransaction.CommitAsync();
         return Json(new

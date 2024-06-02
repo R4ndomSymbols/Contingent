@@ -1,15 +1,16 @@
-
-var specialities = [];
-var groups = [];
-var lockCount = 0;
-var creationYear = 0;
-var ancestorGroupId = 0;
-var specialityId = 0;
-var financingType = 0;
-var eduFormType = 0;
-var courseOn = 0;
-var groupCourse = [];
-var created = false;
+import { Utilities } from "../site";
+let utils = new Utilities();
+let specialties = [];
+let groups = [];
+let lockCount = 0;
+let creationYear = 0;
+let ancestorGroupId = 0;
+let specialtyId = 0;
+let financingType = 0;
+let eduFormType = 0;
+let courseOn = 0;
+let groupCourse = [];
+let created = false;
 $(document).ready(function () {
 
     $(".data_changer").blur(
@@ -21,7 +22,7 @@ $(document).ready(function () {
         findGroups();
     });
     $(".edu_program_input").on("input", function () {
-        findSpecialities();
+        findSpecialties();
     });
     $(".CreationYear").on("input", function () {
         var num = Number($(this).val());
@@ -48,7 +49,7 @@ $(document).ready(function () {
         }
         creationYear = 0;
         ancestorGroupId = -1;
-        specialityId = -1;
+        specialtyId = -1;
         eduFormType = -1;
         financingType = -1;
         $(".edu_program_input").val(undefined);
@@ -70,7 +71,7 @@ function updateName() {
         url: "/groups/getname",
         data: JSON.stringify(
             {
-                EduProgramId: specialityId,
+                EduProgramId: specialtyId,
                 EduFormatCode: eduFormType,
                 SponsorshipTypeCode: financingType,
                 CreationYear: creationYear,
@@ -84,7 +85,7 @@ function updateName() {
     });
 }
 
-$("#save").click(function () {
+$("#save").on("click", function () {
     if (created) {
         alert("Обновление не предусмотрено")
         return;
@@ -95,7 +96,7 @@ $("#save").click(function () {
         url: "/groups/add",
         data: JSON.stringify(
             {
-                EduProgramId: specialityId,
+                EduProgramId: specialtyId,
                 EduFormatCode: eduFormType,
                 SponsorshipTypeCode: financingType,
                 CreationYear: creationYear,
@@ -113,33 +114,33 @@ $("#save").click(function () {
             created = true
         },
         error: function (response, a, b) {
-            setErrorsByClass(response);
+            utils.readAndSetErrors(response)
             alert("Сохранение провалилось");
         }
     });
 });
 
-function findSpecialities() {
-    specialities = [];
-    var searchFunction = () => $.ajax({
+function findSpecialties() {
+    specialties = [];
+    let searchFunction = () => $.ajax({
         type: "POST",
         url: "/specialities/search/query",
         data: JSON.stringify({
-            SearchString: getSearchSpecialityData()
+            SearchString: getSearchSpecialtyData()
         }),
         contentType: "application/json",
         success: function (response) {
-            $.each(response, function (index, speciality) {
-                specialities.push({
-                    value: speciality["id"],
-                    label: speciality.fgosCode + " " + speciality.fgosName + " (" + speciality.qualificationName + ")"
+            $.each(response, function (index, specialty) {
+                specialties.push({
+                    value: specialty["id"],
+                    label: specialty.fgosCode + " " + specialty.fgosName + " (" + specialty.qualificationName + ")"
                 })
             });
             $(".edu_program_input").autocomplete({
                 delay: 100,
-                source: specialities,
+                source: specialties,
                 change: function (event, ui) {
-                    specialityId = ui.item.value
+                    specialtyId = ui.item.value
                 },
                 select: function (event, ui) {
                     $(this).prop("value", ui.item.label)
@@ -148,11 +149,11 @@ function findSpecialities() {
             })
         }
     });
-    registerSheduledSearch(searchFunction);
+    registerScheduledSearch(searchFunction);
 }
 function findGroups() {
     groups = [];
-    var searchFunction = () => $.ajax({
+    let searchFunction = () => $.ajax({
         type: "POST",
         url: "/groups/search/query",
         data: JSON.stringify({
@@ -185,16 +186,16 @@ function findGroups() {
             })
         }
     });
-    registerSheduledSearch(searchFunction);
+    registerScheduledSearch(searchFunction);
 }
 
-function getSearchSpecialityData() {
+function getSearchSpecialtyData() {
     return $(".edu_program_input").val();
 }
 
-function registerSheduledSearch(searchFunc) {
+function registerScheduledSearch(searchFunc) {
     lockCount += 1;
-    var promise = new Promise(
+    let promise = new Promise(
         (resolve, reject) => {
             let now = lockCount;
             setTimeout(

@@ -1,9 +1,12 @@
+import { Utilities } from "../site";
+let utils = new Utilities();
+
 $(document).ready(function () {
     getHistory();
 });
 
 $("#delete_history").on("click", function () {
-    if (confirm("Вы точно хотите удалить историю приказа (удалит ВСЮ последующую историю ВСЕХ студентов в приказе)?")){
+    if (confirm("Вы точно хотите удалить историю приказа (удалит ВСЮ последующую за данным приказом историю ВСЕХ студентов в приказе)?")){
         $.ajax({
             type: "DELETE",
             url: "/studentflow/revert/" + String($("#order_info").attr("order_id")),
@@ -11,17 +14,12 @@ $("#delete_history").on("click", function () {
                 getHistory();
                 alert("История удалена")
             },
-            error: function(a,b,c){
-                alert("Произошла ошибка при удалении")
+            error: function(xhr,b,c){
+                utils.readAndSetErrors(xhr)
             }
         });
     }
 });
-
-function revertAllHistory() 
-{  
-
-}
 
 function getHistory(){
     $.ajax({

@@ -495,9 +495,10 @@ public class StudentModel
             _id = (int)reader["id"];
         }
         connection.Dispose();
-        if (_education.Any())
+        // это сохранение зависит от студента, от его id
+        if (_education is not null && _education.Any())
         {
-            _education.Save();
+            _education.Save(scope);
         }
         return ResultWithoutValue.Success();
     }
