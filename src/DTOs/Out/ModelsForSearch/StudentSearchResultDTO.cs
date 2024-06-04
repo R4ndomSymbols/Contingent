@@ -14,14 +14,12 @@ public class StudentSearchResultDTO
     public bool? IsNameGenerated { get; init; }
     public string LinkToModify { get; init; }
     public string LinkToView { get; init; }
-    public int RequiredOffset { get; set; }
-    public StudentSearchResultDTO(StudentModel? student, GroupModel? group, int requiredOffset = 0)
+    public StudentSearchResultDTO(StudentModel? student, GroupModel? group)
     {
         if (student is null)
         {
             throw new Exception("Студент как результат поиска должен быть найден");
         }
-        RequiredOffset = requiredOffset;
         StudentId = (int)student.Id!;
         StudentFullName = student.GetName();
         GroupId = group?.Id;

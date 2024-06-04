@@ -1,15 +1,10 @@
-var currentPage = 1;
-var pageSize = 20;
-var lastFound = undefined;
-var offsets = [0];
+let currentPage = 0;
+let pageSize = 20;
 
 $("#perform_search").on("click", function () {
     currentPage = 0;
     changePage(currentPage);
     lastFound = undefined;
-    $.each(offsets, function (indexInArray, valueOfElement) { 
-         offsets[indexInArray] = 0
-    });
     searchStudents();
 });
 
@@ -36,11 +31,8 @@ function searchStudents() {
 function fillPage(studentsFound) {
     $("#students_found").empty();
     lastFound = (studentsFound === undefined || studentsFound.length === 0) ? undefined : studentsFound;
-     
+
     $.each(studentsFound, function (indexInArray, student) {
-        if (currentPage == offsets.length){
-            offsets.push(0);
-        }
         offsets[currentPage] = student.requiredOffset
         $("#students_found").append(
             `
@@ -65,7 +57,6 @@ function buildSearchQuery() {
             GroupName: $("#group_input").val(),
             PageSize: pageSize,
             PageSkipCount: currentPage,
-            PreciseOffset: currentPage - 1 < 0 ? 0 : offsets[currentPage-1]
         }
     );
     return json;
@@ -79,12 +70,11 @@ function moveForward() {
     currentPage++;
     changePage(currentPage);
     searchStudents();
-    
+
 }
 
-function moveBackwards() 
-{
-    if (currentPage <= 0){
+function moveBackwards() {
+    if (currentPage <= 0) {
         return;
     }
     currentPage--;
@@ -94,6 +84,6 @@ function moveBackwards()
 
 function changePage(pageNumber) {
     $("#current_page").empty();
-    $("#current_page").append("<h3>" +String(pageNumber+1)+"</h3>");
+    $("#current_page").append(String(pageNumber + 1));
 }
 

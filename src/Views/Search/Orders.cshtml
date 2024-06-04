@@ -3,24 +3,21 @@
 
 @model IReadOnlyCollection<OrderSearchDTO>;
 
-<div class="container">
-    <div class="row mb-2">
-        <div class="d-flex flex-column">
-            <h5>
+<div class="page-layout-container">
+    <div class="item-input-group">
+        <div class="d-flex flex-column mb-1">
+            <h5 class="field-title">
                 Название приказа
             </h5>
-            <div class="d-flex">
-                <input type="text" id="order_name" class="flex-fill">
-                <button class="btn btn-primary ml-1" id="find_orders">
+            <div class="d-flex flex-row">
+                <input type="text" id="order_name" class="flex-fill standard-input">
+                <button class="standard-button-prim" id="find_orders">
                     Поиск приказов
                 </button>
             </div>
         </div>
-    </div>
-
-    <div class="row mb-2">
-        <div class="d-flex flex-column">
-            <h5>
+        <div class="d-flex flex-column mb-1">
+            <h5 class="field-title">
                 Тип приказа
             </h5>
             @{
@@ -29,7 +26,7 @@
                 (x, y) => string.Compare(x.OrderTypeName, y.OrderTypeName, StringComparison.Ordinal)
                 );
             }
-            <select id="order_type">
+            <select id="order_type" class="standard-select">
                 <option value="-1" selected>Любой</option>
                 @foreach (var t in sorted)
                 {
@@ -37,35 +34,39 @@
                 }
             </select>
         </div>
-    </div>
-    <div class="d-flex flex-row mb-2 ">
-        <div class="d-flex flex-column">
-            <h5>
-                Год приказа
-            </h5>
-            <select id="order_date">
-                <option value="-1" selected>Любой</option>
-                @for (int i = DateTime.Now.Year; i >= 2010; i--)
-                {
-                    <option value="@i">@i</option>
-                }
-            </select>
+        <div class="d-flex flex-row mb-2 ">
+            <div class="d-flex flex-column">
+                <h5 class="field-title">
+                    Год приказа
+                </h5>
+                <select id="order_date" class="standard-select">
+                    <option value="-1" selected>Любой</option>
+                    @for (int i = DateTime.Now.Year; i >= 2010; i--)
+                    {
+                        <option value="@i">@i</option>
+                    }
+                </select>
+            </div>
+            <div class="flex-fill">
+
+            </div>
+            <div class="d-flex flex-column me-2">
+                <h5 class="field-title">
+                    Количество записей
+                </h5>
+                <div class="d-flex flex-row">
+                    <input type="radio" id="get_30" name="record_count" value="30" class="flex-fill" />
+                    <label for="get_30">30</label>
+
+                    <input type="radio" id="get_100" name="record_count" value="100" class="flex-fill" />
+                    <label for="get_100">100</label>
+
+                    <input type="radio" id="get_300" name="record_count" value="300" class="flex-fill" />
+                    <label for="get_300">300</label>
+                </div>
+            </div>
         </div>
-        <div class="ms-4">
-            <h5>
-                Количество записей
-            </h5>
-            <input type="radio" id="get_30" name="record_count" value="30" />
-            <label for="get_30">30</label>
-
-            <input type="radio" id="get_100" name="record_count" value="100" />
-            <label for="get_100">100</label>
-
-            <input type="radio" id="get_300" name="record_count" value="300" />
-            <label for="get_300">300</label>
-        </div>
     </div>
-
 
     <div class="row mb-2">
         <table class="table">

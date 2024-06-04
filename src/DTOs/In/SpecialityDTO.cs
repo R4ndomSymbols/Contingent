@@ -6,7 +6,7 @@ using Utilities;
 namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class SpecialityDTO : IFromCSV<SpecialityDTO>
+public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
 {
     public const string FgosCodeFieldName = "номер фгос";
     public const string FgosNameFieldName = "название фгос";
@@ -42,7 +42,7 @@ public class SpecialityDTO : IFromCSV<SpecialityDTO>
     [JsonInclude]
     public int ProgramType { get; set; }
 
-    public SpecialityDTO()
+    public SpecialtyDTO()
     {
         FgosCode = "";
         FgosName = "";
@@ -51,7 +51,7 @@ public class SpecialityDTO : IFromCSV<SpecialityDTO>
         QualificationPostfix = null;
     }
 
-    public Result<SpecialityDTO> MapFromCSV(CSVRow row)
+    public Result<SpecialtyDTO> MapFromCSV(CSVRow row)
     {
         FgosCode = row[FgosCodeFieldName]!;
         FgosName = row[FgosNameFieldName]!;
@@ -66,6 +66,6 @@ public class SpecialityDTO : IFromCSV<SpecialityDTO>
         EducationalLevelOut = LevelOfEducation.ImportLevelCode(row[EducationalLevelOutFieldName]);
         ProgramType = TrainingProgram.ImportProgramTypeCode(row[ProgramTypeFieldName]);
         TeachingDepthCode = TeachingDepth.ImportTeachingDepthCode(row[TeachingDepthFieldName]);
-        return Result<SpecialityDTO>.Success(this);
+        return Result<SpecialtyDTO>.Success(this);
     }
 }

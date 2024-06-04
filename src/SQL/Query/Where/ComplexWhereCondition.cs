@@ -3,7 +3,7 @@ namespace Contingent.SQL;
 public class ComplexWhereCondition : IQueryPart
 {
 
-    private WhereCondition? _facaded;
+    private WhereCondition? _facade;
     private ComplexWhereCondition? _left;
     private ComplexWhereCondition? _right;
     private ConditionRelation _relation;
@@ -31,8 +31,8 @@ public class ComplexWhereCondition : IQueryPart
     }
     public ComplexWhereCondition(WhereCondition single)
     {
-        _facaded = single;
-        _strategy = () => _facaded.AsSQLText();
+        _facade = single;
+        _strategy = () => _facade.AsSQLText();
         _isTreeHead = true;
         _isEmpty = false;
     }
@@ -49,7 +49,6 @@ public class ComplexWhereCondition : IQueryPart
         {
             throw new Exception("Нельзя использовать пустой фильтр в конструкторе");
         }
-
         _isGroup = isGroup;
         _left = left;
         _right = right;
@@ -101,9 +100,9 @@ public class ComplexWhereCondition : IQueryPart
             {
                 TraceDown(condition._right, history);
             }
-            if (condition._facaded is not null)
+            if (condition._facade is not null)
             {
-                history.Add(condition._facaded.RestrictedLeft);
+                history.Add(condition._facade.RestrictedLeft);
             }
         }
 

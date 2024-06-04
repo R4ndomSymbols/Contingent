@@ -6,7 +6,7 @@
 @{
     ViewData["Title"] = "Студент";
 }
-<div class="d-flex flex-column p-5">
+<div class="d-flex flex-column page-layout-container">
     <div class="d-flex flex-row">
         <h3 class="group-title flex-fill">
             Данные студента
@@ -118,13 +118,13 @@
         </div>
 
         <div class="d-flex flex-column">
-            <h5>Адрес</h5>
+            <h5 class="field-title">Адрес</h5>
             @{
                 string RealAddress = Model.ActualAddress.AddressName;
             }
             <div class="d-flex flex-row flex-fill">
                 <input id="ActualAddress" class="standard-input" value="@RealAddress" />
-                <button id="about" class="col-1 standard-button-sec">Разобрать</button>
+                <button id="about" class="standard-button-sec">Разобрать</button>
             </div>
             <small class="accent_color" id="AboutAddress"></small>
             <small class="accent_color" id="ActualAddress_err"></small>
@@ -156,10 +156,10 @@
             </div>
         </div>
         <div class="d-flex flex-column">
-            <h5>Прописка</h5>
+            <h5 class="field-title">Прописка</h5>
             <div class="d-flex flex-row flex-fill">
                 <input id="LegalAddress" class="standard-input" value="@citizenship.LegalAddress.AddressName" />
-                <button class="col-1 standard-button-sec" id="about_legal_address">
+                <button class="standard-button-sec" id="about_legal_address">
                     Разобрать
                 </button>
             </div>
@@ -171,7 +171,7 @@
         <h3 class="group-title flex-fill">
             Образование студента
         </h3>
-        <button class="standard-button-sec col-3" id="add_education_level">
+        <button class="standard-button-sec" id="add_education_level">
             Добавить уровень образования
         </button>
     </div>

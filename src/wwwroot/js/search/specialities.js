@@ -21,7 +21,7 @@ function getSearchData() {
     let query = {
         SearchString: $("#search_text").val()
     }
-    return query
+    return JSON.stringify(query)
 }
 
 function appendFound(specialty) {

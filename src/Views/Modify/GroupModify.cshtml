@@ -2,106 +2,124 @@
 @{
     ViewData["Title"] = "Группа";
 }
-<div class="container">
-    <div class="form-check mb-3">
-        <input type="checkbox" id="AutogenerateName" class="form-check-input" />
-        <label for="AutogenerateName" class="form-check-label">Автоматическая генерация</label>
-    </div>
-    <div id="auto_gen" style="display: none;">
-        <div class="d-flex flex-row">
-            <h5 class="me-4">Название группы</h5>
-            <h5 id="GroupName">Нет</h5>
-        </div>
-        <div class="d-flex flex-row">
-            <div class="d-flex flex-column flex-grow-1 me-3">
-                <h5 class="mb-2">Специальность</h5>
-                <input class="data_changer edu_program_input" />
-                <small class="accent_color mt-1 EducationProgram"></small>
-            </div>
-            <div class="d-flex flex-column col-2">
-                <h5 class="mb-2">Год создания</h5>
-                <input class="data_changer CreationYear" />
-                <small class="accent_color mt-1 CreationYear_err"></small>
-            </div>
-        </div>
-        <div class="d-flex flex-row">
-            <div class="d-flex flex-column flex-grow-1 me-3">
-                <h5 class="mb-2">Тип финансирования</h5>
-                <select class="SponsorshipType data_changer">
-                    @foreach (var i in GroupSponsorship.ListOfSponsorships)
-                    {
-                        int code = (int)i.TypeOfSponsorship;
-                        <option value="@code">@i.RussianName </option>
-                    }
-                </select>
-            </div>
-            <div class="d-flex flex-column flex-grow-1">
-                <h5 class="mb-2">Форма обучения</h5>
-                <select class="EducationalForm data_changer">
-                    @foreach (var i in GroupEducationFormat.ListOfFormats)
-                    {
-                        int code = (int)i.FormatType;
-                        <option value="@code">@i.RussianName </option>
-                    }
-                </select>
-            </div>
-        </div>
-    </div>
+<div class="d-flex flex-column page-layout-container">
 
-    <div id="no_gen" style="display: none;">
-        <div class="d-flex flex-row">
-            <div class="d-flex flex-column me-3 flex-grow-1">
-                <h5 class="mb-2">Название группы</h5>
-                <input id="GroupNameInput" type="text" />
-                <small class="accent_color mt-1 GroupName_err"></small>
-            </div>
-            <div class="d-flex flex-column flex-grow-1">
-                <h5 class="mb-2">Группа-предшественник</h5>
-                <input type="text" id="ancestor_group" />
-                <small class="accent_color mt-1 AncestorGroup_err"></small>
-            </div>
-        </div>
-        <div class="d-flex flex-row">
-            <div class="d-flex flex-column me-3 flex-grow-1">
-                <h5 class="mb-2">Специальность</h5>
-                <input class="data_changer edu_program_input" />
-                <small class="accent_color mt-1 EducationProgram_err"></small>
-            </div>
-            <div class="d-flex flex-column col-2">
-                <h5 class="mb-2">Год создания</h5>
-                <input class="data_changer CreationYear" />
-                <small class="accent_color mt-1 CreationYear_err"></small>
-            </div>
-        </div>
-        <div class="d-flex flex-row">
-            <div class="d-flex flex-column me-3 flex-grow-1">
-                <h5 class="mb-2">Тип финансирования</h5>
-                <select class="SponsorshipType data_changer">
-                    @foreach (var i in GroupSponsorship.ListOfSponsorships)
-                    {
-                        int code = (int)i.TypeOfSponsorship;
-                        <option value="@code">@i.RussianName </option>
-                    }
-                </select>
-            </div>
-            <div class="d-flex flex-column flex-grow-1">
-                <h5 class="mb-2">Форма обучения</h5>
-                <select class="EducationalForm data_changer">
-                    @foreach (var i in GroupEducationFormat.ListOfFormats)
-                    {
-                        int code = (int)i.FormatType;
-                        <option value="@code">@i.RussianName </option>
-                    }
-                </select>
-            </div>
-        </div>
-    </div>
-    <div class="d-flex flex-row mt-2">
-        <button class="btn btn-primary" id="save">
+    <div class="d-flex flex-row group-title">
+        <h3 class="flex-grow-1">
+            Именование группы
+        </h3>
+        <button class="standard-button-prim" id="save">
             Сохранить
         </button>
     </div>
+
+    <div class="d-flex flex-column item-input-group">
+        <div class="d-flex flex-row">
+            <input type="checkbox" id="AutogenerateName" class="form-check-input" />
+            <label for="AutogenerateName" class="form-check-label ms-2 fs-5">Автоматическая генерация (создание
+                потока)</label>
+            <!-- Для отображения множества имен -->
+            <div id="name_display" class="hidden-element d-flex flex-row ms-2">
+                <h5 class="me-2">
+                    Сгенерированные имена:
+                </h5>
+                <h5 id="names_generated">
+
+                </h5>
+            </div>
+        </div>
+    </div>
+    <h3 class="group-title">
+        Характеристики группы
+    </h3>
+    <div class="item-input-group d-flex flex-column">
+        <!--Два вида разметки для отображения автоматической генерации имени -->
+        <div id="auto_gen" class="hidden-element d-flex flex-column">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column flex-grow-1 me-3">
+                    <h5 class="mb-2">Специальность</h5>
+                    <input id="specialty_input_auto_gen" class="EducationProgram standard-input" />
+                    <small class="EducationProgram_err error-box mt-1"></small>
+                </div>
+                <div class="d-flex flex-column col-2">
+                    <h5 class="mb-2">Год создания</h5>
+                    <input id="auto_gen_creation_year" class="data_changer CreationYear standard-input" />
+                    <small class="CreationYear_err error-box mt-1"></small>
+                </div>
+            </div>
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column flex-fill me-3">
+                    <h5 class="field-title">Тип финансирования</h5>
+                    <select id="auto_gen_financing_type" class="SponsorshipType data_changer standard-select">
+                        @foreach (var i in GroupSponsorship.ListOfSponsorships)
+                        {
+                            int code = (int)i.TypeOfSponsorship;
+                            <option value="@code">@i.RussianName </option>
+                        }
+                    </select>
+                </div>
+                <div class="d-flex flex-column flex-fill">
+                    <h5 class="field-title">Форма обучения</h5>
+                    <select id="auto_gen_education_form" class="EducationalForm data_changer standard-select">
+                        @foreach (var i in GroupEducationFormat.ListOfFormats)
+                        {
+                            int code = (int)i.FormatType;
+                            <option value="@code">@i.RussianName </option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!--Ручной ввод -->
+        <div id="manual_input" class="d-flex flex-column">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column me-3 flex-fill">
+                    <h5 class="field-title">Название группы</h5>
+                    <input id="group_name_no_gen" class="GroupName standard-input" type="text" />
+                    <small class="error-box GroupName_err"></small>
+                </div>
+                <div class="d-flex flex-column flex-grow-1">
+                    <h5 class="field-title">Группа-предшественник</h5>
+                    <input id="ancestor_group_input" type="text" class="AncestorGroup standard-input" />
+                    <small class="error-box AncestorGroup_err"></small>
+                </div>
+            </div>
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column me-3 flex-grow-1">
+                    <h5 class="field-title">Специальность</h5>
+                    <input id="specialty_input_no_gen" class="EducationProgram standard-input " />
+                    <small class="error-box EducationProgram_err"></small>
+                </div>
+                <div class="d-flex flex-column col-2">
+                    <h5 class="field-title">Год создания</h5>
+                    <input id="creation_year_no_gen" class="CreationYear standard-input" />
+                    <small class="error-box CreationYear_err"></small>
+                </div>
+            </div>
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column me-3 flex-grow-1">
+                    <h5 class="field-title">Тип финансирования</h5>
+                    <select id="no_gen_financing_type" class="SponsorshipType data_changer standard-select">
+                        @foreach (var i in GroupSponsorship.ListOfSponsorships)
+                        {
+                            int code = (int)i.TypeOfSponsorship;
+                            <option value="@code">@i.RussianName </option>
+                        }
+                    </select>
+                </div>
+                <div class="d-flex flex-column flex-grow-1">
+                    <h5 class="field-title">Форма обучения</h5>
+                    <select id="no_gen_education_form" class="EducationalForm data_changer standard-select">
+                        @foreach (var i in GroupEducationFormat.ListOfFormats)
+                        {
+                            int code = (int)i.FormatType;
+                            <option value="@code">@i.RussianName </option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
-</div>
-<script src="~/js/site.js"></script>
-<script src="~/js/modify/groups.js"></script>
+<script src="~/js/modify/groups.js" type="module"></script>

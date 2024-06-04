@@ -1,215 +1,341 @@
-import { Utilities } from "../site";
-let utils = new Utilities();
-let specialties = [];
-let groups = [];
-let lockCount = 0;
-let creationYear = 0;
-let ancestorGroupId = 0;
-let specialtyId = 0;
-let financingType = 0;
-let eduFormType = 0;
-let courseOn = 0;
-let groupCourse = [];
+import { Utilities } from "../site.js";
+
+// общее 
+let availableSpecialties = [];
+// индикатор создания группы / потока
 let created = false;
+
+let utils = new Utilities();
+let lockCount = 0;
+
+
 $(document).ready(function () {
-
-    $(".data_changer").blur(
-        function () {
-            updateName();
-        }
-    );
-    $("#ancestor_group").on("input", function () {
-        findGroups();
-    });
-    $(".edu_program_input").on("input", function () {
-        findSpecialties();
-    });
-    $(".CreationYear").on("input", function () {
-        var num = Number($(this).val());
-        creationYear = isNaN(num) ? creationYear : num;
-    });
-    $(".SponsorshipType").on("change", function () {
-        var num = Number($(this).val());
-        financingType = num != -1 ? num : financingType
-    });
-    $(".EducationalForm").on("change", function () {
-        var num = Number($(this).val());
-        eduFormType = num != -1 ? num : eduFormType
-    });
-
     $("#AutogenerateName").on("click", function () {
-        var generateName = Boolean(document.getElementById("AutogenerateName").checked);
-        if (generateName) {
-            $("#no_gen").css("display", "none");
-            $("#auto_gen").css("display", "block");
-        }
-        else {
-            $("#no_gen").css("display", "block");
-            $("#auto_gen").css("display", "none");
-        }
-        creationYear = 0;
-        ancestorGroupId = -1;
-        specialtyId = -1;
-        eduFormType = -1;
-        financingType = -1;
-        $(".edu_program_input").val(undefined);
-        $(".creationYear").val(undefined);
-        $('.EducationalForm').prop('selectedIndex', 0);
-        $('.SponsorshipType').prop('selectedIndex', 0);
-
+        onGenerationChange(Boolean(document.getElementById("AutogenerateName").checked));
     });
-    $("#AutogenerateName").trigger("click")
-
+    $("#AutogenerateName").trigger("click");
 });
-function updateName() {
-    var generateName = Boolean(document.getElementById("AutogenerateName").checked);
-    if (!generateName) {
-        return;
+
+function onGenerationChange(checkBoxValue) {
+    if (checkBoxValue) {
+        terminateNoGen();
+        makeAutoGenReady();
     }
-    $.ajax({
-        type: "POST",
-        url: "/groups/getname",
-        data: JSON.stringify(
-            {
-                EduProgramId: specialtyId,
-                EduFormatCode: eduFormType,
-                SponsorshipTypeCode: financingType,
-                CreationYear: creationYear,
-                AutogenerateName: true,
-            }
-        ),
-        dataType: "JSON",
-        success: function (response) {
-            document.getElementById("GroupName").innerText = response["groupName"];
-        }
-    });
+    else {
+        terminateAutoGen();
+        makeNoGenReady();
+    }
+
 }
 
-$("#save").on("click", function () {
+function saveCommon(jsonObject) {
+
     if (created) {
-        alert("Обновление не предусмотрено")
+        alert("Обновление не предусмотрено, обновите страну")
         return;
     }
 
     $.ajax({
         type: "POST",
         url: "/groups/add",
-        data: JSON.stringify(
-            {
-                EduProgramId: specialtyId,
-                EduFormatCode: eduFormType,
-                SponsorshipTypeCode: financingType,
-                CreationYear: creationYear,
-                AutogenerateName: Boolean(document.getElementById("AutogenerateName").checked),
-                GroupName: $("#GroupNameInput").val(),
-                CourseOn: courseOn,
-                PreviousGroupId: ancestorGroupId
-
-
-            }),
+        data: JSON.stringify(jsonObject),
         dataType: "JSON",
         contentType: "application/json",
         success: function (response) {
-            alert("Сохранение прошло успешно")
+            utils.notifySuccess();
             created = true
         },
         error: function (response, a, b) {
-            utils.readAndSetErrors(response)
+            utils.readAndSetErrors(response, undefined, utils.SELECTOR_CLASS)
             alert("Сохранение провалилось");
         }
     });
-});
+}
 
-function findSpecialties() {
-    specialties = [];
-    let searchFunction = () => $.ajax({
+function findSpecialtiesCommon(searchText, callback = undefined) {
+    if (searchText.length < 2) {
+        if (callback !== undefined) {
+            callback([]);
+        }
+        return;
+    }
+
+    $.ajax({
         type: "POST",
         url: "/specialities/search/query",
         data: JSON.stringify({
-            SearchString: getSearchSpecialtyData()
+            SearchString: searchText
         }),
         contentType: "application/json",
         success: function (response) {
-            $.each(response, function (index, specialty) {
-                specialties.push({
-                    value: specialty["id"],
-                    label: specialty.fgosCode + " " + specialty.fgosName + " (" + specialty.qualificationName + ")"
-                })
-            });
-            $(".edu_program_input").autocomplete({
-                delay: 100,
-                source: specialties,
-                change: function (event, ui) {
-                    specialtyId = ui.item.value
-                },
-                select: function (event, ui) {
-                    $(this).prop("value", ui.item.label)
-                    event.preventDefault();
-                }
-            })
+            if (callback !== undefined) {
+                callback(response)
+            }
         }
     });
-    registerScheduledSearch(searchFunction);
 }
-function findGroups() {
-    groups = [];
-    let searchFunction = () => $.ajax({
+
+// секция для автоматического ввода
+let selectedSpecialtyAutoGen = undefined;
+
+function makeAutoGenReady() {
+    showAutoGen();
+    $(".data_changer").blur(
+        function () {
+            utils.registerScheduledQuery(() => updateName());
+        }
+    );
+    $("#specialty_input_auto_gen").on("input", function () {
+        utils.registerScheduledQuery(() => findSpecialtiesAutoGen(), 2);
+    })
+    $("#save").on("click", function () {
+        saveAutoGen();
+    });
+}
+
+function terminateAutoGen() {
+    $("#specialty_input_auto_gen").off("keyup");
+    $("#save").off("click");
+    $(".data_changer").off();
+}
+
+function showAutoGen() {
+    $("#auto_gen").removeClass("hidden-element");
+    $("#name_display").removeClass("hidden-element");
+    $("#manual_input").addClass("hidden-element");
+}
+// обновление имени группы при изменении важных параметров
+function updateName() {
+    if (selectedSpecialtyAutoGen === undefined) {
+        return;
+    }
+    $.ajax({
+        type: "POST",
+        url: "/groups/getname",
+        data: JSON.stringify(createJSONAutoGen()),
+        dataType: "JSON",
+        success: function (response) {
+            document.getElementById("names_generated").innerText = response["groupName"];
+        }
+    });
+}
+
+function saveAutoGen() {
+    saveCommon(createJSONAutoGen());
+}
+
+
+function findSpecialtiesAutoGen() {
+    // тут специальность можно выбрать всегда
+    let callback = (specialties) => $("#specialty_input_auto_gen").autocomplete({
+        delay: 100,
+        source: specialties.map(
+            x => {
+                return {
+                    value: x.id,
+                    label: x.fgosCode + " " + x.fgosName + " (" + x.qualificationName + ")"
+                }
+            }
+        ),
+        change: function (event, ui) {
+            selectedSpecialtyAutoGen = specialties.find(x => x.id == ui.item.value)
+            updateName();
+        },
+        select: function (event, ui) {
+            $(this).prop("value", ui.item.label)
+            event.preventDefault();
+        }
+    });
+    findSpecialtiesCommon($("#specialty_input_auto_gen").val(), callback);
+
+}
+
+function createJSONAutoGen() {
+    return {
+        EduProgramId: selectedSpecialtyAutoGen === undefined ? 0 : selectedSpecialtyAutoGen.id,
+        EduFormatCode: Number($("#auto_gen_education_form").val()),
+        SponsorshipTypeCode: Number($("#auto_gen_financing_type").val()),
+        CreationYear: $("#auto_gen_creation_year").val(),
+        AutogenerateName: true,
+        CourseOn: 1,
+    }
+}
+
+
+
+
+
+// секция для ручного ввода
+let ancestor = undefined;
+let selectedSpecialtyNoGen = undefined;
+let availableGroups = [];
+
+function makeNoGenReady() {
+    showNoGen();
+    $("#ancestor_group_input").on("input", function () {
+        utils.registerScheduledQuery(
+            () => findGroupsNoGen(
+                changeUiAndLogicOnInputGroup
+            ));
+    });
+    $("#save").on("click", function () {
+        saveNoGen();
+    });
+}
+function terminateNoGen() {
+    ancestor = undefined;
+    selectedSpecialtyNoGen = undefined;
+    availableGroups = [];
+    $("#ancestor_group_input").off("keyup");
+    $("#save").off("click");
+}
+
+
+
+function showNoGen() {
+    $("#auto_gen").addClass("hidden-element");
+    $("#name_display").addClass("hidden-element");
+    $("#manual_input").removeClass("hidden-element");
+}
+
+function changeUiAndLogicOnInputGroup() {
+
+    // указана ли группа в данный момент
+    let valueNow = $("#ancestor_group_input").val()
+    console.log(valueNow)
+    if (valueNow === undefined || valueNow == "") {
+        // в случае, если групп не указана, то нужно включить эти поля
+        enableInput("creation_year_no_gen")
+        enableInput("specialty_input_no_gen")
+        enableInput("no_gen_financing_type")
+        enableInput("no_gen_education_form")
+        $("#specialty_input_no_gen").on("input", function () {
+            utils.registerScheduledQuery(
+                function () {
+                    findSpecialtiesNoGen()
+                }, 3
+            )
+        })
+        return;
+    }
+    else {
+        $("#specialty_input_no_gen").off()
+        disableInput("creation_year_no_gen")
+        disableInput("specialty_input_no_gen")
+        disableInput("no_gen_financing_type")
+        disableInput("no_gen_education_form")
+    }
+
+    function disableInput(inputId) {
+        $("#" + inputId).attr("disabled", "disabled")
+    }
+    function enableInput(inputId) {
+        $("#" + inputId).removeAttr("disabled")
+    }
+
+}
+
+function findGroupsNoGen(callback) {
+    $.ajax({
         type: "POST",
         url: "/groups/search/query",
         data: JSON.stringify({
-            GroupName: $("#ancestor_group").val(),
+            GroupName: $("#ancestor_group_input").val(),
             IsActive: true
         }),
         contentType: "application/json",
         success: function (response) {
-            $.each(response, function (index, group) {
-                groups.push({
-                    value: group["groupId"],
-                    label: group.groupName
-                });
-                groupCourse.push({
-                    id: group["groupId"],
-                    course: group.courseOn
-                });
-            });
-            $("#ancestor_group").autocomplete({
+            availableGroups = response;
+            $("#ancestor_group_input").autocomplete({
                 delay: 100,
-                source: groups,
+                source: availableGroups.map(
+                    x => {
+                        return {
+                            label: x.groupName,
+                            value: x.groupId
+                        }
+                    }
+                ),
                 change: function (event, ui) {
-                    ancestorGroupId = ui.item.value
-                    courseOn = Number(groupCourse.find((x) => x.id == ui.item.value).course) + 1
+                    if (ui.item === null) {
+                        return;
+                    }
+                    ancestor = availableGroups.find(x => x.groupId == ui.item.value)
                 },
                 select: function (event, ui) {
                     $(this).prop("value", ui.item.label)
                     event.preventDefault();
-                }
+                },
             })
+        },
+        complete: function (data) {
+            callback();
         }
     });
-    registerScheduledSearch(searchFunction);
 }
 
-function getSearchSpecialtyData() {
-    return $(".edu_program_input").val();
+function findSpecialtiesNoGen() {
+    if (ancestor === undefined) {
+        findSpecialtiesCommon(
+            $("#specialty_input_no_gen").val(),
+            (specialties) => {
+                $("#specialty_input_no_gen").autocomplete({
+                    delay: 100,
+                    source: specialties.map(
+                        x => {
+                            return {
+                                value: x.id,
+                                label: x.fgosCode + " " + x.fgosName + " (" + x.qualificationName + ")"
+                            }
+                        }
+                    ),
+                    change: function (event, ui) {
+                        selectedSpecialtyNoGen = specialties.find(x => x == ui.item.value)
+                    },
+                    select: function (event, ui) {
+                        $(this).prop("value", ui.item.label)
+                        event.preventDefault();
+                    }
+                })
+            }
+        )
+
+    }
 }
 
-function registerScheduledSearch(searchFunc) {
-    lockCount += 1;
-    let promise = new Promise(
-        (resolve, reject) => {
-            let now = lockCount;
-            setTimeout(
-                () => {
-                    if (now != lockCount) {
-                        resolve();
-                    }
-                    else {
-                        searchFunc();
-                        resolve();
-                    }
-                }, 400)
+function saveNoGen() {
+    saveCommon(createJsonNoGen())
+}
+
+function createJsonNoGen() {
+    let json = undefined
+    if (ancestor === undefined) {
+        json = {
+            EduProgramId: selectedSpecialtyAutoGen === undefined ? 0 : selectedSpecialtyAutoGen.id,
+            EduFormatCode: $("#no_gen_education_form").val(),
+            SponsorshipTypeCode: $("#no_gen_financing_type").val(),
+            CreationYear: $("#creation_year_no_gen").val(),
+            AutogenerateName: false,
+            GroupName: $("#group_name_no_gen").val(),
+            CourseOn: 1,
+            PreviousGroupId: 0
         }
-    )
+    }
+    else {
+        json = {
+            EduProgramId: ancestor.specialtyId,
+            EduFormatCode: ancestor.eduFormatCode,
+            SponsorshipTypeCode: ancestor.sponsorshipTypeCode,
+            CreationYear: String(ancestor.creationYear),
+            AutogenerateName: false,
+            GroupName: $("#group_name_no_gen").val(),
+            CourseOn: Number(ancestor.courseOn) + 1,
+            PreviousGroupId: ancestor.groupId
+        }
+    }
+    console.log(ancestor)
+    return json;
 }
+
 
 

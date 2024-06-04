@@ -13,7 +13,7 @@ public class SpecialityImport : IFromCSV<SpecialityImport>
     }
     public Result<SpecialityImport> MapFromCSV(CSVRow row)
     {
-        var specialityDTO = new SpecialityDTO().MapFromCSV(row).ResultObject;
+        var specialityDTO = new SpecialtyDTO().MapFromCSV(row).ResultObject;
         var speciality = SpecialtyModel.Build(specialityDTO);
         if (speciality.IsFailure)
         {

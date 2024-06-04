@@ -125,7 +125,7 @@ public class SpecialtyModel
         return mapper;
     }
 
-    public static Result<SpecialtyModel> Build(SpecialityDTO dto)
+    public static Result<SpecialtyModel> Build(SpecialtyDTO dto)
     {
         if (dto is null)
         {

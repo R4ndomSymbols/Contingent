@@ -1,17 +1,30 @@
 @using Contingent.Controllers.DTO.Out;
 @model IEnumerable<GroupSearchResultDTO>;
 
-<div class="container">
-    <div class="d-flex flex-row">
-        <h5 class="mr-1">
-            Имя группы:
-        </h5>
-        <input type="text" id="name_input" placeholder="Название группы" class="col-3" />
-        <input type="checkbox" id="active_only">
-        <label for="active_only">Только активные</label>
-        <button class="btn btn-primary col-1" id="search_button">
-            Поиск
-        </button>
+<div class="d-flex flex-column page-layout-container">
+    <div class="d-flex flex-column item-input-group">
+        <div class="d-flex flex-row">
+            <h5 class="field-title">
+                Имя группы:
+            </h5>
+            <div class="flex-fill">
+
+            </div>
+            <div class="d-flex flex-row">
+                <h5 class="field-title">
+                    Только активные
+                </h5>
+                <input type="checkbox" class="form-check ms-3 me-1" id="active_only">
+            </div>
+        </div>
+        <div class="d-flex flex-row">
+            <input type="text" id="name_input" placeholder="Название группы" class="standard-input flex-fill" />
+            <button class="standard-button-prim col-2" id="search_button">
+                Поиск
+            </button>
+        </div>
+
+
     </div>
     <div class="d-flex flex-row">
         <table class="table col-12">

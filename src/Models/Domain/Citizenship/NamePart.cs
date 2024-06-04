@@ -22,6 +22,12 @@ public class NamePart
         return Result<NamePart>.Success(new NamePart(name));
 
     }
+
+    public static NamePart CreateFromDatabase(string name)
+    {
+        return new NamePart(name);
+    }
+
     public static Result<NamePart> Create(string? name, int maxLength)
     {
         var res = Create(name);

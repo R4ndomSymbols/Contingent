@@ -21,7 +21,7 @@ public sealed class GroupInDTO : IFromCSV<GroupInDTO>
     [JsonRequired]
     public int SponsorshipTypeCode { get; set; }
     [JsonRequired]
-    public int CreationYear { get; set; }
+    public string CreationYear { get; set; }
     [JsonRequired]
     public bool AutogenerateName { get; set; }
     public string GroupName { get; set; }
@@ -49,7 +49,7 @@ public sealed class GroupInDTO : IFromCSV<GroupInDTO>
         }
         if (int.TryParse(row[CreationYearFieldName], out int year))
         {
-            CreationYear = year;
+            CreationYear = year.ToString();
         }
         AutogenerateName = row[AutogenerateNameFieldName]!.ToLower() == "да";
         return Result<GroupInDTO>.Success(this);

@@ -11,7 +11,7 @@ public sealed class EmptyOrder : Order
 {
     public override string OrderOrgId
     {
-        get => "[Не может быть определен на данный момент]";
+        get => "Не может быть определен на данный момент";
     }
     private EmptyOrder() : base()
     {

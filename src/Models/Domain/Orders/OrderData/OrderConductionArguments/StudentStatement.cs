@@ -17,6 +17,7 @@ public abstract class StudentStatement
         var student = StudentModel.GetStudentById(dto.StudentId).Result;
         if (student is null)
         {
+            var paramCollection = new SQLParameterCollection();
             var nameSplit = dto.Name.Split(' ');
             var whereClauseForCitizenship = RussianCitizenship.GetFilterClause(new RussianCitizenshipInDTO()
             {
@@ -24,7 +25,7 @@ public abstract class StudentStatement
                 Name = nameSplit.ElementAtOrDefault(1)!,
                 Patronymic = nameSplit.ElementAtOrDefault(2)
             },
-            out SQLParameterCollection paramCollection);
+            ref paramCollection);
             var foundBy = StudentModel.FindUniqueStudents(
                 new QueryLimits(0, 2),
                 null,

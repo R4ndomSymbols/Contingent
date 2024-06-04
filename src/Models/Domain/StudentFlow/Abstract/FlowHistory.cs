@@ -173,7 +173,7 @@ public static class FlowHistory
         var sqlParameters = parameters ?? new SQLParameterCollection();
         if (queryParameters.ExtractLastState)
         {
-            basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.OR,
+            basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND,
              new ComplexWhereCondition(
             new WhereCondition(
                 new Column("creation_timestamp", "orders"),
@@ -244,7 +244,7 @@ public static class FlowHistory
             );
             basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND, filter);
         }
-        basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND, additionalFilter);
+        basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND, additionalFilter);
 
         var query =
         // последнее состояние исключает неуникальность студентов
@@ -271,9 +271,9 @@ public static class FlowHistory
         return await query.Execute(conn, limits);
     }
 
-    public static IEnumerable<StudentFlowRecord> GetRecordsByFilter(QueryLimits limits, HistoryExtractSettings settings)
+    public static IEnumerable<StudentFlowRecord> GetRecordsByFilter(QueryLimits limits, HistoryExtractSettings settings, ComplexWhereCondition? specific = null, SQLParameterCollection? parameters = null)
     {
-        return GetHistoryAggregate(limits: limits, queryParameters: settings).Result;
+        return GetHistoryAggregate(limits: limits, queryParameters: settings, additionalFilter: specific, parameters: parameters).Result;
     }
 
     public static void DeleteRecords(IEnumerable<int> ids)

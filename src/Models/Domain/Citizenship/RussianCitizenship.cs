@@ -21,9 +21,9 @@ public class RussianCitizenship : Citizenship
                 var found = new RussianCitizenship()
                 {
                     _id = (int)reader["id_r_cit"],
-                    _surname = NamePart.Create((string)reader["surname"]).ResultObject,
-                    _name = NamePart.Create((string)reader["name"]).ResultObject,
-                    _patronymic = reader["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.Create((string)reader["patronymic"]).ResultObject,
+                    _surname = NamePart.CreateFromDatabase((string)reader["surname"]),
+                    _name = NamePart.CreateFromDatabase((string)reader["name"]),
+                    _patronymic = reader["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.CreateFromDatabase((string)reader["patronymic"]),
                 };
                 found._legalAddressId = reader["legal_address"].GetType() == typeof(DBNull) ? null : (int)reader["legal_address"];
                 found._legalAddress = includeAddress && found._legalAddressId is not null ? AddressModel.GetAddressById((int)reader["legal_address"]).Result : null;
@@ -44,10 +44,9 @@ public class RussianCitizenship : Citizenship
         }
         return mapper;
     }
-    public static ComplexWhereCondition GetFilterClause(RussianCitizenshipInDTO parameters, out SQLParameterCollection paramCollection)
+    public static ComplexWhereCondition GetFilterClause(RussianCitizenshipInDTO parameters, ref SQLParameterCollection paramCollection)
     {
         var where = ComplexWhereCondition.Empty;
-        paramCollection = new SQLParameterCollection();
         if (!string.IsNullOrEmpty(parameters.Name) && !string.IsNullOrWhiteSpace(parameters.Name))
         {
             where = where.Unite(

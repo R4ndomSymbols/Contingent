@@ -6,6 +6,7 @@
     ERROR_ON_PAGE_DISPLAY_ELEMENT_NAME_POSTFIX = "_err";
     SELECTOR_CLASS = "."
     SELECTOR_ID = "#"
+    locks = new Map();
     // контейнер ошибок - это перечисление, содержащее ошибки с полями
     // формат ошибок определен на бекенде
     readAndSetErrors(errorsContainer, customName = undefined, selector = this.SELECTOR_ID) {
@@ -100,6 +101,37 @@
     notifySuccess(message = "Сохранение прошло успешно") {
         alert(message)
     }
-
+    registerScheduledQuery(executed, queryIdentity = 1) {
+        if (this.locks.has(queryIdentity)) {
+            this.locks.set(
+                queryIdentity,
+                this.locks.get(queryIdentity) + 1
+            )
+        }
+        else {
+            this.locks.set(queryIdentity, 1)
+        }
+        let promise = new Promise(
+            (resolve, reject) => {
+                let now = this.locks.get(queryIdentity);
+                setTimeout(
+                    () => {
+                        if (now != this.locks.get(queryIdentity)) {
+                            resolve();
+                        }
+                        else {
+                            executed();
+                            resolve();
+                        }
+                    }, 400)
+            }
+        )
+    }
+    disableField(name, selector = this.SELECTOR_ID) {
+        $(selector + name).attr("disabled", "disabled")
+    }
+    enableField(name, selector = this.SELECTOR_ID) {
+        $(selector + name).removeAttr("disabled")
+    }
 }
 

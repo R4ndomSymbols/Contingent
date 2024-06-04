@@ -45,14 +45,14 @@ public class SpecialtyController : Controller
     }
     [HttpPost]
     [Route("specialities/add")]
-    public async Task<IActionResult> AddOrUpdateSpeciality()
+    public async Task<IActionResult> AddOrUpdateSpecialty()
     {
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync();
-        SpecialityDTO? dto;
+        SpecialtyDTO? dto;
         try
         {
-            dto = JsonSerializer.Deserialize<SpecialityDTO>(body);
+            dto = JsonSerializer.Deserialize<SpecialtyDTO>(body);
         }
         catch (Exception)
         {

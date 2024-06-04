@@ -75,7 +75,7 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON: " + e.Message));
         }
         var groupResult = GroupModel.Build(deserialized);
         if (groupResult.IsFailure)
@@ -114,7 +114,7 @@ public class GroupController : Controller
         {
             return BadRequest(groupResult.Errors.AsErrorCollection());
         }
-        return Json(new { GroupName = string.Join(", ", groupResult.ResultObject.GenerateGroupSequence().Select(x => x.GroupName)) });
+        return Json(new { GroupName = groupResult.ResultObject.ThreadNames });
     }
 
     [HttpPost]

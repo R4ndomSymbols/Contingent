@@ -1,15 +1,19 @@
-<div class="container">
-    <div class="d-flex flex-row">
-        <h5 class="col-5">
-            Название специальности, код ФГОС
-        </h5>
+<div class="page-layout-container">
+    <div class=".item-input-group">
+        <div class="d-flex flex-column">
+            <h5 class="field-title">
+                Название специальности, код ФГОС
+            </h5>
+            <div class="d-flex flex-row">
+                <input type="text" class="standard-input flex-fill" id="search_text">
+                <button id="search_button" class="standard-button-prim">
+                    Поиск
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="d-flex flex-row">
-        <input type="text" class="col-9" id="search_text">
-        <button id="search_button" class="col-1">
-            Поиск
-        </button>
-    </div>
+
+
     <div class="row">
         <table class="table">
             <thead>
@@ -18,8 +22,8 @@
                 <th>Квалификация</th>
                 <th>Действия</th>
             </thead>
-            <tbody id ="search_result">
-                
+            <tbody id="search_result">
+
             </tbody>
         </table>
     </div>

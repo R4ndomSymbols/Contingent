@@ -1,11 +1,16 @@
-import { Utilities } from "../site";
+import { Utilities } from "../site.js";
 let utils = new Utilities();
 let id = null;
 
 $(document).ready(function () {
-    let possible = Number($("#Id").val());
-    if (possible !== NaN && possible !== 0 && possible !== undefined){
+    let possible = Number($("#id_section").attr("spec_id"));
+    if (possible !== NaN && possible !== 0 && possible !== undefined) {
         id = possible
+        utils.disableField("CourseCount")
+        utils.disableField("FgosPrefix")
+        utils.disableField("QualificationPostfix")
+        utils.disableField("EducationalLevelIn")
+        utils.disableField("EducationalLevelOut")
     }
 });
 
@@ -17,9 +22,9 @@ $("#save").click(function () {
         contentType: "application/json",
         success: function (response) {
             id = Number(response["id"]);
-            alert("Специальность сохранена");
+            utils.notifySuccess();
         },
-        error: function(xhr, a, b) {
+        error: function (xhr, a, b) {
             utils.readAndSetErrors(xhr)
         }
     });
@@ -38,11 +43,11 @@ function getData() {
             FgosCode: $("#FgosCode").val(),
             FgosName: $("#FgosName").val(),
             Qualification: $("#Qualification").val(),
-            CourseCount: courseCount.length === 0 ? -1 :Number(courseCount.val()),
-            FgosPrefix: fgosPrefix.length === 0 ? "undefined" : fgosPrefix.val(),
-            QualificationPostfix: qualPostfix.length === 0 ? "undefined" : qualPostfix.val(),
-            EducationalLevelIn: eduIn.length === 0 ? -1 : Number(eduIn.val()),
-            EducationalLevelOut: eduOut.length === 0 ? -1 : Number(eduOut.val()),
+            CourseCount: Number(courseCount.val()),
+            FgosPrefix: fgosPrefix.val(),
+            QualificationPostfix: qualPostfix.val(),
+            EducationalLevelIn: Number(eduIn.val()),
+            EducationalLevelOut: Number(eduOut.val()),
             TeachingLevel: Number($("#TeachingLevel").val()),
             ProgramType: Number($("#ProgramType").val())
         }

@@ -29,14 +29,14 @@ public class SpecialtySearchController : Controller
     public async Task<IActionResult> SearchSpecialities()
     {
         using var reader = new StreamReader(Request.Body);
-        SpecialitySearchQueryDTO? dto = null;
+        SpecialtySearchQueryDTO? dto = null;
         try
         {
-            dto = JsonSerializer.Deserialize<SpecialitySearchQueryDTO>(await reader.ReadToEndAsync());
+            dto = JsonSerializer.Deserialize<SpecialtySearchQueryDTO>(await reader.ReadToEndAsync());
         }
         catch (Exception e)
         {
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос: " + e.Message));
         }
         if (dto is null)
         {

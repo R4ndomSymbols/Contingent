@@ -1,16 +1,13 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
-using Contingent.Models;
-using Contingent.Models.Domain;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Infrastructure;
 using Contingent.SQL;
-using Contingent.Statistics;
-using Utilities;
+using Contingent.Models.Domain.Citizenship;
+using Contingent.Models.Domain.Groups;
 namespace Contingent.Controllers.Search;
 
 
@@ -45,50 +42,50 @@ public class StudentSearchController : Controller
         }
         catch (Exception e)
         {
-           return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
         if (dto is null)
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
         }
-        var search = new SearchHelper();
-        var source = search.GetSource(dto.Source);
-        var filter = search.GetFilter(dto);
-
-        if (source != null)
+        SQLParameterCollection parameters = new();
+        var condition = ComplexWhereCondition.Empty;
+        if (dto.Name is not null && dto.Name.Length > 2)
         {
-            var foundStudents = filter.Execute(source.Invoke());
-            var foundSize = foundStudents.Count();
-            return Json(foundStudents.Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo)));
+            var parts = dto.Name.Split(' ').Where(x => x != string.Empty).Select(x => x.Trim());
+            condition = condition.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                RussianCitizenship.GetFilterClause(
+                    new RussianCitizenshipInDTO()
+                    {
+                        Surname = parts.First(),
+                        Name = parts.Count() >= 2 ? parts.ElementAt(1) : null,
+                        Patronymic = parts.Count() == 3 ? parts.ElementAt(2) : null,
+                    },
+                ref parameters)
+            );
         }
-        float count = 0;
-        using (var conn = Utils.GetAndOpenConnectionFactory().Result)
+        if (!(string.IsNullOrEmpty(dto.GroupName) || string.IsNullOrWhiteSpace(dto.GroupName)))
         {
-            var cmd = new NpgsqlCommand("SELECT reltuples AS estimate FROM pg_class WHERE relname = \'students\'", conn);
-            using (cmd)
+            condition.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                GroupModel.GetFilterForGroup(dto.GroupName, ref parameters)
+            );
+        }
+        var limits = new QueryLimits(dto.PageSkipCount, dto.PageSize);
+        var found = FlowHistory.GetRecordsByFilter(
+            limits,
+            new HistoryExtractSettings()
             {
-                using var reader = cmd.ExecuteReader();
-                reader.Read();
-                count = (float)reader["estimate"];
-            }
-        }
-        var result = new List<StudentFlowRecord>();
-        var limits = new QueryLimits(dto.PageSkipCount, dto.PageSize, dto.PreciseOffset);
-        var found = new List<StudentSearchResultDTO>();
-        while (found.Count < limits.PageLength)
-        {
-            found.AddRange(filter.Execute(StudentHistory.GetLastRecordsForManyStudents(limits, (false, false)))
-            .Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo)));
-            limits = new QueryLimits(dto.PageSize, dto.PageSize, limits.GlobalOffset + dto.PageSize);
-            if (limits.GlobalOffset > count)
-            {
-                break;
-            }
-        }
-        foreach (var searchResult in found)
-        {
-            searchResult.RequiredOffset = limits.GlobalOffset;
-        }
+                ExtractAddress = (false, false),
+                ExtractGroups = true,
+                ExtractOrders = false,
+                ExtractStudents = true,
+                ExtractStudentUnique = true,
+                ExtractLastState = true
+            },
+            condition, parameters
+        ).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo));
         return Json(found);
     }
 }

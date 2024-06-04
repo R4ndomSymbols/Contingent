@@ -3,10 +3,10 @@ using System.Text.Json.Serialization;
 namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class SpecialitySearchQueryDTO
+public class SpecialtySearchQueryDTO
 {
 
-    public SpecialitySearchQueryDTO()
+    public SpecialtySearchQueryDTO()
     {
         SearchString = null;
     }

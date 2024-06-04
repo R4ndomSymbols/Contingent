@@ -110,7 +110,7 @@ public class SearchHelper
         return null;
     }
 
-    public Filter<SpecialtyModel> GetFilterForSpecialties(SpecialitySearchQueryDTO dto)
+    public Filter<SpecialtyModel> GetFilterForSpecialties(SpecialtySearchQueryDTO dto)
     {
         var filter = Filter<SpecialtyModel>.Empty;
         if (dto is null)

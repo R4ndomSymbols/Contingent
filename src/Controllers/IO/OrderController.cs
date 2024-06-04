@@ -73,7 +73,7 @@ public class OrderController : Controller
             {
                 var order = built.ResultObject;
                 order.Save(null);
-                return Ok(Json(new { OrderId = order.Id }).Value);
+                return Json(new OrderSearchDTO(order));
             }
             return BadRequest(new ErrorCollectionDTO(built.Errors));
         }

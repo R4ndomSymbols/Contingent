@@ -1,15 +1,24 @@
-import { Utilities } from "../site";
+import { Utilities } from "../site.js";
 let utils = new Utilities();
-
+let id = null;
 $(document).ready(function () {
-    $(".identity_dependency").blur(
-        function(){
-            updateIdentity();
-        }
-    );
+    id = $("#OrderOrgId").attr("orgid");
+    if (id === "" || id === undefined || id == null || id === "-1") {
+        $(".identity_dependency").focusout(
+            function () {
+                utils.registerScheduledQuery(
+                    () => updateIdentity()
+                );
+            }
+        );
+    }
+    else {
+        utils.disableField("EffectiveDate");
+        utils.disableField("identity_dependency", utils.SELECTOR_CLASS)
+    }
 });
 
-function updateIdentity(){
+function updateIdentity() {
 
     $.ajax({
         type: "POST",
@@ -19,19 +28,19 @@ function updateIdentity(){
                 SpecifiedDate: $("#SpecifiedDate").val(),
                 EffectiveDate: $("#EffectiveDate").val(),
                 OrderType: Number($("#OrderType").val()),
-                OrderDisplayedName: $("#OrderDisplayedName").val(),
-                OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val() 
+                OrderDisplayedName: "test",
+                OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val()
             }
         ),
         contentType: "application/json",
         success: function (response) {
-            document.getElementById("OrderOrgId").innerText = response["orderOrgId"];
+            $("#order_name").text("Приказ " + String(response["orderOrgId"]));
         },
-        error: function(xhr, textStatus, errThrown){
+        error: function (xhr, textStatus, errThrown) {
             utils.readAndSetErrors(xhr);
         }
     });
-    
+
 }
 
 $("#save").click(function () {
@@ -39,20 +48,21 @@ $("#save").click(function () {
         type: "POST",
         url: "/orders/save",
         data: JSON.stringify(
-        {
-            SpecifiedDate: $("#SpecifiedDate").val(),
-            EffectiveDate: $("#EffectiveDate").val(),
-            OrderType: Number($("#OrderType").val()),
-            OrderDisplayedName: $("#OrderDisplayedName").val(),
-            OrderDescription: $("#OrderDescription").val() == "" ? null : $("#OrderDescription").val() 
+            {
+                Id: id,
+                SpecifiedDate: $("#SpecifiedDate").val(),
+                EffectiveDate: $("#EffectiveDate").val(),
+                OrderType: Number($("#OrderType").val()),
+                OrderDisplayedName: $("#OrderDisplayedName").val(),
+                OrderDescription: $("#OrderDescription").val()
 
-        }),
-        dataType: "JSON",
+            }),
+        contentType: "application/json",
         success: function (response) {
-            $("#OrderId").attr("order_id",  response["orderId"]);
-            alert("Приказ успешно сохранен")
+            id = response["orderId"];
+            utils.notifySuccess();
         },
-        error: function(xhr, textStatus, errThrown){
+        error: function (xhr, textStatus, errThrown) {
             utils.readAndSetErrors(xhr);
         }
     });

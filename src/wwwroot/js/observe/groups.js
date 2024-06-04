@@ -1,4 +1,4 @@
-import { Utilities } from "../site";
+import { Utilities } from "../site.js";
 let utils = new Utilities();
 let dateInput;
 let searchButton;
@@ -16,12 +16,12 @@ $(document).ready(function () {
             contentType: "application/json",
             success: function (response) {
                 resetHistory();
-                $.each(response, function (indexInArray, valueOfElement) { 
-                     appendHistoryRecord(valueOfElement)
+                $.each(response, function (indexInArray, valueOfElement) {
+                    appendHistoryRecord(valueOfElement)
                 });
-    
+
             },
-            error: function (jqXHR, status, error){
+            error: function (jqXHR, status, error) {
                 utils.readAndSetErrors(jqXHR)
                 resetHistory();
             }
@@ -30,10 +30,10 @@ $(document).ready(function () {
 });
 
 
-function resetHistory(){
+function resetHistory() {
     historyTable.empty();
 }
-function appendHistoryRecord(record){
+function appendHistoryRecord(record) {
     historyTable.append(
         `
             <tr>
@@ -54,11 +54,11 @@ function appendHistoryRecord(record){
     );
 }
 
-function getDataForSearchHistory(){
+function getDataForSearchHistory() {
     return JSON.stringify(
         {
             Id: Number($("#info").attr("group_id")),
-            OnDate: dateInput.val()   
+            OnDate: dateInput.val()
         }
     )
 }

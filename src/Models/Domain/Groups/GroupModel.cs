@@ -6,6 +6,7 @@ using Contingent.SQL;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow.History;
 using Contingent.Models.Infrastructure;
+using Microsoft.AspNetCore.Routing.Tree;
 
 namespace Contingent.Models.Domain.Groups;
 
@@ -17,7 +18,8 @@ namespace Contingent.Models.Domain.Groups;
 
 public class GroupModel
 {
-    private static List<GroupModel> _saveQueue = new List<GroupModel>();
+    // набор групп, которые должны быть сохранены вместе с главной
+    private List<GroupModel> _threadRemainings = new();
     private bool _changed = false;
     public static string InvalidNamePlaceholder => "Нет";
     private int _id;
@@ -67,6 +69,20 @@ public class GroupModel
     public string GroupName
     {
         get => _groupName;
+    }
+    public string ThreadNames
+    {
+        get
+        {
+            if (_id == Utils.INVALID_ID)
+            {
+                return string.Join(", ", new[] { this }.Concat(_threadRemainings).Select(x => x.GroupName));
+            }
+            else
+            {
+                return string.Join(", ", FindGroupsByThread(new QueryLimits(0, 6), _historyThreadId).Select(x => x.GroupName));
+            }
+        }
     }
     public int CreationYear
     {
@@ -146,58 +162,73 @@ public class GroupModel
 
 
     // только первый курс
-    public static Result<GroupModel> Build(GroupInDTO? dto)
+    public static Result<GroupModel> Build(GroupInDTO? dtoIn)
     {
-        if (dto is null)
+        if (dtoIn is null)
         {
             return Result<GroupModel>.Failure(new ValidationError("dto не может быть null"));
         }
-        IList<ValidationError?> errors = new List<ValidationError?>();
-        GroupModel model = new();
-        if (errors.IsValidRule(
-            Period.OrganizationLifetime.IsWithin(new DateTime(dto.CreationYear, 1, 1)),
-            message: "Дата создания указана неверно",
-            propName: nameof(CreationYear)
-        ))
+        GroupModel built = new();
+        Result<GroupModel> result;
+        if (dtoIn.AutogenerateName)
         {
-            model._creationYear = dto.CreationYear;
+            result = ProcessAuto(built, dtoIn);
+            if (result.IsSuccess)
+            {
+                var group = result.ResultObject;
+                group._threadRemainings.AddRange(group.SupplementGroupSequence());
+            }
         }
-        if (errors.IsValidRule(
-            GroupEducationFormat.TryGetByTypeCode(dto.EduFormatCode, out GroupEducationFormat? type) && type!.IsDefined(),
-            message: "Тип обучения указан неверно",
-            propName: nameof(FormatOfEducation)
-        ))
+        else
         {
-            model._formatOfEducation = type!;
+            result = ProcessManual(built, dtoIn);
         }
-        if (errors.IsValidRule(
-            GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship) && sponsorship!.IsDefined(),
-            message: "Тип финансирования указан неверно",
-            propName: nameof(CreationYear)
-        ))
-        {
-            model._groupSponsorship = sponsorship!;
-        }
+        return result;
 
-        var found = SpecialtyModel.GetById(dto.EduProgramId).Result;
-
-        if (errors.IsValidRule(
-            found is not null,
-            message: "Специальность не может быть не указана",
-            propName: nameof(EducationProgram)
-        ))
+        Result<GroupModel> ProcessAuto(GroupModel model, GroupInDTO dto)
         {
-            model._educationProgram = found!;
-        }
+            IList<ValidationError?> errors = new List<ValidationError?>();
+            if (errors.IsValidRule(
+                int.TryParse(dto.CreationYear, out int result) &&
+                result > 0 &&
+                Period.OrganizationLifetime.IsWithin(new DateTime(result, 1, 1)),
+                message: "Дата создания указана неверно",
+                propName: nameof(CreationYear)
+            ))
+            {
+                model._creationYear = result;
+            }
+            if (errors.IsValidRule(
+                GroupEducationFormat.TryGetByTypeCode(dto.EduFormatCode, out GroupEducationFormat? type) && type!.IsDefined(),
+                message: "Тип обучения указан неверно",
+                propName: nameof(FormatOfEducation)
+            ))
+            {
+                model._formatOfEducation = type!;
+            }
+            if (errors.IsValidRule(
+                GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship) && sponsorship!.IsDefined(),
+                message: "Тип финансирования указан неверно",
+                propName: nameof(CreationYear)
+             ))
+            {
+                model._groupSponsorship = sponsorship!;
+            }
 
-        if (errors.Any())
-        {
-            return Result<GroupModel>.Failure(errors);
-        }
-        model._nameGenerated = dto.AutogenerateName;
+            var found = SpecialtyModel.GetById(dto.EduProgramId).Result;
 
-        if (model._nameGenerated)
-        {
+            if (errors.IsValidRule(
+                found is not null,
+                message: "Специальность не может быть не указана",
+                propName: nameof(EducationProgram)
+            ))
+            {
+                model._educationProgram = found!;
+            }
+            if (errors.Any())
+            {
+                return Result<GroupModel>.Failure(errors);
+            }
             // для генерации имени нужно знать:
             // курс группы, специальность группы, тип обучения и тип посещения,
             // так же группа может быть с 11 класса (не учитывается)
@@ -208,11 +239,13 @@ public class GroupModel
             model._nameGenerated = dto.AutogenerateName;
             model._sequenceLetter = model.GetSequenceLetter();
             model._groupName = model.GenerateGroupName();
+            return Result<GroupModel>.Success(model);
 
         }
-        else
+
+        Result<GroupModel> ProcessManual(GroupModel model, GroupInDTO dto)
         {
-            model._sequenceLetter = null;
+            IList<ValidationError?> errors = new List<ValidationError?>();
             if (errors.IsValidRule(
                 ValidatorCollection.CheckStringPattern(dto.GroupName, ValidatorCollection.OnlyText),
                 message: "Неверно указано имя группы",
@@ -221,51 +254,99 @@ public class GroupModel
             {
                 model._groupName = dto.GroupName;
             }
+            var ancestor = GetGroupById(dto.PreviousGroupId);
+
+            // для отключения сообщений о null в ancestor
+            // для случая, когда указана родительская группа
             if (errors.IsValidRule(
-                model._educationProgram.CourseCount >= dto.CourseOn && dto.CourseOn > 0,
-                message: "Курс указан неверно",
-                propName: nameof(CourseOn))
-            )
+                ancestor is not null,
+                message: "Не указан родитель",
+                propName: "AncestorGroup"
+            ) && ancestor is not null)
             {
-                model._courseOn = dto.CourseOn;
-                var ancestor = GetGroupById(dto.PreviousGroupId);
-                if (ancestor is null)
-                {
-                    if (errors.IsValidRule(
-                    model._courseOn == 1,
-                    message: "Группа-предшественник указана неверно",
+                if (errors.IsValidRule(
+                    ancestor._courseOn + 1 > ancestor._educationProgram.CourseCount,
+                    message: "Группа не может быть предшественницей указанной",
                     propName: "AncestorGroup"
-                    ))
-                    {
-                        model._historyThreadId = GetNextSequenceId();
-                        model._isActive = true;
-                    }
-                }
-                else
+                ))
                 {
-                    if (errors.IsValidRule(
-                    model._courseOn - ancestor._courseOn == 1,
-                    message: "Группа-предшественник указана неверно",
-                    propName: "AncestorGroup"
-                    ))
-                    {
-                        model._historyThreadId = ancestor._historyThreadId;
-                        model._isActive = new GroupHistory(ancestor).GetStateOnDate(DateTime.Now).Any();
-                    }
+                    model._courseOn = ancestor._courseOn + 1;
                 }
+                if (errors.IsValidRule(
+                    CheckUniqueSequence(ancestor._historyThreadId, model._courseOn),
+                    message: string.Format("Группа такого курса {0} уже существует в этом потоке", model._courseOn),
+                    propName: "AncestorGroup"
+                ))
+                {
+                    model._historyThreadId = ancestor._historyThreadId;
+                }
+                if (errors.Any())
+                {
+                    return Result<GroupModel>.Failure(errors);
+                }
+                model._creationYear = ancestor._creationYear;
+                model._educationProgram = ancestor._educationProgram;
+                model._formatOfEducation = ancestor._formatOfEducation;
+                model._groupSponsorship = ancestor._groupSponsorship;
+                model._isActive = true;
+                model._nameGenerated = false;
+                return Result<GroupModel>.Success(model);
+            }
+            else
+            {
+                if (errors.IsValidRule(
+                    int.TryParse(dto.CreationYear, out int result) &&
+                    result > 0 &&
+                    Period.OrganizationLifetime.IsWithin(new DateTime(result, 1, 1)),
+                    message: "Дата создания указана неверно",
+                    propName: nameof(CreationYear)
+                ))
+                {
+                    model._creationYear = result;
+                }
+                if (errors.IsValidRule(
+                    GroupEducationFormat.TryGetByTypeCode(dto.EduFormatCode, out GroupEducationFormat? type) && type!.IsDefined(),
+                    message: "Тип обучения указан неверно",
+                    propName: nameof(FormatOfEducation)
+                ))
+                {
+                    model._formatOfEducation = type!;
+                }
+                if (errors.IsValidRule(
+                    GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship) && sponsorship!.IsDefined(),
+                    message: "Тип финансирования указан неверно",
+                    propName: nameof(CreationYear)
+                ))
+                {
+                    model._groupSponsorship = sponsorship!;
+                }
+
+                var found = SpecialtyModel.GetById(dto.EduProgramId).Result;
+
+                if (errors.IsValidRule(
+                    found is not null,
+                    message: "Специальность не может быть не указана",
+                    propName: nameof(EducationProgram)
+                ))
+                {
+                    model._educationProgram = found!;
+                }
+                if (errors.Any())
+                {
+                    return Result<GroupModel>.Failure(errors);
+                }
+                // для генерации имени нужно знать:
+                // курс группы, специальность группы, тип обучения и тип посещения,
+                // так же группа может быть с 11 класса (не учитывается)
+                // порядковый номер группы среди других таких же групп (совпадает специальность и курс)
+                model._courseOn = 1;
+                model._isActive = true;
+                model._historyThreadId = GetNextSequenceId();
+                model._nameGenerated = false;
+                model._sequenceLetter = null;
+                return Result<GroupModel>.Success(model);
             }
         }
-        if (errors.Any())
-        {
-            return Result<GroupModel>.Failure(errors);
-        }
-        else
-        {
-            _saveQueue.Add(model);
-            return Result<GroupModel>.Success(model);
-        }
-
-
     }
 
     public static GroupModel? GetGroupById(int id, ObservableTransaction? scope = null)
@@ -282,62 +363,32 @@ public class GroupModel
         var found = FindGroups(new QueryLimits(0, 1), additionalConditions: where, addtitionalParameters: parameters).Result;
         return found.FirstOrDefault(x => true, null);
     }
-    // метод сохраняет не только созданную группу, но и создает набор групп до выпускного курса
-    // вызывается только в случае, если группа имеет первый курс, и ее имя генерируемое
-    private Result<IReadOnlyCollection<GroupModel>> SaveGroupSequence(ObservableTransaction? scope = null)
-    {
-        if (_courseOn != 1 || !_nameGenerated)
-        {
-            return Result<IReadOnlyCollection<GroupModel>>.Failure(new ValidationError("Такую группу невозможно сохранить данным образом"));
-        }
-        var toSave = GenerateGroupSequence();
-        var saved = new List<GroupModel>();
-        for (int i = 0; i < toSave.Length; i++)
-        {
-            var result = toSave[i].SaveBase(scope);
-            if (result.IsSuccess)
-            {
-                saved.Add(toSave[i]);
-            }
-            else
-            {
-                scope?.RollbackAsync()?.Wait();
-                return Result<IReadOnlyCollection<GroupModel>>.Failure(result.Errors);
-            }
 
-        }
-        return Result<IReadOnlyCollection<GroupModel>>.Success(saved);
-    }
     public ResultWithoutValue Save(ObservableTransaction? scope = null)
     {
         if (_id != Utils.INVALID_ID)
         {
             return Update(scope);
         }
-        if (_courseOn == 1 && _nameGenerated)
+        var result = SaveBase(scope);
+        if (result.IsFailure)
         {
-            var result = SaveGroupSequence(scope);
+            return result;
+        }
+        foreach (var toSave in _threadRemainings)
+        {
+            result = toSave.SaveBase(scope);
             if (result.IsFailure)
             {
-                return ResultWithoutValue.Failure(result.Errors);
+                return result;
             }
-            UpdateSavingQueue(this);
-            return ResultWithoutValue.Success();
         }
-        var resultSingle = SaveBase(scope);
-        if (resultSingle.IsSuccess)
-        {
-            UpdateSavingQueue(this);
-        }
-        return resultSingle;
+        _threadRemainings.Clear();
+        return ResultWithoutValue.Success();
     }
 
     private ResultWithoutValue SaveBase(ObservableTransaction? scope)
     {
-        if (GetGroupById(_id) is not null || _educationProgram.Id is null)
-        {
-            return ResultWithoutValue.Failure(new ValidationError("Невозможно сохранить данную группу"));
-        }
         NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
         string cmdText = "INSERT INTO public.educational_group( " +
             " program_id, course_on, group_name, type_of_financing, " +
@@ -502,16 +553,10 @@ public class GroupModel
             return FindGroups(limits, additionalConditions: where).Result;
         }
         var parameters = new SQLParameterCollection();
-        var p1 = parameters.Add<string>(name.Trim().ToLower() + (strict ? "" : "%"));
         where = where.Unite(
             ComplexWhereCondition.ConditionRelation.AND,
-            new ComplexWhereCondition(
-            new WhereCondition(
-                new Column("lower", "group_name", "educational_group", null),
-                p1,
-                WhereCondition.Relations.Like
-            )
-        ));
+            GetFilterForGroup(name.Trim().ToLower() + (strict ? "" : "%"), ref parameters)
+        );
         return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
     }
     public static IReadOnlyCollection<GroupModel> FindGroupsByThread(QueryLimits limits, int threadId, int? courseOn = null)
@@ -538,6 +583,21 @@ public class GroupModel
                 )
         );
         return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
+    }
+
+    public static ComplexWhereCondition GetFilterForGroup(string name, ref SQLParameterCollection parameters)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(name))
+        {
+            throw new Exception("Запрос не может быть сформирован с такими параметрами");
+        }
+        var p1 = parameters.Add<string>(name);
+        return new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("lower", "group_name", "educational_group", null),
+                p1,
+                WhereCondition.Relations.Like
+        ));
     }
 
     public GroupModel Copy()
@@ -577,26 +637,19 @@ public class GroupModel
         }
     }
 
-    public GroupModel[] GenerateGroupSequence()
+    private GroupModel[] SupplementGroupSequence()
     {
-        if (!_nameGenerated)
+        if (!_nameGenerated || _courseOn == _educationProgram.CourseCount)
         {
-            return new[] { this };
+            return Array.Empty<GroupModel>();
         }
-        var groups = new GroupModel[_educationProgram.CourseCount];
-        for (int course = 1; course < groups.Length + 1; course++)
+        var groups = new GroupModel[_educationProgram.CourseCount - this._courseOn];
+        for (int course = this._courseOn + 1; course <= _educationProgram.CourseCount; course++)
         {
-            int index = course - 1;
-            if (course == _courseOn)
-            {
-                groups[index] = this;
-            }
-            else
-            {
-                groups[index] = this.Copy();
-                groups[index]._courseOn = course;
-                groups[index]._groupName = groups[index].GenerateGroupName();
-            }
+            int index = course - (this._courseOn + 1);
+            groups[index] = this.Copy();
+            groups[index]._courseOn = course;
+            groups[index]._groupName = groups[index].GenerateGroupName();
         }
         return groups;
     }
@@ -662,36 +715,16 @@ public class GroupModel
         return FindGroupsByThread(new QueryLimits(0, _educationProgram.CourseCount), _historyThreadId, _courseOn + 1).FirstOrDefault();
 
     }
-    // потенциально, это
-    // может привести к утечке памяти
-    // обновляет айдишку потока всех в очереди
-    private static void UpdateSavingQueue(GroupModel groupModel)
+
+    private static bool CheckUniqueSequence(int groupSequence, int courseOn)
     {
-        var index = _saveQueue.FindIndex(x => object.ReferenceEquals(x, groupModel));
-        if (index != -1)
-        {
-            _saveQueue.RemoveAt(index);
-        }
-        if (groupModel._id == Utils.INVALID_ID)
-        {
-            return;
-        }
-
-        if (_saveQueue.Any())
-        {
-            var id = GetNextSequenceId();
-            var nextLetter = groupModel.GetSequenceLetter();
-            foreach (var group in _saveQueue)
-            {
-                if (groupModel.GetRelationTo(group) == GroupRelations.Sibling)
-                {
-                    group._sequenceLetter = nextLetter;
-                }
-                group._historyThreadId = id;
-
-            }
-
-        }
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        string cmdText = "SELECT group_id FROM educational_group WHERE course_on = @p1 AND group_sequence_id = @p2";
+        using var cmd = new NpgsqlCommand(cmdText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter("p1", courseOn));
+        cmd.Parameters.Add(new NpgsqlParameter("p2", groupSequence));
+        using var reader = cmd.ExecuteReader();
+        return !reader.HasRows;
     }
 }
 

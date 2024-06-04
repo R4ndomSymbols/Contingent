@@ -133,6 +133,36 @@ html {
 
 }
 
+.page-layout-container {
+  padding: 1rem;
+  flex-flow: column;
+  flex: 1 1 auto;
+}
+
+.hidden-element {
+  display: none !important;
+}
+
+.separator {
+  border-top: 1px solid #d90209;
+
+}
+
+
+/*
+Заголовки h3
+*/
 .group-title {
   margin-bottom: 1rem;
+}
+
+.error-box {
+  color: #d90209;
+  margin-top: 1rem;
+  text-align: start;
+}
+
+.field-title {
+  color: #181617;
+  margin-bottom: 0.5rem;
 }
