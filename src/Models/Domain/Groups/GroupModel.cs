@@ -106,6 +106,7 @@ public class GroupModel
     private GroupModel()
     {
         _id = Utils.INVALID_ID;
+
     }
 
     public static Mapper<GroupModel> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
@@ -187,7 +188,7 @@ public class GroupModel
 
         Result<GroupModel> ProcessAuto(GroupModel model, GroupInDTO dto)
         {
-            IList<ValidationError?> errors = new List<ValidationError?>();
+            IList<ValidationError> errors = new List<ValidationError>();
             if (errors.IsValidRule(
                 int.TryParse(dto.CreationYear, out int result) &&
                 result > 0 &&
@@ -245,7 +246,7 @@ public class GroupModel
 
         Result<GroupModel> ProcessManual(GroupModel model, GroupInDTO dto)
         {
-            IList<ValidationError?> errors = new List<ValidationError?>();
+            IList<ValidationError> errors = new List<ValidationError>();
             if (errors.IsValidRule(
                 ValidatorCollection.CheckStringPattern(dto.GroupName, ValidatorCollection.OnlyText),
                 message: "Неверно указано имя группы",
@@ -553,9 +554,10 @@ public class GroupModel
             return FindGroups(limits, additionalConditions: where).Result;
         }
         var parameters = new SQLParameterCollection();
+        var correct = name.Trim().ToLower();
         where = where.Unite(
             ComplexWhereCondition.ConditionRelation.AND,
-            GetFilterForGroup(name.Trim().ToLower() + (strict ? "" : "%"), ref parameters)
+            GetFilterForGroup(strict ? correct : "%" + correct + "%", ref parameters)
         );
         return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
     }

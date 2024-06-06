@@ -9,6 +9,8 @@ public class ErrorCollectionDTO
     public const string CriticalErrorIdentifier = "CRITICAL_ERROR";
     // идентификатор неконкретной ошибки
     public const string GeneralErrorIdentifier = "GENERAL_ERROR";
+    // индетификатор пустого ввода
+    public const string EmptyInputIdentifier = "NULL_RECEIVED_ERROR";
     public IReadOnlyCollection<ErrorDTO> Errors { get; private init; }
 
     public ErrorCollectionDTO(IEnumerable<ValidationError?>? errors)
@@ -59,7 +61,8 @@ public static class ErrorCollectionDTOExtensions
         return new ErrorCollectionDTO(error);
     }
 
-    public static ErrorCollectionDTO AsErrorCollection(this IEnumerable<ValidationError?> errors){
+    public static ErrorCollectionDTO AsErrorCollection(this IEnumerable<ValidationError?> errors)
+    {
         return new ErrorCollectionDTO(errors);
     }
 

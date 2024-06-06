@@ -111,7 +111,7 @@ public class Building : IAddressPart
         );
         return Result<Building>.Success(got);
     }
-    public static Building? Create(AddressRecord source, Street parent)
+    public static Building? Create(AddressRecord source, Street? parent)
     {
         if (source.AddressLevelCode != ADDRESS_LEVEL || parent is null)
         {
@@ -152,7 +152,7 @@ public class Building : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var found = AddressModel.FindRecords(_id).Result;
-        return found.Select(d => Apartment.Create(d, this));
+        return found.Select(d => Apartment.Create(d, this)!);
     }
     public override string ToString()
     {
@@ -166,5 +166,10 @@ public class Building : IAddressPart
         }
         var toCompare = (Building)obj;
         return toCompare._id == this._id;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }

@@ -4,11 +4,13 @@ namespace Contingent.Models.Domain.Students;
 public class TargetEduAgreement
 {
 
+
     private TargetEduAgreement(TypesOfEducationAgreement type, string name)
     {
         RussianName = name;
         AgreementType = type;
     }
+    public static TargetEduAgreement NotStated => new TargetEduAgreement(TypesOfEducationAgreement.NotMentioned, "Не указан");
     public string RussianName { get; private init; }
     public TypesOfEducationAgreement AgreementType { get; private init; }
 

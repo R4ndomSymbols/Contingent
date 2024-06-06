@@ -30,7 +30,8 @@ public sealed class GroupInDTO : IFromCSV<GroupInDTO>
 
     public GroupInDTO()
     {
-
+        CreationYear = "";
+        GroupName = "";
     }
 
     public Result<GroupInDTO> MapFromCSV(CSVRow row)

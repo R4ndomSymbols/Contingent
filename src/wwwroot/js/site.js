@@ -6,6 +6,7 @@
     ERROR_ON_PAGE_DISPLAY_ELEMENT_NAME_POSTFIX = "_err";
     SELECTOR_CLASS = "."
     SELECTOR_ID = "#"
+    INVALID_ID = -1
     locks = new Map();
     // контейнер ошибок - это перечисление, содержащее ошибки с полями
     // формат ошибок определен на бекенде

@@ -41,7 +41,8 @@ header {
 }
 
 footer {
-  flex: 0 1 40px
+  flex: 0 1 50px;
+  background-color: #ffffff;
 }
 
 
@@ -130,7 +131,6 @@ html {
   border-radius: 10px;
   border: 1px solid #d90209;
   padding: 1rem;
-
 }
 
 .page-layout-container {
@@ -165,4 +165,24 @@ html {
 .field-title {
   color: #181617;
   margin-bottom: 0.5rem;
+}
+
+.field-content {
+  text-align: left;
+  margin-bottom: 0rem;
+}
+
+.field-h-title {
+  min-width: 40%;
+  text-align: left;
+  margin-right: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.data-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #b1b6b9;
+  margin-top: 0.5rem;
 }

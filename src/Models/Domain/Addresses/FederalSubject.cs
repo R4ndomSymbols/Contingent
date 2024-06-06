@@ -61,7 +61,7 @@ public class FederalSubject : IAddressPart
         FederalCity = 2,
         Edge = 3, // край
         Autonomy = 4, // автономная область
-        AutomomyDistrict = 5, // автономный округ
+        AutonomyDistrict = 5, // автономный округ
         Region = 6, // область
     }
 
@@ -70,7 +70,7 @@ public class FederalSubject : IAddressPart
         {FederalSubjectTypes.FederalCity, new AddressNameFormatting("г.ф.з.", "Город федерального значения", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.Edge, new AddressNameFormatting("край", "Край", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.Autonomy, new AddressNameFormatting("а.обл.", "Автономная область", AddressNameFormatting.BEFORE)},
-        {FederalSubjectTypes.AutomomyDistrict, new AddressNameFormatting("а.окр", "Автономный округ", AddressNameFormatting.BEFORE)},
+        {FederalSubjectTypes.AutonomyDistrict, new AddressNameFormatting("а.окр", "Автономный округ", AddressNameFormatting.BEFORE)},
         {FederalSubjectTypes.Region, new AddressNameFormatting("обл.", "Область", AddressNameFormatting.BEFORE)},
     };
     // кода у субъекта не будет
@@ -181,11 +181,16 @@ public class FederalSubject : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         var found = AddressModel.FindRecords(_id).Result;
-        return found.Select(rec => District.Create(rec, this));
+        return found.Select(rec => District.Create(rec, this)!);
     }
 
     public override string ToString()
     {
         return _subjectName.FormattedName;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }

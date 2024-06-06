@@ -152,7 +152,7 @@ public class SettlementArea : IAddressPart
     public IEnumerable<IAddressPart> GetDescendants()
     {
         IEnumerable<AddressRecord> foundUntyped = AddressModel.FindRecords(_id).Result;
-        return foundUntyped.Select(rec => Settlement.Create(rec, this)) ?? new List<Settlement>();
+        return foundUntyped.Select(rec => Settlement.Create(rec, this)!) ?? new List<Settlement>();
     }
     public override string ToString()
     {

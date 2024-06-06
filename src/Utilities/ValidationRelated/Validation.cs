@@ -125,7 +125,7 @@ public static class ValidatorCollection
         err.Log();
         return err;
     }
-    public static bool IsValidRule([NotNull] this IList<ValidationError?> source, bool res, string message, string propName = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0)
+    public static bool IsValidRule([NotNull] this IList<ValidationError> source, bool res, string message, string propName = "", [CallerFilePath] string path = "", [CallerLineNumber] int line = 0)
     {
         if (!res)
         {

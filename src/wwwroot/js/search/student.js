@@ -33,7 +33,6 @@ function fillPage(studentsFound) {
     lastFound = (studentsFound === undefined || studentsFound.length === 0) ? undefined : studentsFound;
 
     $.each(studentsFound, function (indexInArray, student) {
-        offsets[currentPage] = student.requiredOffset
         $("#students_found").append(
             `
             <tr>

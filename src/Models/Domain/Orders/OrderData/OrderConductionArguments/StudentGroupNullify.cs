@@ -7,17 +7,13 @@ using Utilities;
 
 namespace Contingent.Models.Domain.Orders.OrderData;
 
-public class StudentGroupNullifyMove : StudentStatement
+public class StudentGroupNullifyMove
 {
     public StudentModel Student { get; private set; }
 
     private StudentGroupNullifyMove(StudentModel studentModel)
     {
         Student = studentModel;
-    }
-    private StudentGroupNullifyMove()
-    {
-        Student = null!;
     }
 
     public static Result<StudentGroupNullifyMove> Create(StudentGroupNullifyMoveDTO? dto)
@@ -26,8 +22,7 @@ public class StudentGroupNullifyMove : StudentStatement
         {
             return Result<StudentGroupNullifyMove>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
         }
-        var move = new StudentGroupNullifyMove();
-        var student = move.GetStudent(dto.Student);
+        var student = OrderDataExtractions.GetStudent(dto.Student);
         if (student.IsFailure)
         {
             return Result<StudentGroupNullifyMove>.Failure(student.Errors);
@@ -73,7 +68,7 @@ public class StudentGroupNullifyMoveList : IEnumerable<StudentGroupNullifyMove>
         var list = new List<StudentFlowRecord>();
         foreach (var i in this)
         {
-            list.Add(new StudentFlowRecord(orderBy, i.Student, null));
+            list.Add(StudentFlowRecord.FromModel(orderBy, i.Student, null));
         }
         return list;
     }

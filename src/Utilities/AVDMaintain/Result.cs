@@ -4,8 +4,8 @@ public sealed class Result<T> : IResult
 {
 
     private readonly bool _isSuccess;
-    private readonly IEnumerable<ValidationError?> _errors;
-    private T _resultObject;
+    private readonly IEnumerable<ValidationError> _errors;
+    private T? _resultObject;
     public T ResultObject
     {
         get
@@ -29,7 +29,7 @@ public sealed class Result<T> : IResult
     {
         get => !_isSuccess;
     }
-    public IReadOnlyCollection<ValidationError?> Errors
+    public IReadOnlyCollection<ValidationError> Errors
     {
         get
         {
@@ -48,7 +48,7 @@ public sealed class Result<T> : IResult
         _errors = Array.Empty<ValidationError>();
     }
 
-    private Result(IEnumerable<ValidationError?> errors)
+    private Result(IEnumerable<ValidationError> errors)
     {
         _errors = errors;
         _isSuccess = false;
@@ -59,7 +59,7 @@ public sealed class Result<T> : IResult
     {
         return new Result<T>(obj);
     }
-    public static Result<T> Failure(IEnumerable<ValidationError?>? errors)
+    public static Result<T> Failure(IEnumerable<ValidationError>? errors)
     {
         if (errors is null)
         {
@@ -110,7 +110,7 @@ public sealed class Result<T> : IResult
         return ResultObject;
     }
 
-    public IReadOnlyCollection<ValidationError?> GetErrors()
+    public IReadOnlyCollection<ValidationError> GetErrors()
     {
         return Errors;
     }
@@ -124,11 +124,11 @@ public class ResultWithoutValue : IResult
 {
     private bool _isSuccess;
 
-    private readonly IEnumerable<ValidationError?> _errors;
+    private readonly IEnumerable<ValidationError> _errors;
     public bool IsSuccess => _isSuccess;
     public bool IsFailure => !_isSuccess;
 
-    public IReadOnlyCollection<ValidationError?> Errors
+    public IReadOnlyCollection<ValidationError> Errors
     {
         get
         {
@@ -140,14 +140,14 @@ public class ResultWithoutValue : IResult
         }
     }
 
-    private ResultWithoutValue(IEnumerable<ValidationError?> errors)
+    private ResultWithoutValue(IEnumerable<ValidationError> errors)
     {
         _errors = errors;
         _isSuccess = false;
     }
     private ResultWithoutValue()
     {
-        _errors = Array.Empty<ValidationError?>();
+        _errors = Array.Empty<ValidationError>();
         _isSuccess = true;
     }
 
@@ -155,7 +155,7 @@ public class ResultWithoutValue : IResult
     {
         return new ResultWithoutValue();
     }
-    public static ResultWithoutValue Failure(IEnumerable<ValidationError?>? errors)
+    public static ResultWithoutValue Failure(IEnumerable<ValidationError>? errors)
     {
         if (errors is null)
         {
@@ -173,7 +173,7 @@ public class ResultWithoutValue : IResult
         {
             throw new ArgumentNullException(nameof(err));
         }
-        return new ResultWithoutValue(new List<ValidationError?> { err });
+        return new ResultWithoutValue(new List<ValidationError> { err });
     }
 
     public Result<U> Retrace<U>(U? resultObject)

@@ -73,7 +73,7 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        string.Format("cтудент не может быть отчислен из группы {0}", group is null ? GroupModel.InvalidNamePlaceholder : group.GroupName), student.Student)
+                        string.Format("студент не может быть отчислен из группы {0}", group is null ? GroupModel.InvalidNamePlaceholder : group.GroupName), student.Student)
                     );
             }
         }
@@ -82,7 +82,6 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var graduate = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentGroupNullifyMove.Create(graduate);
         if (result.IsFailure)

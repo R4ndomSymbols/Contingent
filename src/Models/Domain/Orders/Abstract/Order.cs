@@ -77,197 +77,230 @@ public abstract class Order : IFromCSV<Order>
 
     protected abstract OrderSequentialGuardian SequentialGuardian { get; }
 
-    private static Dictionary<OrderTypes, Func<int, NpgsqlDataReader, Utilities.IResult>> _orderTypeMappings = new Dictionary<OrderTypes, Func<int, NpgsqlDataReader, Utilities.IResult>>{
-        {
-            OrderTypes.FreeEnrollment, FreeEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.FreeEnrollmentFromAnotherOrg, FreeEnrollmentWithTransferOrder.Create
-        },
-        {
-            OrderTypes.FreeReEnrollment, FreeReEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferWithinCourseOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithAcademicDebt, FreeDeductionWithAcademicDebtOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithGraduation, FreeDeductionWithGraduationOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithOwnDesire, FreeDeductionWithOwnDesireOrder.Create
-        },
-        // платные
-        {
-            OrderTypes.PaidEnrollment, PaidEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.PaidEnrollmentWithTransfer, PaidEnrollmentWithTransferOrder.Create
-        },
-        {
-            OrderTypes.PaidReEnrollment, PaidReEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.PaidTransferNextCourse, PaidTransferNextCourseOrder.Create
-        },
-        {
-            OrderTypes.PaidTransferBetweenSpecialties, PaidTransferBetweenSpecialtiesOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithAcademicDebt, PaidDeductionWithAcademicDebtOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithGraduation, PaidDeductionWithGraduationOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithOwnDesire, PaidDeductionWithOwnDesireOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithTransfer, PaidDeductionWithTransferOrder.Create
-        }
-    };
+    private static readonly Dictionary<OrderTypes,
+        (Func<int, NpgsqlDataReader, Utilities.IResult> byId,
+         Func<int, string, Utilities.IResult> forConduction,
+         Func<OrderDTO?, Utilities.IResult> fromDTO
+        )>
 
-    private static Dictionary<OrderTypes, Func<int, string, Utilities.IResult>> _orderForConductionMappings = new Dictionary<OrderTypes, Func<int, string, Utilities.IResult>>{
+    _orderTypeMappings = new()
+    {
         {
             OrderTypes.FreeEnrollment,
-            (id, jsonString) => FreeEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (FreeEnrollmentOrder.Create,
+            (id, jsonString) => FreeEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+            FreeEnrollmentOrder.Create)
         },
         {
             OrderTypes.FreeEnrollmentFromAnotherOrg,
-            (id, jsonString) => FreeEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (
+                FreeEnrollmentWithTransferOrder.Create,
+                (id, jsonString) => FreeEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeEnrollmentWithTransferOrder.Create
+            )
         },
         {
             OrderTypes.FreeReEnrollment,
-            (id, jsonString) => FreeReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (
+                FreeReEnrollmentOrder.Create,
+                (id, jsonString) => FreeReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeReEnrollmentOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeTransferBetweenSpecialties,
+            (
+                FreeTransferWithinCourseOrder.Create,
+                (id, jsonString) => FreeTransferWithinCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeTransferWithinCourseOrder.Create
+            )
         },
         {
             OrderTypes.FreeTransferNextCourse,
-            (id, jsonString) => FreeTransferToTheNextCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.FreeTransferBetweenSpecialities,
-            (id, jsonString) => FreeTransferWithinCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.FreeDeductionWithAcademicDebt,
-            (id, jsonString) => FreeDeductionWithAcademicDebtOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.FreeDeductionWithGraduation,
-            (id, jsonString) => FreeDeductionWithGraduationOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.FreeDeductionWithOwnDesire,
-            (id, jsonString) => FreeDeductionWithOwnDesireOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
-        },
-        // платные
-        {
-            OrderTypes.PaidEnrollment,
-            (id, jsonString) => PaidEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.PaidEnrollmentWithTransfer,
-            (id, jsonString) => PaidEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.PaidReEnrollment,
-            (id, jsonString) => PaidReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.PaidTransferNextCourse,
-            (id, jsonString) => PaidTransferNextCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
-        },
-        {
-            OrderTypes.PaidTransferBetweenSpecialties,
-            (id, jsonString) => PaidTransferBetweenSpecialtiesOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (
+                FreeTransferToTheNextCourseOrder.Create,
+                (id, jsonString) => FreeTransferToTheNextCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeTransferToTheNextCourseOrder.Create
+            )
         },
         {
             OrderTypes.FreeTransferFromPaidToFree,
-            (id, jsonString) => PaidTransferFromPaidToFreeOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString))
+            (
+                FreeTransferFromPaidToFreeOrder.Create,
+                (id, jsonString) => FreeTransferFromPaidToFreeOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeTransferFromPaidToFreeOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithAcademicDebt,
+            (
+                FreeDeductionWithAcademicDebtOrder.Create,
+                (id, jsonString) => FreeDeductionWithAcademicDebtOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithAcademicDebtOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithGraduation,
+            (
+                FreeDeductionWithGraduationOrder.Create,
+                (id, jsonString) => FreeDeductionWithGraduationOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithGraduationOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithOwnDesire,
+            (
+                FreeDeductionWithOwnDesireOrder.Create,
+                (id, jsonString) => FreeDeductionWithOwnDesireOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithOwnDesireOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithTransfer,
+            (
+                FreeDeductionWithTransferOrder.Create,
+                (id, jsonString) => FreeDeductionWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithTransferOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+            (
+                FreeDeductionWithAcademicVacationNoReturnOrder.Create,
+                (id, jsonString) => FreeDeductionWithAcademicVacationNoReturnOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithAcademicVacationNoReturnOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithEducationProcessNotInitiated,
+            (
+                FreeDeductionWithEducationProcessNotInitiatedOrder.Create,
+                (id, jsonString) => FreeDeductionWithEducationProcessNotInitiatedOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                FreeDeductionWithEducationProcessNotInitiatedOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeAcademicVacationReturn,
+            (
+                FreeAcademicVacationReturnOrder.Create,
+                (id, jsonString) => FreeAcademicVacationReturnOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                FreeAcademicVacationReturnOrder.Create
+            )
+        },
+        {
+            OrderTypes.FreeAcademicVacationSend,
+            (
+                FreeAcademicVacationSendOrder.Create,
+                (id, jsonString) => FreeAcademicVacationSendOrder.Create(id, JsonSerializer.Deserialize<StudentDurableStatesDTO>(jsonString)),
+                FreeAcademicVacationSendOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidEnrollment,
+            (
+                PaidEnrollmentOrder.Create,
+                (id, jsonString) => PaidEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidEnrollmentOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidReEnrollment,
+            (
+                PaidReEnrollmentOrder.Create,
+                (id, jsonString) => PaidReEnrollmentOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidReEnrollmentOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidEnrollmentWithTransfer,
+            (
+                PaidEnrollmentWithTransferOrder.Create,
+                (id, jsonString) => PaidEnrollmentWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidEnrollmentWithTransferOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidTransferBetweenSpecialties,
+            (
+                PaidTransferBetweenSpecialtiesOrder.Create,
+                (id, jsonString) => PaidTransferBetweenSpecialtiesOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidTransferBetweenSpecialtiesOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidTransferNextCourse,
+            (
+                PaidTransferNextCourseOrder.Create,
+                (id, jsonString) => PaidTransferNextCourseOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidTransferNextCourseOrder.Create
+            )
         },
         {
             OrderTypes.PaidDeductionWithAcademicDebt,
-            (id, jsonString) => PaidDeductionWithAcademicDebtOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
+            (
+                PaidDeductionWithAcademicDebtOrder.Create,
+                (id, jsonString) => PaidDeductionWithAcademicDebtOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithAcademicDebtOrder.Create
+            )
         },
         {
             OrderTypes.PaidDeductionWithGraduation,
-            (id, jsonString) => PaidDeductionWithGraduationOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
+            (
+                PaidDeductionWithGraduationOrder.Create,
+                (id, jsonString) => PaidDeductionWithGraduationOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithGraduationOrder.Create
+            )
         },
         {
             OrderTypes.PaidDeductionWithOwnDesire,
-            (id, jsonString) => PaidDeductionWithOwnDesireOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
+            (
+                PaidDeductionWithOwnDesireOrder.Create,
+                (id, jsonString) => PaidDeductionWithOwnDesireOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithOwnDesireOrder.Create
+            )
         },
         {
             OrderTypes.PaidDeductionWithTransfer,
-            (id, jsonString) => PaidDeductionWithTransferOrder.Create(id,JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString))
+            (
+                PaidDeductionWithTransferOrder.Create,
+                (id, jsonString) => PaidDeductionWithTransferOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithTransferOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithAcademicVacationNoReturn,
+            (
+                PaidDeductionWithAcademicVacationNoReturnOrder.Create,
+                (id, jsonString) => PaidDeductionWithAcademicVacationNoReturnOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithAcademicVacationNoReturnOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithEducationProcessNotInitiated,
+            (
+                PaidDeductionWithEducationProcessNotInitiatedOrder.Create,
+                (id, jsonString) => PaidDeductionWithEducationProcessNotInitiatedOrder.Create(id, JsonSerializer.Deserialize<StudentGroupNullifyMovesDTO>(jsonString)),
+                PaidDeductionWithEducationProcessNotInitiatedOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidAcademicVacationSend,
+            (
+                PaidAcademicVacationSendOrder.Create,
+                (id, jsonString) => PaidAcademicVacationSendOrder.Create(id, JsonSerializer.Deserialize<StudentDurableStatesDTO>(jsonString)),
+                PaidAcademicVacationSendOrder.Create
+            )
+        },
+        {
+            OrderTypes.PaidAcademicVacationReturn,
+            (
+                PaidAcademicVacationReturnOrder.Create,
+                (id, jsonString) => PaidAcademicVacationReturnOrder.Create(id, JsonSerializer.Deserialize<StudentToGroupMovesDTO>(jsonString)),
+                PaidAcademicVacationReturnOrder.Create
+            )
         }
     };
 
-    private static Dictionary<OrderTypes, Func<OrderDTO?, Utilities.IResult>> _orderFromDtoMappings = new Dictionary<OrderTypes, Func<OrderDTO?, Utilities.IResult>>{
-        {
-            OrderTypes.FreeEnrollment, FreeEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.FreeEnrollmentFromAnotherOrg, FreeEnrollmentWithTransferOrder.Create
-        },
-        {
-            OrderTypes.FreeReEnrollment, FreeReEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferNextCourse, FreeTransferToTheNextCourseOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferBetweenSpecialities, FreeTransferWithinCourseOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithAcademicDebt, FreeDeductionWithAcademicDebtOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithGraduation, FreeDeductionWithGraduationOrder.Create
-        },
-        {
-            OrderTypes.FreeDeductionWithOwnDesire, FreeDeductionWithOwnDesireOrder.Create
-        },
-        // платные
-        {
-            OrderTypes.PaidEnrollment, PaidEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.PaidEnrollmentWithTransfer, PaidEnrollmentWithTransferOrder.Create
-        },
-        {
-            OrderTypes.PaidReEnrollment, PaidReEnrollmentOrder.Create
-        },
-        {
-            OrderTypes.PaidTransferNextCourse, PaidTransferNextCourseOrder.Create
-        },
-        {
-            OrderTypes.PaidTransferBetweenSpecialties, PaidTransferBetweenSpecialtiesOrder.Create
-        },
-        {
-            OrderTypes.FreeTransferFromPaidToFree, PaidTransferFromPaidToFreeOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithAcademicDebt, PaidDeductionWithAcademicDebtOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithGraduation, PaidDeductionWithGraduationOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithOwnDesire, PaidDeductionWithOwnDesireOrder.Create
-        },
-        {
-            OrderTypes.PaidDeductionWithTransfer, PaidDeductionWithTransferOrder.Create
-        }
-    };
     public static Mapper<Order> GetMapper(Column? source, JoinSection.JoinType joinType = JoinSection.JoinType.InnerJoin)
     {
         var mapper = new Mapper<Order>(
@@ -280,7 +313,7 @@ public abstract class Order : IFromCSV<Order>
                 }
                 var id = (int)idraw;
                 OrderTypes typeGot = (OrderTypes)(int)reader["type"];
-                Utilities.IResult? result = _orderTypeMappings[typeGot](id, reader);
+                Utilities.IResult? result = _orderTypeMappings[typeGot].byId(id, reader);
                 if (result is null || result.IsFailure)
                 {
                     return QueryResult<Order>.NotFound();
@@ -338,25 +371,25 @@ public abstract class Order : IFromCSV<Order>
     protected static Result<T> MapBase<T>(OrderDTO? source, T model) where T : Order
     {
         // добавить проверку на диапазон дат дату, но потом
-        var errors = new List<ValidationError?>();
+        var errors = new List<ValidationError>();
         if (source is null)
         {
             return Result<T>.Failure(new ValidationError("DTO приказа не может быть пустым"));
         }
 
-        if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate),
+        if (errors.IsValidRule(Utils.TryParseDate(source.EffectiveDate, out DateTime effDate),
         message: "Дата вступления в силу указана неверно",
         propName: nameof(EffectiveDate)))
         {
-            model._effectiveDate = Utils.ParseDate(source.EffectiveDate);
+            model._effectiveDate = effDate;
         }
         if (errors.IsValidRule(
-            Utils.TryParseDate(source.SpecifiedDate),
+            Utils.TryParseDate(source.SpecifiedDate, out DateTime specDate),
             message: "Дата приказа указана неверно",
             propName: nameof(SpecifiedDate)
         ))
         {
-            model._specifiedDate = Utils.ParseDate(source.SpecifiedDate);
+            model._specifiedDate = specDate;
         }
         if (errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || source.OrderDescription is null,
@@ -368,7 +401,7 @@ public abstract class Order : IFromCSV<Order>
         }
         if (errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(source.OrderDisplayedName, ValidatorCollection.OnlyText),
-            message: "Имя приказа укзано неверно",
+            message: "Имя приказа указано неверно",
             propName: nameof(OrderDisplayedName)) && source.OrderDisplayedName is not null
         )
         {
@@ -432,29 +465,7 @@ public abstract class Order : IFromCSV<Order>
         {
             throw new Exception("Ошибка при записи в таблицу движения: данные приказа или приказ не соотвествуют форме или приказ закрыт");
         }
-
-        NpgsqlConnection conn = Utils.GetAndOpenConnectionFactory().Result;
-        string cmdText = "COPY student_flow (student_id, order_id, group_id_to)" +
-        " FROM STDIN (FORMAT BINARY) ";
-        using (var writer = conn.BeginBinaryImport(cmdText))
-        {
-            foreach (var r in records)
-            {
-                writer.StartRow();
-                writer.Write<int>(r.StudentNullRestrict.Id.Value);
-                writer.Write<int>(this._id);
-                if (r.GroupTo != null)
-                {
-                    writer.Write<int>((int)r.GroupTo.Id);
-                }
-                else
-                {
-                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer);
-                }
-            }
-            writer.Complete();
-        }
-
+        StudentFlowRecord.InsertBatch(records);
         _conductionStatus = OrderConductionStatus.Conducted;
     }
     protected abstract OrderTypes GetOrderType();
@@ -531,8 +542,10 @@ public abstract class Order : IFromCSV<Order>
                 {
                     return ResultWithoutValue.Failure(new OrderValidationError(string.Format("зарегистрирован в незакрытом приказе {0}", order.OrderDisplayedName), student));
                 }
+                // проверка хронологичности приказа, на студента
+                // если последний приказ на студента есть этот же самый приказ, то проведение невозможно
                 if (order._effectiveDate > _effectiveDate
-                    || (order._effectiveDate == _effectiveDate && order._creationTimestamp > _creationTimestamp)
+                    || (order._effectiveDate == _effectiveDate && order._creationTimestamp >= _creationTimestamp)
                 )
                 {
                     ResultWithoutValue.Failure(
@@ -637,7 +650,7 @@ public abstract class Order : IFromCSV<Order>
             Utilities.IResult? result = null;
             try
             {
-                result = _orderForConductionMappings[type](id, conductionDataDTO);
+                result = _orderTypeMappings[type].forConduction(id, conductionDataDTO);
             }
             catch
             {
@@ -678,7 +691,7 @@ public abstract class Order : IFromCSV<Order>
         Utilities.IResult? result = null;
         try
         {
-            result = _orderFromDtoMappings[type](mapped);
+            result = _orderTypeMappings[type].fromDTO(mapped);
         }
         catch
         {

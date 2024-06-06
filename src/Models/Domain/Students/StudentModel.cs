@@ -102,11 +102,11 @@ public class StudentModel
             if (_actualAddressId != Utils.INVALID_ID && _actualAddressId is not null && _actualAddress is null)
             {
                 _actualAddress = AddressModel.GetAddressById(_actualAddressId).Result;
-                _actualAddressId = _actualAddress.Id;
+                _actualAddressId = _actualAddress!.Id;
             }
             return _actualAddress;
         }
-        set
+        private set
         {
             _actualAddress = value;
             _actualAddressId = value?.Id;
@@ -137,6 +137,10 @@ public class StudentModel
         _actualAddressId = null;
         _russianCitizenshipId = null;
         _education = null;
+        _snils = "";
+        _gradeBookNumber = "";
+        _paidAgreementType = PaidEduAgreement.NotStated;
+        _targetAgreementType = TargetEduAgreement.NotStated;
     }
 
     public static Mapper<StudentModel> GetMapper((bool actual, bool legal) includeAddresses, Column? source, JoinSection.JoinType join = JoinSection.JoinType.InnerJoin)
@@ -201,19 +205,17 @@ public class StudentModel
         {
             return Result<StudentModel>.Failure(new ValidationError(nameof(dto), "Пустая модель студента"));
         }
-        var model = new StudentModel();
-        var errors = new List<ValidationError?>();
-        StudentModel? modelInDatabase = null;
-        if (dto.Id != null)
+        StudentModel? model = null;
+        var errors = new List<ValidationError>();
+        if (dto.Id != null && dto.Id.Value != Utils.INVALID_ID)
         {
-            model._id = (int)dto.Id;
-            modelInDatabase = GetStudentById(model._id).Result;
+            model = GetStudentById(dto.Id).Result;
             errors.IsValidRule(
-                modelInDatabase is not null,
+                model is not null,
                 "Несуществующий id модели",
-                nameof(Id)
-            );
+            nameof(Id));
         }
+        model ??= new StudentModel();
         if (string.IsNullOrEmpty(dto.PhysicalAddress.Address))
         {
             model.ActualAddress = null;
@@ -241,28 +243,58 @@ public class StudentModel
         {
             errors.AddRange(citizenshipResult.Errors);
         }
-        if (errors.IsValidRule(
-            dto.Education is not null && dto.Education.Count > 0,
-            message: "Отсутствуют данные об образовании",
-            propName: nameof(Education)
-        ))
+        // добавление тегов, если студент обнаружен
+        // новые теги для существующего студента не обязательны
+
+        if (model.Education is not null)
         {
-            model._education = new StudentEducation(model);
-            for (int i = 0; i < dto.Education!.Count; i++)
+            if (dto.Education is not null && dto.Education.Count > 0)
             {
-                var level = StudentEducationalLevelRecord.Create(dto.Education[i], model);
+                // непустое образование может быть, изначально, 
+                // только у объекта с базы данных
+                // в данном случае, и пустое на вход приемлемо, т.к. теги изменить нельзя 
+                TryAddEducation(
+                    dto.Education, model, errors
+                );
+            }
+        }
+        else
+        {
+            if (dto.Education is null || dto.Education.Count == 0)
+            {
+                errors.Add(
+                    new ValidationError(nameof(Education), "Отсутствуют данные образовании"
+                ));
+            }
+            else
+            {
+                TryAddEducation(dto.Education, model, errors);
+            }
+        }
+
+        static void TryAddEducation(
+            IEnumerable<StudentEducationRecordInDTO> levels,
+            StudentModel built,
+            List<ValidationError> errorList
+            )
+        {
+            built._education ??= new StudentEducation(built);
+            foreach (var levelDTO in levels)
+            {
+                var level = StudentEducationalLevelRecord.Create(levelDTO, built);
                 if (level.IsFailure)
                 {
-                    errors.AddRange(level.Errors);
+                    errorList.AddRange(level.Errors);
                 }
                 else
                 {
-                    model._education.Add(level.ResultObject);
+                    built._education.Add(level.ResultObject);
                 }
             }
         }
 
-        // инн и снилс должны быть уникальны в базе
+
+        // снилс должны быть уникальны в базе
         if (errors.IsValidRule(
             dto.Snils.CheckStringPatternD(ValidatorCollection.Snils),
             message: "Неверный формат СНИЛС",
@@ -271,12 +303,12 @@ public class StudentModel
             model._snils = dto.Snils;
         }
         if (errors.IsValidRule(
-            Utils.TryParseDate(dto.DateOfBirth),
+            Utils.TryParseDate(dto.DateOfBirth, out DateTime birthDate),
             message: "Недопустимая дата рождения",
             propName: nameof(DateOfBirth)
         ))
         {
-            model._dateOfBirth = Utils.ParseDate(dto.DateOfBirth);
+            model._dateOfBirth = birthDate;
         }
         if (errors.IsValidRule(
             dto.AdmissionScore.CheckStringPatternD(ValidatorCollection.DecimalFormat) ||
@@ -303,7 +335,7 @@ public class StudentModel
             propName: nameof(GradeBookNumber)
         ))
         {
-            model._gradeBookNumber = dto.GradeBookNumber;
+            model._gradeBookNumber = dto.GradeBookNumber!;
         }
         if (errors.IsValidRule(
             Enum.TryParse(typeof(Genders.GenderCodes), dto.Gender.ToString(), out object? t),
@@ -339,17 +371,16 @@ public class StudentModel
         {
             model._giaDemoExamMark = dto.GiaDemoExamMark is null ? null : int.Parse(dto.GiaDemoExamMark);
         }
-        if (modelInDatabase is not null)
+        if (model.Id is null)
         {
-            model._paidAgreementType = modelInDatabase._paidAgreementType;
-        }
-        else if (errors.IsValidRule(
-            PaidEduAgreement.TryGetByTypeCode(dto.PaidAgreementType),
-            message: "Неверно указан тип договора о платном обучении",
-            propName: nameof(PaidAgreement)
-        ))
-        {
-            model._paidAgreementType = PaidEduAgreement.GetByTypeCode(dto.PaidAgreementType);
+            if (errors.IsValidRule(
+                PaidEduAgreement.TryGetByTypeCode(dto.PaidAgreementType),
+                message: "Неверно указан тип договора о платном обучении",
+                propName: nameof(PaidAgreement)
+            ))
+            {
+                model._paidAgreementType = PaidEduAgreement.GetByTypeCode(dto.PaidAgreementType);
+            }
         }
         if (errors.Any())
         {

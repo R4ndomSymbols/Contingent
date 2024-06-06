@@ -6,105 +6,157 @@
 @{
     ViewData["Title"] = "Просмотр";
 }
-<div class="container">
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Номер зачетки</h5>
-        <p class="col-4">@Model.GradeBookNumber</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Дата рождения</h5>
-        <p class="col-4">@Model.DateOfBirth</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Снилс</h5>
-        <p class="col-4">@Model.Snils</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Пол</h5>
-        <p class="col-4">@Model.GenderName</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Договор о целевом обучении</h5>
-        @{
-            string targetAgrName = TargetEduAgreement.GetByTypeCode(Model.TargetAgreementType).RussianName;
-        }
-        <p class="col-4">@targetAgrName</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Договор об обучении на платной основе</h5>
-        @{
-            string paidAgrName = PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName;
-        }
-        <p class="col-4">@paidAgrName</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Вступительный балл</h5>
-        <p class="col-4">@Model.AdmissionScore</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Балл ГИА</h5>
+<div class="d-flex flex-column page-layout-container">
+    <h3 class="group-title">
+        Гражданство (РФ)
+    </h3>
+    @{
+        RussianCitizenshipDTO citizenship = Model.Citizenship;
+    }
+
+    @if (citizenship != null)
+    {
+        <div class="item-input-group">
+            <div class="data-row">
+                @{
+                    string fullName =
+                    citizenship.Surname + " " + citizenship.Name + " " + citizenship.Patronymic;
+                }
+                <h5 class="field-h-title">
+                    ФИО Студента
+                </h5>
+                <p class="field-content">
+                    @fullName
+                </p>
+            </div>
+            <div class="data-row">
+                <h5 class="field-h-title">
+                    Прописка
+                </h5>
+                <p class="field-content">
+                    @Model.Citizenship.LegalAddress.AddressName
+                </p>
+            </div>
+        </div>
+    }
+
+    <h3 class=".group-title">
+        Основные сведения
+    </h3>
+    <div class="item-input-group">
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Номер зачетки
+            </h5>
+            <p class="field-content">
+                @Model.GradeBookNumber
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Дата рождения
+            </h5>
+            <p class="field-content">
+                @Model.DateOfBirth
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Снилс
+            </h5>
+            <p class="field-content">
+                @Model.Snils
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Пол
+            </h5>
+            <p class="field-content">
+                @Model.GenderName
+            </p>
+        </div>
+        <div class="data-row">
+            @{
+                string targetAgrName = TargetEduAgreement.GetByTypeCode(Model.TargetAgreementType).RussianName;
+            }
+            <h5 class="field-h-title">
+                Договор о целевом обучении
+            </h5>
+            <p class="field-content">
+                @targetAgrName
+            </p>
+        </div>
+        <div class="data-row">
+            @{
+                string paidAgrName = PaidEduAgreement.GetByTypeCode(Model.PaidAgreementType).RussianName;
+            }
+            <h5 class="field-h-title">
+                Договор об обучении на платной основе
+            </h5>
+            <p class="field-content">
+                @paidAgrName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Вступительный балл
+            </h5>
+            <p class="field-content">
+                @Model.AdmissionScore
+            </p>
+        </div>
         @{
             string giaMark = Model.GiaMark?.ToString() ?? "Не указан";
             string giaMarkDem = Model.GiaDemoExamMark?.ToString() ?? "Не указан";
         }
-        <p class="col-4">@giaMark</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Балл ГИА (демэкзамен)</h5>
-        <p class="col-4">@giaMarkDem</p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-4">Фактический адрес</h5>
-        @{
-
-            string factAddress = Model.ActualAddress.AddressName;
-        }
-        <p class="col-8">@factAddress</p>
-    </div>
-    @{
-        RussianCitizenshipDTO citizenship = Model.Citizenship;
-    }
-    @if (citizenship != null)
-    {
-        <div class="mt-3">
-            <h2 class="mb-4">Гражданство (РФ)</h2>
-            <div class="d-flex flex-row">
-                <h5 class="col-4">Фамилия</h5>
-                <p class="col-4">@citizenship.Surname</p>
-            </div>
-            <div class="d-flex flex-row">
-                <h5 class="col-4">Имя</h5>
-                <p class="col-4">@citizenship.Name</p>
-            </div>
-            <div class="d-flex flex-row">
-                <h5 class="col-4">Отчество</h5>
-                <p class="col-4">@citizenship.Patronymic</p>
-            </div>
-            <div class="d-flex flex-row">
-                <h5 class="col-4">Прописка</h5>
-                @{
-                    string fullAddress = Model.Citizenship.LegalAddress.AddressName;
-                }
-                <p class="col-8">@fullAddress</p>
-            </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Балл ГИА
+            </h5>
+            <p class="field-content">
+                @giaMark
+            </p>
         </div>
-    }
-    <div class="text-center">
-        <h5>Образование студента</h5>
-    </div>
-    <div class="d-flex flex-row">
-        @foreach (var edu in Model.EducationalLevels)
-        {
-            <div class="me-4">
-                <p>@edu.TypeName</p>
-            </div>
-        }
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Балл ГИА (демэкзамен)
+            </h5>
+            <p class="field-content">
+                @giaMarkDem
+            </p>
+        </div>
+        <div class="data-row">
+            @{
+                string factAddress = Model.ActualAddress.AddressName;
+            }
+            <h5 class="field-h-title">
+                Фактический адрес
+            </h5>
+            <p class="field-content">
+                @factAddress
+            </p>
+        </div>
     </div>
 
-    <div class="col-4">
-        <p>История студента в приказах</p>
+    <h3 class="group-title">
+        Сведения об образовании студента
+    </h3>
+    <div class="item-input-group">
+        <div class="d-flex flex-column">
+            @foreach (var edu in Model.EducationalLevels)
+            {
+                <div class="field-content">
+                    <p>@edu.TypeName</p>
+                </div>
+            }
+        </div>
     </div>
-    <div class="col-11">
+
+    <h3 class="group-title mt-1">
+        История студента в приказах
+    </h3>
+    <div class="flex-fill">
         <table class="table">
             <thead>
                 <th>Тип приказа</th>
@@ -122,4 +174,4 @@
     <div id="about_student" student_id="@Model.Id" />
 </div>
 
-<script src="~/js/studentView.js"></script>
+<script src="~/js/observe/student.js"></script>

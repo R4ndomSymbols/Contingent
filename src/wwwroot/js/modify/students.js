@@ -1,14 +1,26 @@
 import { Utilities } from "../site.js";
-const error_postfix = "_err"
 const tag_select_postfix = "_tag"
 const minimal_tag_id = 1
 let currentTagId = minimal_tag_id;
 let utils = new Utilities();
 let tags = [];
 let addressSearchLockCount = 0;
+let studentId = utils.INVALID_ID;
+let addressId = utils.INVALID_ID;
+let russianCitizenshipId = utils.INVALID_ID;
+let legalAddress = utils.INVALID_ID;
+
 
 $(document).ready(function () {
+    studentId = Number($("#StudentId").attr("assigned_id"))
+    addressId = Number($("#AddressId").attr("assigned_id"))
+    russianCitizenshipId = Number($("#RussianCitizenshipId").attr("assigned_id"))
+    legalAddress = Number($("#RussianLegalAddressId").attr("assigned_id"))
     // получает все уровни образования, имеющиеся у студента
+    if (studentId != utils.INVALID_ID) {
+        utils.disableField("PaidAgreementType");
+    }
+
     $.ajax({
         type: "GET",
         url: "/students/tags",
@@ -160,8 +172,6 @@ function getEducationLevels() {
 $("#save").click(function () {
     var realAddress = $("#ActualAddress").val();
     var legalAddress = $("#LegalAddress").val();
-    document.getElementById("ActualAddress_err").innerHTML = "";
-    document.getElementById("LegalAddress_err").innerHTML = "";
     var giaMark = $("#GiaMark").val();
     var giaDemMark = $("#GiaDemoExamMark").val();
     var patr = $("#Patronymic").val();
@@ -172,13 +182,13 @@ $("#save").click(function () {
         data: JSON.stringify(
             {
 
-                Id: (document.getElementById("StudentId") === null) ? null : Number($("#StudentId").val()),
+                Id: studentId,
                 GradeBookNumber: $("#GradeBookNumber").val(),
                 DateOfBirth: $("#DateOfBirth").val(),
                 Gender: Number($("#Gender").val()),
                 Snils: $("#Snils").val(),
                 TargetAgreementType: Number($("#TargetAgreementType").val()),
-                PaidAgreementType: paid.length === 0 ? -1 : Number(paid.val()),
+                PaidAgreementType: Number(paid.val()),
                 AdmissionScore: $("#AdmissionScore").val(),
                 GiaMark: giaMark == "" ? null : giaMark,
                 GiaDemoExamMark: giaDemMark == "" ? null : giaDemMark,
@@ -186,7 +196,7 @@ $("#save").click(function () {
                     Address: realAddress,
                 },
                 RusCitizenship: {
-                    Id: (document.getElementById("RussianCitizenshipId") === null) ? null : Number($("#RussianCitizenshipId").val()),
+                    Id: russianCitizenshipId,
                     Name: $("#Name").val(),
                     Surname: $("#Surname").val(),
                     Patronymic: patr == "" ? null : patr,
@@ -199,17 +209,10 @@ $("#save").click(function () {
             }),
         dataType: "JSON",
         success: function (response) {
-            var realAddressId = response["addressId"];
-            var studentId = response["studentId"];
-            var legalAddressId = response["addressId"];
-            var rusId = response["russianCitizenshipId"];
-
-            if (realAddressId != undefined && studentId != undefined && legalAddressId != undefined && rusId != undefined) {
-                $("#AddressId").val(realAddressId);
-                $("#StudentId").val(studentId);
-                $("#RussianLegalAddressId").val(legalAddressId);
-                $("#RussianCitizenshipId").val(rusId);
-            }
+            addressId = response["addressId"];
+            studentId = response["studentId"];
+            legalAddress = response["addressId"];
+            russianCitizenshipId = response["russianCitizenshipId"];
             utils.notifySuccess();
         },
         error: function (xhr, a, b) {

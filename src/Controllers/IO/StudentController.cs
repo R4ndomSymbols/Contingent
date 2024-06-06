@@ -106,7 +106,7 @@ public class StudentController : Controller
         {
             ActualAddressId = student.ActualAddressId,
             StudentId = student.Id,
-            LegalAddressId = student.RussianCitizenship.LegalAddressId,
+            LegalAddressId = student.RussianCitizenship!.LegalAddressId,
             RussianCitizenshipId = student.RussianCitizenship.Id
 
         });

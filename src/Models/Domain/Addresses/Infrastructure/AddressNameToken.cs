@@ -19,6 +19,7 @@ public class AddressNameToken
 
     public AddressNameToken(string nameOnly, AddressNameFormatting formatting)
     {
+        _normalizedName = "";
         if (formatting is null)
         {
             throw new Exception("Форматирование должно быть определено");
@@ -62,4 +63,10 @@ public class AddressNameToken
         return toCompare._normalizedName == this._normalizedName &&
                 toCompare.Formatting.Equals(this.Formatting);
     }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
+
 }

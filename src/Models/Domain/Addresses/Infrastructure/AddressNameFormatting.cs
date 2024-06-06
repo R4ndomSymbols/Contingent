@@ -113,5 +113,8 @@ public class AddressNameFormatting
             toCompare._positioning == this._positioning;
     }
 
-
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
 }

@@ -86,7 +86,10 @@ public class FlowImport : IFromCSV<FlowImport>
         return ((FlowImport)obj)._rowNumber == _rowNumber;
     }
 
-
+    public override int GetHashCode()
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public class FlowImportBatch
@@ -104,7 +107,7 @@ public class FlowImportBatch
     {
         if (import.ByOrder is not null)
         {
-            if (!CheckImportUniquiness(import))
+            if (!CheckImportUniqueness(import))
             {
                 return false;
             }
@@ -141,7 +144,7 @@ public class FlowImportBatch
     {
         return !_ordersToConduct.Any(x => x.Equals(order));
     }
-    private bool CheckImportUniquiness(FlowImport import)
+    private bool CheckImportUniqueness(FlowImport import)
     {
         return !_imports.Any(x => x.Equals(import));
     }

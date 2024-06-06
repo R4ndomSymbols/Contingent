@@ -1,6 +1,10 @@
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
+using Utilities;
+using Contingent.SQL;
+using Npgsql;
+using Contingent.Models.Infrastructure;
 
 namespace Contingent.Models.Domain.Flow;
 
@@ -9,33 +13,150 @@ namespace Contingent.Models.Domain.Flow;
 
 public class StudentFlowRecord
 {
-
-
-    public RawStudentFlowRecord Record { get; private init; }
-    public Order? ByOrder { get; private init; }
-    public StudentModel? Student { get; private init; }
-    public GroupModel? GroupTo { get; private init; }
+    private RawStudentFlowRecord _record;
+    public int Id => _record.Id;
+    public Period StatePeriod { get; private set; }
+    public Order? ByOrder { get; private set; }
+    public StudentModel? Student { get; private set; }
+    public GroupModel? GroupTo { get; private set; }
     public Order OrderNullRestrict => ByOrder is null ? throw new Exception("Приказ должен быть указан") : ByOrder;
     public StudentModel StudentNullRestrict => Student is null ? throw new Exception("Студент должен быть указан") : Student;
     public GroupModel GroupToNullRestrict => GroupTo is null ? throw new Exception("Группа должен быть указана") : GroupTo;
 
-    public StudentFlowRecord(Order order, StudentModel student, GroupModel? group)
+    private StudentFlowRecord()
+    {
+
+    }
+
+    private static StudentFlowRecord FromDatabase(
+        RawStudentFlowRecord record,
+        Order? order,
+        StudentModel? student,
+        GroupModel? group
+    )
+    {
+        var rec = new StudentFlowRecord();
+        rec._record = record;
+        rec.ByOrder = order;
+        rec.Student = student;
+        rec.GroupTo = group;
+        return rec;
+    }
+
+
+    public static StudentFlowRecord FromModel(Order order, StudentModel student, GroupModel? group, Period? statePeriod = null)
     {
         if (order is null || student is null)
         {
             throw new ArgumentNullException("Один из параметров записи истории не указан");
         }
-        ByOrder = order;
-        Student = student;
-        GroupTo = group;
+        var rec = new StudentFlowRecord();
+        rec.ByOrder = order;
+        rec.Student = student;
+        rec.GroupTo = group;
+        rec._record = new RawStudentFlowRecord()
+        {
+            StudentId = (int)student.Id!,
+            GroupToId = group?.Id,
+            OrderId = (int)order.Id!,
+            StartStatusDate = statePeriod?.Start,
+            EndStatusDate = statePeriod?.End
+        };
+        return rec;
     }
-    public StudentFlowRecord(RawStudentFlowRecord raw, Order? order, StudentModel? student, GroupModel? group)
+
+    public RawStudentFlowRecord AsRaw()
     {
-        Record = raw;
-        ByOrder = order;
-        Student = student;
-        GroupTo = group;
+        return _record;
     }
+
+    public static Mapper<StudentFlowRecord> GetMapper(
+        Mapper<Order> orderMapper,
+        Mapper<GroupModel> groupMapper,
+        Mapper<StudentModel> studentMapper
+    )
+    {
+        var usedCols = new List<Column> {
+            new Column("id", "rec_id", "student_flow"),
+            new Column("student_id", "student_flow"),
+            new Column("group_id_to", "student_flow"),
+            new Column("order_id", "student_flow")
+        };
+
+        var historyMapper = new Mapper<StudentFlowRecord>(
+            (m) =>
+            {
+                var raw = new RawStudentFlowRecord();
+                raw.Id = m["rec_id"].GetType() == typeof(DBNull) ? Utils.INVALID_ID : (int)m["rec_id"];
+                raw.StudentId = m["student_id"].GetType() == typeof(DBNull) ? Utils.INVALID_ID : (int)m["student_id"];
+                raw.GroupToId = m["group_id_to"].GetType() == typeof(DBNull) ? null : (int)m["group_id_to"];
+                raw.OrderId = m["order_id"].GetType() == typeof(DBNull) ? Utils.INVALID_ID : (int)m["order_id"];
+                raw.StartStatusDate = m["start_status_date"].GetType() == typeof(DBNull) ? null : (DateTime)m["start_status_date"];
+                raw.EndStatusDate = m["end_status_date"].GetType() == typeof(DBNull) ? null : (DateTime)m["end_status_date"];
+                var studentResult = studentMapper.Map(m);
+                var groupResult = groupMapper.Map(m);
+                var orderResult = orderMapper.Map(m);
+                var group = groupResult.IsFound ? groupResult.ResultObject : null;
+                var student = studentResult.IsFound ? studentResult.ResultObject : null;
+                var order = orderResult.IsFound ? orderResult.ResultObject : null;
+                return QueryResult<StudentFlowRecord>.Found(FromDatabase(raw, order, student, group));
+            },
+            usedCols
+        );
+        historyMapper.AssumeChild(studentMapper);
+        historyMapper.AssumeChild(groupMapper);
+        historyMapper.AssumeChild(orderMapper);
+        return historyMapper;
+    }
+
+    public static void InsertBatch(IEnumerable<StudentFlowRecord> records)
+    {
+        if (records is null || !records.Any())
+        {
+            return;
+        }
+        // основная запись в таблицу движения студентов
+        NpgsqlConnection conn = Utils.GetAndOpenConnectionFactory().Result;
+        string cmdText = "COPY student_flow (student_id, order_id, group_id_to, start_status_date, end_status_date)" +
+        " FROM STDIN (FORMAT BINARY) ";
+        using (var writer = conn.BeginBinaryImport(cmdText))
+        {
+            foreach (var record in records)
+            {
+                var raw = record.AsRaw();
+                writer.StartRow();
+                writer.Write<int>(raw.StudentId);
+                writer.Write<int>(raw.OrderId);
+                if (raw.GroupToId is not null)
+                {
+                    writer.Write<int>(raw.GroupToId.Value);
+                }
+                else
+                {
+                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer);
+                }
+                if (raw.StartStatusDate is not null)
+                {
+                    writer.Write<DateTime>(raw.StartStatusDate.Value);
+                }
+                else
+                {
+                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Timestamp);
+                }
+                if (raw.EndStatusDate is not null)
+                {
+                    writer.Write<DateTime>(raw.EndStatusDate.Value);
+                }
+                else
+                {
+                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Timestamp);
+                }
+            }
+            writer.Complete();
+        }
+
+    }
+
 
 
 
@@ -44,9 +165,36 @@ public class StudentFlowRecord
 
 public struct RawStudentFlowRecord
 {
-    public int? Id;
-    public int? StudentId;
+    // id записи движения, всегда есть
+    public int Id;
+    // индентификатор студента, всегда есть 
+    public int StudentId;
+    // группа, КУДА переводится студент
     public int? GroupToId;
-    public int? OrderId;
-    public DateTime Timestamp;
+    // приказ, всегда есть
+    public int OrderId;
+    // дата начала состояния студента по приказу, не обязательно принадлежит конкретному приказу
+    public DateTime? StartStatusDate;
+    // дата окончания состояния студента по приказу
+    public DateTime? EndStatusDate;
+
+    public RawStudentFlowRecord()
+    {
+        Id = Utils.INVALID_ID;
+        StudentId = Utils.INVALID_ID;
+        GroupToId = null;
+        OrderId = Utils.INVALID_ID;
+        StartStatusDate = null;
+        EndStatusDate = null;
+    }
+
+    public RawStudentFlowRecord(int id, int studentId, int? groupToId, int orderId, DateTime? startStatusDate, DateTime? endStatusDate)
+    {
+        Id = id;
+        StudentId = studentId;
+        GroupToId = groupToId;
+        OrderId = orderId;
+        StartStatusDate = startStatusDate;
+        EndStatusDate = endStatusDate;
+    }
 }

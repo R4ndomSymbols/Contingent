@@ -29,7 +29,7 @@ public class AddressModel
             var found = parts.Where(p => p is not null && p.Id != Utils.INVALID_ID);
             if (found.Any())
             {
-                return found.First().Id;
+                return found.First()!.Id;
             }
             else
             {
@@ -80,7 +80,7 @@ public class AddressModel
                 _buildingPart,
                 _apartmentPart
         };
-        return string.Join(",", parts.Where(p => p is not null).Select(p => p.ToString()));
+        return string.Join(",", parts.Where(p => p is not null).Select(p => p!.ToString()));
     }
     private AddressModel()
     {
@@ -121,13 +121,13 @@ public class AddressModel
             return got.Select(p => p.ToString());
         }
     }
-    public static Result<AddressModel?> Create(AddressInDTO? addressDTO, ObservableTransaction? scope = null)
+    public static Result<AddressModel> Create(AddressInDTO? addressDTO, ObservableTransaction? scope = null)
     {
         if (addressDTO is null)
         {
             return Result<AddressModel>.Failure(new ValidationError(nameof(AddressModel), "Адрес не указан"));
         }
-        string address = addressDTO.Address;
+        string? address = addressDTO.Address;
         if (string.IsNullOrEmpty(address) || string.IsNullOrWhiteSpace(address))
         {
             return Result<AddressModel>.Failure(new ValidationError(nameof(AddressModel), "Адрес не указан"));
@@ -139,7 +139,7 @@ public class AddressModel
         {
             errors = ProcessSubject(0, built, parts, new AddressPartPointer(), scope);
         }
-        catch (IndexOutOfRangeException e)
+        catch (IndexOutOfRangeException)
         {
             errors = errors.Append(new ValidationError(nameof(AddressModel), "Адрес содержит не все необходимые части"));
         }
@@ -149,7 +149,7 @@ public class AddressModel
         }
         return Result<AddressModel>.Success(built);
     }
-    public async Task<ResultWithoutValue> Save(ObservableTransaction scope)
+    public async Task<ResultWithoutValue> Save(ObservableTransaction? scope)
     {
         if (_apartmentPart is not null)
         {
@@ -357,7 +357,7 @@ public class AddressModel
             return new List<ValidationError>() { new ValidationError(nameof(District), "Адрес содержит недостаточное число частей") };
         }
         IEnumerable<ValidationError> err = new List<ValidationError>();
-        var result = District.Create(parts[pointer], built._subjectPart, scope);
+        var result = District.Create(parts[pointer], built._subjectPart!, scope);
         if (result.IsSuccess)
         {
             built._districtPart = result.ResultObject;
@@ -381,7 +381,7 @@ public class AddressModel
         {
             return new List<ValidationError>() { new ValidationError(nameof(SettlementArea), "Адрес содержит недостаточное число частей") };
         }
-        var result = SettlementArea.Create(parts[pointer], built._districtPart, scope);
+        var result = SettlementArea.Create(parts[pointer], built._districtPart!, scope);
         if (result.IsSuccess)
         {
             built._settlementAreaPart = result.ResultObject;
@@ -410,7 +410,7 @@ public class AddressModel
         }
         else
         {
-            result = Settlement.Create(parts[pointer], built._settlementAreaPart, scope);
+            result = Settlement.Create(parts[pointer], built._settlementAreaPart!, scope);
             if (result.IsSuccess)
             {
                 built._settlementPart = result.ResultObject;
@@ -427,7 +427,7 @@ public class AddressModel
         {
             return new List<ValidationError>() { new ValidationError(nameof(Street), "Адрес содержит недостаточное число частей") };
         }
-        var result = Street.Create(parts[pointer], built._settlementPart, scope);
+        var result = Street.Create(parts[pointer], built._settlementPart!, scope);
         if (result.IsSuccess)
         {
             built._streetPart = result.ResultObject;
@@ -446,7 +446,7 @@ public class AddressModel
         {
             return new List<ValidationError>() { new ValidationError(nameof(Building), "Адрес содержит недостаточное число частей") };
         }
-        var result = Building.Create(parts[pointer], built._streetPart, scope);
+        var result = Building.Create(parts[pointer], built._streetPart!, scope);
         if (result.IsSuccess)
         {
             built._buildingPart = result.ResultObject;
@@ -465,7 +465,7 @@ public class AddressModel
         {
             return new List<ValidationError>();
         }
-        var result = Apartment.Create(parts[pointer], built._buildingPart, scope);
+        var result = Apartment.Create(parts[pointer], built._buildingPart!, scope);
         if (result.IsSuccess)
         {
             built._apartmentPart = result.ResultObject;
@@ -498,7 +498,7 @@ public class AddressModel
         if (found.Any())
         {
             var foundSingle = found.First();
-            toMap._districtPart = District.Create(foundSingle, toMap._subjectPart);
+            toMap._districtPart = District.Create(foundSingle, toMap._subjectPart!);
             ProcessSettlementArea(records, toMap);
             ProcessSettlement(records, toMap);
         }
@@ -509,7 +509,7 @@ public class AddressModel
         if (found.Any())
         {
             var foundSingle = found.First();
-            toMap._settlementAreaPart = SettlementArea.Create(foundSingle, toMap._districtPart);
+            toMap._settlementAreaPart = SettlementArea.Create(foundSingle, toMap._districtPart!);
         }
     }
     private static void ProcessSettlement(IEnumerable<AddressRecord> records, AddressModel toMap)
@@ -524,7 +524,7 @@ public class AddressModel
             }
             else
             {
-                toMap._settlementPart = Settlement.Create(foundSingle, toMap._districtPart);
+                toMap._settlementPart = Settlement.Create(foundSingle, toMap._districtPart!);
             }
             ProcessStreet(records, toMap);
         }
@@ -535,7 +535,7 @@ public class AddressModel
         if (found.Any())
         {
             var foundSingle = found.First();
-            toMap._streetPart = Street.Create(foundSingle, toMap._settlementPart);
+            toMap._streetPart = Street.Create(foundSingle, toMap._settlementPart!);
             ProcessBuilding(records, toMap);
         }
     }
@@ -545,7 +545,7 @@ public class AddressModel
         if (found.Any())
         {
             var foundSingle = found.First();
-            toMap._buildingPart = Building.Create(foundSingle, toMap._streetPart);
+            toMap._buildingPart = Building.Create(foundSingle, toMap._streetPart!);
         }
     }
     private static void ProcessApartment(IEnumerable<AddressRecord> records, AddressModel toMap)

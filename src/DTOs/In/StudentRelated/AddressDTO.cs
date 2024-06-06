@@ -16,4 +16,9 @@ public class AddressInDTO
 
     [JsonRequired]
     public string? Address { get; set; }
+
+    public bool IsAddressStated()
+    {
+        return !string.IsNullOrEmpty(Address);
+    }
 }

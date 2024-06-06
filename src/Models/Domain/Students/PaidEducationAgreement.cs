@@ -6,6 +6,8 @@ public class PaidEduAgreement
     public string RussianName { get; private init; }
     public PaidEducationAgreementTypes AgreementType { get; private init; }
 
+    public static PaidEduAgreement NotStated => new PaidEduAgreement(PaidEducationAgreementTypes.NotMentioned, "Не указано");
+
     private PaidEduAgreement(PaidEducationAgreementTypes type, string name)
     {
         AgreementType = type;

@@ -47,7 +47,7 @@ public class AgeTable : ITable
         );
 
 
-        ColumnHeaderCell<StudentFlowRecord> trTypeCell1 = null;
+        ColumnHeaderCell<StudentFlowRecord>? trTypeCell1 = null;
         switch (type)
         {
             case TrainingProgramTypes.QualifiedWorker:
@@ -132,26 +132,26 @@ public class AgeTable : ITable
         var enlistedFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.History.IsStudentEnlisted();
+                return std.StudentNullRestrict.History.IsStudentEnlisted();
             })
         );
         var enlistedWomanFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.Gender == Genders.GenderCodes.Female;
+                return std.StudentNullRestrict.Gender == Genders.GenderCodes.Female;
             })
         ).Include(enlistedFilter3);
 
         var studyingFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.History.IsStudentEnlisted() && std.GroupTo?.FormatOfEducation.FormatType == GroupEducationFormatTypes.FullTime;
+                return std.StudentNullRestrict.History.IsStudentEnlisted() && std.GroupTo?.FormatOfEducation.FormatType == GroupEducationFormatTypes.FullTime;
             })
         );
         var studyingWomanFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.Gender == Genders.GenderCodes.Female;
+                return std.StudentNullRestrict.Gender == Genders.GenderCodes.Female;
             })
         ).Include(studyingFilter3);
 
@@ -179,7 +179,7 @@ public class AgeTable : ITable
         );
         var graduatesFemaleFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(
-                std => std.Student.IsFemale
+                std => std.StudentNullRestrict.IsFemale
             )
         ).Include(graduatesFilter3);
 
@@ -231,7 +231,7 @@ public class AgeTable : ITable
         var youngerThan13Filter = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.Student.GetAgeOnDate(ageDate) < 13;
+                return std.StudentNullRestrict.GetAgeOnDate(ageDate) < 13;
             })
         );
         var youngerThan13Cell = new RowHeaderCell<StudentFlowRecord>(
@@ -245,7 +245,7 @@ public class AgeTable : ITable
             var ageFilter = new Filter<StudentFlowRecord>(
                 (students) => students.Where(std =>
                 {
-                    return std.Student.GetAgeOnDate(ageDate) == scoped;
+                    return std.StudentNullRestrict.GetAgeOnDate(ageDate) == scoped;
                 })
             );
             var ageCell = new RowHeaderCell<StudentFlowRecord>(
@@ -258,7 +258,7 @@ public class AgeTable : ITable
             "Старше 30 лет",
             horizontalRoot,
             new Filter<StudentFlowRecord>(
-                (students) => students.Where(std => std.Student.GetAgeOnDate(ageDate) > 30)
+                (students) => students.Where(std => std.StudentNullRestrict.GetAgeOnDate(ageDate) > 30)
             )
         );
         var found = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000), (false, false));

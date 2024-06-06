@@ -12,7 +12,7 @@ namespace Contingent.Models.Domain.Flow;
 public static class FlowHistory
 {
 
-    private static SelectQuery<DateTime> GetLastOrderDateSubquery(string outerTableName)
+    private static SelectQuery<DateTime> GetLastOrderDateSubquery(string innerFlowTableName)
     {
         var mapper = new Mapper<DateTime>(
             (r) =>
@@ -31,13 +31,13 @@ public static class FlowHistory
         var joins = new JoinSection().AppendJoin(
             JoinSection.JoinType.InnerJoin,
             new Column("id", "orders"),
-            new Column("order_id", "student_flow")
+            new Column("order_id", innerFlowTableName)
 
         );
         var where = new ComplexWhereCondition(
             new WhereCondition(
+                new Column("student_id", innerFlowTableName),
                 new Column("student_id", "student_flow"),
-                new Column("student_id", outerTableName),
                 WhereCondition.Relations.Equal
             )
         );
@@ -46,7 +46,7 @@ public static class FlowHistory
             OrderByCondition.OrderByTypes.DESC
         );
         orderBy.AddColumn(new Column("creation_timestamp", "orders"), OrderByCondition.OrderByTypes.DESC);
-        var query = SelectQuery<DateTime>.Init("orders")
+        var query = SelectQuery<DateTime>.Init("student_flow", innerFlowTableName)
         .AddJoins(joins)
         .AddMapper(mapper)
         .AddOrderByStatement(orderBy)
@@ -66,7 +66,6 @@ public static class FlowHistory
         {
             throw new Exception("Параметры запроса должны быть указаны");
         }
-        string alias = "outer_table";
 
         Mapper<StudentModel> studentMapper;
         if (queryParameters.ExtractByStudent is not null)
@@ -76,7 +75,7 @@ public static class FlowHistory
             );
             studentMapper.PathTo.AppendJoin(
                 queryParameters.IncludeNotRegisteredStudents ? JoinSection.JoinType.FullJoin : JoinSection.JoinType.LeftJoin,
-                new Column("student_id", alias),
+                new Column("student_id", "student_flow"),
                 new Column("id", "students")
             );
         }
@@ -84,7 +83,7 @@ public static class FlowHistory
         {
             studentMapper = StudentModel.GetMapper(
             queryParameters.ExtractAddress,
-            new Column("student_id", alias),
+            new Column("student_id", "student_flow"),
             queryParameters.IncludeNotRegisteredStudents ? JoinSection.JoinType.FullJoin : JoinSection.JoinType.LeftJoin);
         }
         else
@@ -103,7 +102,7 @@ public static class FlowHistory
         }
         else if (queryParameters.ExtractGroups)
         {
-            groupMapper = GroupModel.GetMapper(new Column("group_id_to", alias), JoinSection.JoinType.LeftJoin);
+            groupMapper = GroupModel.GetMapper(new Column("group_id_to", "student_flow"), JoinSection.JoinType.LeftJoin);
         }
         else
         {
@@ -120,13 +119,13 @@ public static class FlowHistory
             );
             orderMapper.PathTo.AppendJoin(
             JoinSection.JoinType.LeftJoin,
-            new Column("order_id", alias),
+            new Column("order_id", "student_flow"),
             new Column("id", "orders")
             );
         }
         else if (queryParameters.ExtractOrders)
         {
-            orderMapper = Order.GetMapper(new Column("order_id", alias), JoinSection.JoinType.LeftJoin);
+            orderMapper = Order.GetMapper(new Column("order_id", "student_flow"), JoinSection.JoinType.LeftJoin);
         }
         else
         {
@@ -135,39 +134,12 @@ public static class FlowHistory
             );
             orderMapper.PathTo.AppendJoin(
             JoinSection.JoinType.LeftJoin,
-            new Column("order_id", alias),
+            new Column("order_id", "student_flow"),
             new Column("id", "orders")
             );
         }
 
-        var usedCols = new List<Column> {
-            new Column("id", "rec_id", alias),
-            new Column("student_id", alias),
-            new Column("group_id_to", alias),
-            new Column("order_id", alias)
-        };
-
-        var historyMapper = new Mapper<StudentFlowRecord>(
-            (m) =>
-            {
-                var raw = new RawStudentFlowRecord();
-                raw.Id = m["rec_id"].GetType() == typeof(DBNull) ? null : (int)m["rec_id"];
-                raw.StudentId = m["student_id"].GetType() == typeof(DBNull) ? null : (int)m["student_id"];
-                raw.GroupToId = m["group_id_to"].GetType() == typeof(DBNull) ? null : (int)m["group_id_to"];
-                raw.OrderId = m["order_id"].GetType() == typeof(DBNull) ? null : (int)m["order_id"];
-                var studentResult = studentMapper.Map(m);
-                var groupResult = groupMapper.Map(m);
-                var orderResult = orderMapper.Map(m);
-                var group = groupResult.IsFound ? groupResult.ResultObject : null;
-                var student = studentResult.IsFound ? studentResult.ResultObject : null;
-                var order = orderResult.IsFound ? orderResult.ResultObject : null;
-                return QueryResult<StudentFlowRecord>.Found(new StudentFlowRecord(raw, order, student, group));
-            },
-            usedCols
-        );
-        historyMapper.AssumeChild(studentMapper);
-        historyMapper.AssumeChild(groupMapper);
-        historyMapper.AssumeChild(orderMapper);
+        
 
         ComplexWhereCondition basicFilter = ComplexWhereCondition.Empty;
         var sqlParameters = parameters ?? new SQLParameterCollection();
@@ -177,11 +149,11 @@ public static class FlowHistory
              new ComplexWhereCondition(
             new WhereCondition(
                 new Column("creation_timestamp", "orders"),
-                GetLastOrderDateSubquery(alias),
+                GetLastOrderDateSubquery("student_flow"),
                 WhereCondition.Relations.Equal
             ),
             new WhereCondition(
-                new Column("order_id", alias), WhereCondition.Relations.Is
+                new Column("order_id", "student_flow"), WhereCondition.Relations.Is
             ),
             ComplexWhereCondition.ConditionRelation.OR, true
             ), false);
@@ -237,7 +209,7 @@ public static class FlowHistory
             var p1 = sqlParameters.Add<int>((int)queryParameters.ExtractByGroup.Id);
             ComplexWhereCondition? filter = new ComplexWhereCondition(
                 new WhereCondition(
-                    new Column("group_id_to", alias),
+                    new Column("group_id_to", "student_flow"),
                     p1,
                     WhereCondition.Relations.Equal
                 )
@@ -246,18 +218,22 @@ public static class FlowHistory
         }
         basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND, additionalFilter);
 
+        var historyMapper = StudentFlowRecord.GetMapper(
+            orderMapper, groupMapper, studentMapper
+        );
+
         var query =
         // последнее состояние исключает неуникальность студентов
         (queryParameters.ExtractStudentUnique ?
-        SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("id", "students"), alias)
-        : SelectQuery<StudentFlowRecord>.Init("student_flow", alias))
+        SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("id", "students"))
+        : SelectQuery<StudentFlowRecord>.Init("student_flow"))
         .AddMapper(historyMapper)
         .AddJoins(historyMapper.PathTo)
         .AddWhereStatement(basicFilter)
         .AddOrderByStatement(
             queryParameters.OverallHistorical ?
             new OrderByCondition(
-                new Column("id", alias),
+                new Column("id", "student_flow"),
                 OrderByCondition.OrderByTypes.DESC
             ) : queryParameters.ExtractStudentUnique ?
             new OrderByCondition(

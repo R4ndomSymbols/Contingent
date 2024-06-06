@@ -56,4 +56,19 @@ public class Period
     {
         return date >= Start && date <= End;
     }
+
+    public bool IsEndedNow()
+    {
+        return End < DateTime.Now;
+    }
+    // -1 если не закончился,
+    // +n, если закончился в определенном времени в прошлом
+    public int GetEndedDaysAgoCount()
+    {
+        if (!IsEndedNow())
+        {
+            return -1;
+        }
+        return (DateTime.Now - End).Days;
+    }
 }

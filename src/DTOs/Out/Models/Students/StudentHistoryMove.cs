@@ -21,7 +21,7 @@ public sealed class StudentHistoryMoveDTO
 
     public StudentHistoryMoveDTO(StudentModel student, GroupModel? byOrderNow, GroupModel? previous, Order moveByThisOrder)
     {
-        StudentId = (int)student.Id;
+        StudentId = (int)student.Id!;
         StudentFullName = student.GetName();
         GroupIdTo = byOrderNow?.Id;
         GroupNameTo = byOrderNow?.GroupName ?? "Нет";

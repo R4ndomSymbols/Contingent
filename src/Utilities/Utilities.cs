@@ -1,6 +1,7 @@
 using System.Globalization;
 using Npgsql;
 using Contingent.Models;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Utilities;
 
@@ -9,9 +10,15 @@ public static class Utils
 {
 
     private static string? DatabaseConnectionString = null;
-
-
     public const int INVALID_ID = -1;
+
+    public static bool IsValidId(int id){
+        return id != INVALID_ID; 
+    }
+    public static bool IsValidId(int? id){
+        return id != null && IsValidId(id.Value);
+    }
+
 
     public static string FormatDateTime(DateTime? date, bool expand = false)
     {
@@ -44,8 +51,9 @@ public static class Utils
             return new DateTime(year, month, day);
         }
     }
-    public static bool TryParseDate(string? date)
+    public static bool TryParseDate(string? date, out DateTime parsed)
     {
+        parsed = DateTime.MinValue;
         if (string.IsNullOrEmpty(date))
         {
             return false;
@@ -65,7 +73,7 @@ public static class Utils
                     {
                         try
                         {
-                            new DateTime(year, month, day);
+                            parsed = new DateTime(year, month, day);
                             return true;
                         }
                         catch (ArgumentOutOfRangeException)

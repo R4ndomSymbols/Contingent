@@ -162,8 +162,8 @@ public class District : IAddressPart
         var foundUntyped = AddressModel.FindRecords(_id).Result;
         return
         foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL)
-        .Select(rec => Settlement.Create(rec, this))
-        .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)));
+        .Select(rec => Settlement.Create(rec, this)!)
+        .Concat(foundUntyped.Where(rec => rec.AddressLevelCode == SettlementArea.ADDRESS_LEVEL).Select(rec => (IAddressPart)SettlementArea.Create(rec, this)!));
     }
 
     public override string ToString()
@@ -178,5 +178,10 @@ public class District : IAddressPart
         }
         var toCompare = (District)obj;
         return toCompare._id == this._id;
+    }
+
+    public override int GetHashCode()
+    {
+        throw new NotImplementedException();
     }
 }

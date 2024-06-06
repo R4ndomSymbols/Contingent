@@ -163,21 +163,29 @@ public class RussianCitizenship : Citizenship
         return (Surname + " " + Name + " " + Patronymic).TrimEnd();
     }
     // переместить валидацию сюда
-    public static Result<RussianCitizenship?> Create(RussianCitizenshipInDTO? dto, ObservableTransaction? scope = null)
+    public static Result<RussianCitizenship> Create(RussianCitizenshipInDTO? dto, ObservableTransaction? scope = null)
     {
         if (dto is null)
         {
             return Result<RussianCitizenship>.Failure(new ValidationError(nameof(dto), "Непределенная модель гражданства"));
         }
-        var errors = new List<ValidationError?>();
-        var citizenship = new RussianCitizenship();
+        var errors = new List<ValidationError>();
+        RussianCitizenship citizenship = null!;
 
-        if (dto.Id != null)
+        if (dto.Id != null && dto.Id != Utils.INVALID_ID)
         {
-            citizenship._id = (int)dto.Id;
+            var fromDB = GetById(dto.Id);
+            if (errors.IsValidRule(
+                fromDB is not null,
+                "Неверно указан id гражданства",
+                nameof(RussianCitizenship)
+            ))
+            {
+                citizenship = fromDB!;
+            }
         }
-        citizenship.LegalAddress = null;
-        if (dto.LegalAddress.Address is not null)
+        citizenship ??= new RussianCitizenship();
+        if (dto.LegalAddress.IsAddressStated())
         {
             var addressResult = AddressModel.Create(dto.LegalAddress, scope);
             if (addressResult.IsSuccess)
@@ -188,6 +196,10 @@ public class RussianCitizenship : Citizenship
             {
                 errors.AddRange(addressResult.Errors);
             }
+        }
+        else
+        {
+            citizenship.LegalAddress = null;
         }
 
         var name = NamePart.Create(dto.Name, 40);
@@ -226,9 +238,9 @@ public class RussianCitizenship : Citizenship
         }
         if (errors.Any())
         {
-            return Result<RussianCitizenship?>.Failure(errors);
+            return Result<RussianCitizenship>.Failure(errors);
         }
-        return Result<RussianCitizenship?>.Success(citizenship);
+        return Result<RussianCitizenship>.Success(citizenship);
 
     }
     public async Task<ResultWithoutValue> Save(ObservableTransaction? scope)
@@ -297,12 +309,30 @@ public class RussianCitizenship : Citizenship
         cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _surname.NameToken));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p4", _name.NameToken));
         cmd.Parameters.Add(new NpgsqlParameter("p5", _patronymic?.NameToken is null ? DBNull.Value : _patronymic.NameToken));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)LegalAddressId));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_id));
+        cmd.Parameters.Add(new NpgsqlParameter("p6", LegalAddressId.HasValue ? LegalAddressId.Value : DBNull.Value));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p7", (int)_id!));
 
         using (cmd)
         {
             await cmd.ExecuteNonQueryAsync();
         }
+    }
+
+    public static RussianCitizenship? GetById(int? id)
+    {
+        if (id is null || id.Value == Utils.INVALID_ID)
+        {
+            return null;
+        }
+        using var conn = Utils.GetAndOpenConnectionFactory().Result;
+        var parameters = new SQLParameterCollection();
+        var sqlQuery = SelectQuery<RussianCitizenship>.Init("rus_citizenship")
+        .AddMapper(GetMapper(null, true))
+        .AddWhereStatement(new ComplexWhereCondition(new WhereCondition(
+            new Column("id_r_cit", "rus_citizenship"), parameters.Add((int)id), WhereCondition.Relations.Equal
+        )))
+        .AddParameters(parameters)
+        .Finish().ResultObject;
+        return sqlQuery.Execute(conn, new QueryLimits(0, 1)).Result.FirstOrDefault();
     }
 }

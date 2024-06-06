@@ -36,7 +36,7 @@ public class StudentHistory
             switch (state)
             {
                 case 0:
-                    if (rec.Record.GroupToId == groupFrom.Id)
+                    if (rec.GroupTo?.Id == groupFrom.Id)
                     {
                         state = 1;
                     }
@@ -44,7 +44,7 @@ public class StudentHistory
                 case 1:
                     {
                         // поиск измнения группы
-                        if (rec.Record.GroupToId != groupFrom.Id)
+                        if (rec.GroupTo?.Id != groupFrom.Id)
                         {
                             return rec.ByOrder;
                         }
@@ -59,7 +59,7 @@ public class StudentHistory
     {
         foreach (var rec in _history)
         {
-            if (rec.ByOrder.Equals(orderBy))
+            if (rec.OrderNullRestrict.Equals(orderBy))
             {
                 return rec;
             }
@@ -102,7 +102,7 @@ public class StudentHistory
     public void RevertHistory(Order startingPoint)
     {
         List<int> _toRemove = new();
-        _history.RemoveOlderOrEqualThan(startingPoint, (rec) => _toRemove.Add((int)rec.Record.Id));
+        _history.RemoveOlderOrEqualThan(startingPoint, (rec) => _toRemove.Add((int)rec.Id));
         FlowHistory.DeleteRecords(_toRemove);
     }
 
@@ -193,6 +193,12 @@ public class StudentHistory
         throw new Exception("Ошибка целостности истории приказов");
     }
 
+    public bool IsStudentSentInAcademicVacation()
+    {
+        var record = GetLastRecord();
+        return record is not null && record.OrderNullRestrict.GetOrderTypeDetails().IsAcademicVacationSend();
+    }
+
     public bool IsStudentEnlisted()
     {
         return GetStudentState(out int cc) == StudentStates.Enlisted;
@@ -214,7 +220,7 @@ public class StudentHistory
 
     public bool IsEnlistedInPeriod(DateTime previous, DateTime next)
     {
-        foreach (var order in _history.Select(rec => rec.ByOrder))
+        foreach (var order in _history.Select(rec => rec.OrderNullRestrict))
         {
             if (order.EffectiveDate >= previous && order.EffectiveDate <= next && order.GetOrderTypeDetails().IsAnyEnrollment())
             {

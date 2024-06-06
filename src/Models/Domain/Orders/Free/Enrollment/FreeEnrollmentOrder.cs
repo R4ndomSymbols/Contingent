@@ -25,7 +25,6 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
     public static Result<FreeEnrollmentOrder> Create(OrderDTO? order)
     {
-
         var created = new FreeEnrollmentOrder();
         var valResult = MapBase(order, created);
         return valResult;

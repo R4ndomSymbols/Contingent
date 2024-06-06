@@ -7,28 +7,28 @@ using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
 
-public class PaidTransferFromPaidToFreeOrder : FreeContingentOrder
+public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
 {
     private StudentToGroupMoveList _transfer;
 
-    protected PaidTransferFromPaidToFreeOrder() : base()
+    protected FreeTransferFromPaidToFreeOrder() : base()
     {
         _transfer = StudentToGroupMoveList.Empty;
     }
-    protected PaidTransferFromPaidToFreeOrder(int id) : base(id)
+    protected FreeTransferFromPaidToFreeOrder(int id) : base(id)
     {
         _transfer = StudentToGroupMoveList.Empty;
     }
 
-    public static Result<PaidTransferFromPaidToFreeOrder> Create(OrderDTO? order)
+    public static Result<FreeTransferFromPaidToFreeOrder> Create(OrderDTO? order)
     {
-        var created = new PaidTransferFromPaidToFreeOrder();
+        var created = new FreeTransferFromPaidToFreeOrder();
         var valResult = MapBase(order, created);
         return valResult;
     }
-    public static Result<PaidTransferFromPaidToFreeOrder> Create(int id, StudentToGroupMovesDTO? dto)
+    public static Result<FreeTransferFromPaidToFreeOrder> Create(int id, StudentToGroupMovesDTO? dto)
     {
-        var result = MapFromDbBaseForConduction<PaidTransferFromPaidToFreeOrder>(id);
+        var result = MapFromDbBaseForConduction<FreeTransferFromPaidToFreeOrder>(id);
         if (result.IsFailure)
         {
             return result;
@@ -37,15 +37,15 @@ public class PaidTransferFromPaidToFreeOrder : FreeContingentOrder
         var dtoAsModelResult = StudentToGroupMoveList.Create(dto);
         if (dtoAsModelResult.IsFailure || order is null)
         {
-            return dtoAsModelResult.RetraceFailure<PaidTransferFromPaidToFreeOrder>();
+            return dtoAsModelResult.RetraceFailure<FreeTransferFromPaidToFreeOrder>();
         }
         order._transfer = dtoAsModelResult.ResultObject;
         return result;
     }
 
-    public static QueryResult<PaidTransferFromPaidToFreeOrder?> Create(int id, NpgsqlDataReader reader)
+    public static QueryResult<FreeTransferFromPaidToFreeOrder?> Create(int id, NpgsqlDataReader reader)
     {
-        var order = new PaidTransferFromPaidToFreeOrder(id);
+        var order = new FreeTransferFromPaidToFreeOrder(id);
         return MapPartialFromDbBase(reader, order);
     }
 

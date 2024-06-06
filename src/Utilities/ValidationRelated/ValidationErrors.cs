@@ -1,4 +1,6 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Students;
 
 [Serializable]
@@ -96,6 +98,9 @@ public class ValidationError
             "Message: " + _message
         );
     }
+
+    public static ValidationError GetNullReceivedError(string err) => new ValidationError(ErrorCollectionDTO.EmptyInputIdentifier, err);
+
 }
 
 public class DbIntegrityValidationError : ValidationError

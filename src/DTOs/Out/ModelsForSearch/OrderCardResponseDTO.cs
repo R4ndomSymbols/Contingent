@@ -25,7 +25,7 @@ public class OrderSearchDTO
     public OrderSearchDTO(Order order)
     {
         OrderId = order.Id;
-        OrderGroupChangePolicy = order.GetOrderTypeDetails().FrontendGroupBehaviour.ToString();
+        OrderGroupChangePolicy = order.GetOrderTypeDetails().FrontendGroupBehavior.ToString();
         IsClosed = order.IsClosed;
         if (!IsClosed)
         {

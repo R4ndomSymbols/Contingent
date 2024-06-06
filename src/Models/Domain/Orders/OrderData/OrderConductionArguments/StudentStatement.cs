@@ -6,9 +6,9 @@ using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Citizenship;
 
 namespace Contingent.Models.Domain.Orders;
-public abstract class StudentStatement
+public static class OrderDataExtractions
 {
-    protected Result<StudentModel> GetStudent(StudentStatementDTO? dto)
+    public static Result<StudentModel> GetStudent(StudentStatementDTO? dto)
     {
         if (dto is null)
         {
@@ -51,7 +51,7 @@ public abstract class StudentStatement
         }
         return Result<StudentModel>.Success(student);
     }
-    protected Result<GroupModel> GetGroup(GroupStatementDTO dto)
+    public static Result<GroupModel> GetGroup(GroupStatementDTO dto)
     {
         if (dto is null)
         {

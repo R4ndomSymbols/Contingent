@@ -7,17 +7,12 @@ using Utilities;
 
 namespace Contingent.Models.Domain.Orders.OrderData;
 
-public class StudentToGroupMove : StudentStatement
+public class StudentToGroupMove
 {
 
     public StudentModel Student { get; private set; }
     public GroupModel GroupTo { get; private set; }
 
-    private StudentToGroupMove(StudentModel student, GroupModel group)
-    {
-        Student = student;
-        GroupTo = group;
-    }
     private StudentToGroupMove()
     {
         Student = null!;
@@ -32,12 +27,12 @@ public class StudentToGroupMove : StudentStatement
             return Result<StudentToGroupMove>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
         }
         var model = new StudentToGroupMove();
-        var student = model.GetStudent(dto.Student);
+        var student = OrderDataExtractions.GetStudent(dto.Student);
         if (student.IsFailure)
         {
             return Result<StudentToGroupMove>.Failure(student.Errors);
         }
-        var group = model.GetGroup(dto.Group);
+        var group = OrderDataExtractions.GetGroup(dto.Group);
         if (group.IsFailure)
         {
             return Result<StudentToGroupMove>.Failure(group.Errors);
@@ -98,7 +93,7 @@ public class StudentToGroupMoveList : IEnumerable<StudentToGroupMove>
         var parsed = new List<StudentFlowRecord>();
         foreach (var m in this)
         {
-            parsed.Add(new StudentFlowRecord(orderBy, m.Student, m.GroupTo));
+            parsed.Add(StudentFlowRecord.FromModel(orderBy, m.Student, m.GroupTo));
         }
         return parsed;
     }

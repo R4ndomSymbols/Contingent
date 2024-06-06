@@ -42,7 +42,21 @@ public class SpecialityOutDTO
 
     public SpecialityOutDTO()
     {
-
+        Id = null;
+        FgosCode = "";
+        FgosName = "";
+        Qualification = "";
+        FgosPrefix = "";
+        QualificationPostfix = "";
+        CourseCount = 0;
+        EducationalLevelIn = 0;
+        EducationalLevelOut = 0;
+        EducationalLevelInName = "";
+        EducationalLevelOutName = "";
+        FullName = "";
+        ProgramType = 0;
+        ProgramTypeName = "";
+        TeachingDepthName = "";
     }
 
 }

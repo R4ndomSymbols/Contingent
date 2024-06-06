@@ -3,74 +3,92 @@
 @{
     ViewData["Title"] = "Специальность";
 }
-
-<div class="d-flex flex-column">
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Код ФГОС</h5>
-        <div class="col-1"></div>
-        <p class="col-5">@Model.FgosCode</p>
-    </div>
-
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Название ФГОС</h5>
-        <div class="col-1"></div>
-        <p class="col-5">@Model.FgosName</p>
-    </div>
-
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Квалификация</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">@Model.Qualification</p>
-    </div>
-
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Количество курсов</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.CourseCount.ToString()
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Префикс имени группы (ФГОС)</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.FgosPrefix
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Постфикс имени группы (квалификация)</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.QualificationPostfix
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Необходимый уровень образования</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.EducationalLevelInName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Уровень образования после освоения программы</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.EducationalLevelOutName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Уровень образовательной программы</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.TeachingDepthName
-        </p>
-    </div>
-    <div class="d-flex flex-row">
-        <h5 class="col-5 mx-0">Уровень программы подготовки</h5>
-        <div class="col-1 mx-0"></div>
-        <p class="col-5">
-            @Model.ProgramTypeName
-        </p>
-    </div>
+<div class="page-layout-container">
     <input type="hidden" id="Id" value="@Model.Id" />
+    <h3 class="group-title">
+        Сведения о специальности
+    </h3>
+    <div class="item-input-group d-flex flex-column">
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Код ФГОС
+            </h5>
+            <p class="field-content">
+                @Model.FgosCode
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Название ФГОС
+            </h5>
+            <p class="field-content">
+                @Model.FgosName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Квалификация
+            </h5>
+            <p class="field-content">
+                @Model.Qualification
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Количество курсов
+            </h5>
+            <p class="field-content">
+                @Model.CourseCount.ToString()
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Префикс имени группы (ФГОС)
+            </h5>
+            <p class="field-content">
+                @Model.FgosPrefix
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Постфикс имени группы (квалификация)
+            </h5>
+            <p class="field-content">
+                @Model.QualificationPostfix
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Необходимый уровень образования
+            </h5>
+            <p class="field-content">
+                @Model.EducationalLevelInName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Уровень образования после освоения программы
+            </h5>
+            <p class="field-content">
+                @Model.EducationalLevelOutName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Уровень образовательной программы
+            </h5>
+            <p class="field-content">
+                @Model.TeachingDepthName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Уровень программы подготовки
+            </h5>
+            <p class="field-content">
+                @Model.ProgramTypeName
+            </p>
+        </div>
+    </div>
 </div>
+

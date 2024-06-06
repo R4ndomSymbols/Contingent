@@ -2,37 +2,38 @@ namespace Contingent.Models.Domain.Orders.OrderData;
 
 public class OrderTypeInfo
 {
-    public readonly GroupDisplayBehaviour FrontendGroupBehaviour;
+    public readonly GroupDisplayBehavior FrontendGroupBehavior;
     public readonly string OrderTypeName;
     public readonly OrderTypes Type;
-    public OrderTypeInfo(OrderTypes orderType, string orderTypeName, GroupDisplayBehaviour behaviour)
+    public OrderTypeInfo(OrderTypes orderType, string orderTypeName, GroupDisplayBehavior behavior)
     {
         OrderTypeName = orderTypeName;
         Type = orderType;
-        FrontendGroupBehaviour = behaviour;
+        FrontendGroupBehavior = behavior;
     }
 
-    public enum GroupDisplayBehaviour
+    public enum GroupDisplayBehavior
     {
         NoChange = 1,
         MustChange = 2,
-        Vipe = 3,
+        WipeOut = 3,
         Undefined = 4,
     }
 
-    private static Dictionary<OrderTypes, OrderTypeInfo> _types = new Dictionary<OrderTypes, OrderTypeInfo>{
+    private static readonly Dictionary<OrderTypes, OrderTypeInfo> _types = new()
+    {
 
         {OrderTypes.FreeEnrollment, new(
             OrderTypes.FreeEnrollment,
             "Зачисление на первый курс (бюджет)",
-            GroupDisplayBehaviour.MustChange
+            GroupDisplayBehavior.MustChange
         )},
         {
             OrderTypes.FreeEnrollmentFromAnotherOrg,
             new(
                 OrderTypes.FreeEnrollmentFromAnotherOrg,
                 "Зачисление в порядке перевода (бюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -40,15 +41,15 @@ public class OrderTypeInfo
             new(
                 OrderTypes.FreeReEnrollment,
                 "Зачисление в порядке восстановления (бюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
-            OrderTypes.FreeTransferBetweenSpecialities,
+            OrderTypes.FreeTransferBetweenSpecialties,
             new(
-                OrderTypes.FreeTransferBetweenSpecialities,
+                OrderTypes.FreeTransferBetweenSpecialties,
                 "Перевод внутри организации (между специальностями) (бюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -56,7 +57,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.FreeTransferNextCourse,
                 "Перевод на следующий курс (бюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -64,7 +65,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.FreeDeductionWithAcademicDebt,
                 "Отчисление в связи с академической задолженностью (бюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
@@ -72,7 +73,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.FreeDeductionWithGraduation,
                 "Отчисление в связи с выпуском (бюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
@@ -80,7 +81,47 @@ public class OrderTypeInfo
             new(
                 OrderTypes.FreeDeductionWithOwnDesire,
                 "Отчисление по собственному желанию (бюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithTransfer,
+            new(
+                OrderTypes.FreeDeductionWithTransfer,
+                "Отчисление в связи с переводом (бюджет)",
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+            new(
+                OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+                "Отчисление в связи с невыходом из академического отпуска (бюджет)",
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+         {
+            OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+            new(
+                OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+                "Отчисление в связи с неприступлением к обучению (бюджет)",
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.FreeAcademicVacationSend,
+            new (
+                OrderTypes.FreeAcademicVacationSend,
+                "О предоставлении академического отпуска (бюджет)",
+                GroupDisplayBehavior.NoChange
+            )
+        },
+        {
+            OrderTypes.FreeAcademicVacationReturn,
+            new (
+                OrderTypes.FreeAcademicVacationReturn,
+                "О восстановлении из академического отпуска (бюджет)",
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -88,7 +129,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidEnrollment,
                 "Зачисление на первый курс (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -96,7 +137,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidEnrollmentWithTransfer,
                 "Зачисление в порядке перевода (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -104,7 +145,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidReEnrollment,
                 "Зачисление в порядке восстановления (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -112,7 +153,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidTransferBetweenSpecialties,
                 "Перевод внутри организации (между специальностями) (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -120,15 +161,15 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidTransferNextCourse,
                 "Перевод на следующий курс (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                GroupDisplayBehavior.MustChange
             )
         },
         {
             OrderTypes.FreeTransferFromPaidToFree,
             new(
                 OrderTypes.FreeTransferFromPaidToFree,
-                "Перевод на бюджет (внебюджет)",
-                GroupDisplayBehaviour.MustChange
+                "Перевод на бюджет (бюджет)",
+                GroupDisplayBehavior.MustChange
             )
         },
         {
@@ -136,7 +177,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidDeductionWithAcademicDebt,
                 "Отчисление в связи с академической задолженностью (внебюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
@@ -144,7 +185,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidDeductionWithGraduation,
                 "Отчисление в связи с выпуском (внебюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
@@ -152,15 +193,31 @@ public class OrderTypeInfo
             new(
                 OrderTypes.PaidDeductionWithOwnDesire,
                 "Отчисление по собственному желанию (внебюджет)",
-                GroupDisplayBehaviour.Vipe
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
             OrderTypes.PaidDeductionWithTransfer,
             new (
                 OrderTypes.PaidDeductionWithTransfer,
-                "Отчисление в связи с переводом в другую организаю (внебюджет)",
-                GroupDisplayBehaviour.Vipe
+                "Отчисление в связи с переводом в другую организацию (внебюджет)",
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithAcademicVacationNoReturn,
+            new (
+                OrderTypes.PaidDeductionWithTransfer,
+                "Отчисление в связи с невыходом из академического отпуска (внебюджет)",
+                GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.PaidDeductionWithEducationProcessNotInitiated,
+            new (
+                OrderTypes.PaidDeductionWithTransfer,
+                "Отчисление в связи с неприступлением к обучению (внебюджет)",
+                GroupDisplayBehavior.WipeOut
             )
         },
         {
@@ -168,7 +225,7 @@ public class OrderTypeInfo
             new(
                 OrderTypes.EmptyOrder,
                 "Не указано",
-                GroupDisplayBehaviour.Undefined
+                GroupDisplayBehavior.Undefined
             )
         }
     };
@@ -177,9 +234,9 @@ public class OrderTypeInfo
 
     public static OrderTypeInfo GetByType(OrderTypes type)
     {
-        if (_types.ContainsKey(type))
+        if (_types.TryGetValue(type, out OrderTypeInfo? value))
         {
-            return _types[type];
+            return value;
         }
         else
         {
@@ -203,6 +260,10 @@ public class OrderTypeInfo
     public bool CanBePreviousToReEnrollment()
     {
         return IsAnyDeduction() && Type != OrderTypes.FreeDeductionWithGraduation && Type != OrderTypes.PaidDeductionWithGraduation;
+    }
+    public bool IsAcademicVacationSend()
+    {
+        return Type == OrderTypes.PaidAcademicVacationSend || Type == OrderTypes.FreeAcademicVacationSend;
     }
 
     public static int ImportOrderType(string? v)

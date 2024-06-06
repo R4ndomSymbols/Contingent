@@ -36,7 +36,7 @@ public class HomeController : Controller
                 ExtractGroups = false,
             }
         );
-        records = records.OrderByDescending(x => x.Record.Id);
+        records = records.OrderByDescending(x => x.Id);
         var studentMovesHistoryRecords = new List<InGroupRelation>();
         foreach (var record in records)
         {

@@ -24,7 +24,7 @@ public class AddressController : Controller
     [Route("/addresses/explain/{address?}")]
     public IActionResult GetAddressInfo(string? address)
     {
-        Result<AddressModel?> result = AddressModel.Create(new AddressInDTO() { Address = address });
+        Result<AddressModel> result = AddressModel.Create(new AddressInDTO() { Address = address });
         if (result.IsFailure)
         {
             return BadRequest(new ErrorCollectionDTO(result.Errors));

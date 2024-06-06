@@ -10,22 +10,21 @@ public class CSVRow
 
     public readonly int LineNumber;
 
-    private CSVRow(int lineNumber)
+    private CSVRow(int lineNumber, string[] line, CSVHeader header)
     {
         LineNumber = lineNumber;
+        _line = line;
+        _header = header;
     }
 
     public static CSVRow? Parse(CSVHeader header, string row, int lineNumber)
     {
-        var csvLine = new CSVRow(lineNumber);
         string[] parts = row.Split(',');
         if (parts.Length != header.ColumnCount)
         {
             return null;
         }
-        csvLine._line = parts;
-        csvLine._header = header;
-        return csvLine;
+        return new CSVRow(lineNumber, parts, header);
     }
 
     public string? this[string name]

@@ -133,16 +133,16 @@ public class SpecialityDataSource : IRowSource
     };
     private static readonly string[] _headers =
     {
-        SpecialityDTO.FgosCodeFieldName,
-        SpecialityDTO.FgosNameFieldName,
-        SpecialityDTO.QualificationFieldName,
-        SpecialityDTO.CourseCountFieldName,
-        SpecialityDTO.FgosPrefixFieldName,
-        SpecialityDTO.QualificationPostfixFieldName,
-        SpecialityDTO.TeachingDepthFieldName,
-        SpecialityDTO.EducationalLevelInFieldName,
-        SpecialityDTO.EducationalLevelOutFieldName,
-        SpecialityDTO.ProgramTypeFieldName
+        SpecialtyDTO.FgosCodeFieldName,
+        SpecialtyDTO.FgosNameFieldName,
+        SpecialtyDTO.QualificationFieldName,
+        SpecialtyDTO.CourseCountFieldName,
+        SpecialtyDTO.FgosPrefixFieldName,
+        SpecialtyDTO.QualificationPostfixFieldName,
+        SpecialtyDTO.TeachingDepthFieldName,
+        SpecialtyDTO.EducationalLevelInFieldName,
+        SpecialtyDTO.EducationalLevelOutFieldName,
+        SpecialtyDTO.ProgramTypeFieldName
     };
 
 

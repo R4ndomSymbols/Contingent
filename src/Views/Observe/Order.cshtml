@@ -8,70 +8,89 @@
     IEnumerable<OrderTypeInfo> types = OrderTypeInfo.GetAllTypes();
 }
 
-<div class="container">
-    <div id="order_info" order_id="@Model.OrderId">
-        <div class="d-flex flex-row">
-            <h5 class="col-3 mx-0"> Идентификатор приказа: </h5>
-            <p class="col-2"> @Model.OrderOrgId</p>
-            <h5 class="col-3 mx-0"> Тип приказа: </h5>
-            <p class="col-3"> @Model.OrderRussianTypeName</p>
-        </div>
+<div class="page-layout-container d-flex flex-column">
+    <div id="order_info" order_id="@Model.OrderId"></div>
+    @{
+        string orderOrgId = "№" + Model.OrderOrgId + " от " + Model.OrderSpecifiedDate;
+    }
+    <div class="d-flex flex-row">
+        <h3 class="group-title">
+            Приказ @orderOrgId
+        </h3>
+        <div class="flex-fill">
 
-        <div class="d-flex flex-row">
-            <h5 class="col-3 mx-0"> Название приказа: </h5>
-            <p class="col-8"> @Model.OrderFullName</p>
         </div>
-        <div class="d-flex flex-row">
-            <h5 class="col-3 mx-0"> Описание приказа: </h5>
-        </div>
-        <div class="d-flex flex-row">
-            <p class="col-11 mx-0">@Model.OrderDescription</p>
-        </div>
-        <div class="d-flex flex-row">
-            <h5 class="col-3 mx-0"> Вступает в силу: </h5>
-            <p class="col-2"> @Model.OrderEffectiveDate.</p>
-            <h5 class="col-3 mx-0"> Дата приказа: </h5>
-            <p class="col-2"> @Model.OrderSpecifiedDate.</p>
-        </div>
-
-        <div class="d-flex flex-row">
-            <h5 class="col-3 mx-0"> Состояние приказа: </h5>
+        <div>
             @if (Model.IsClosed)
             {
-                <p class="col-2 text-danger">Закрыт</p>
+                <h4 class="text-danger">Закрыт</h4>
             }
             else
             {
-                <p class="col-2 text-success">Открыт</p>
+                <h4 class="text-success">Открыт</h4>
             }
         </div>
-        <div class="d-flex flex-row">
-            <div class="flex-fill">
-                <p class="text-left">
-                    История приказа
-                </p>
-            </div>
-            <button id="delete_history" class="btn btn-danger ml-3">
-                УДАЛИТЬ ИСТОРИЮ
-            </button>
-        </div>
-        <div class="col-11 row">
-            <table class="table">
-                <thead>
-                    <th scope="col" class="col-1">Номер в поименной книге</th>
-                    <th scope="col">ФИО</th>
-                    <th scope="col">Группа откуда</th>
-                    <th scope="col">Группа куда</th>
-                </thead>
-                <tbody id="students_in_order">
-
-                </tbody>
-            </table>
-
-        </div>
-
-
     </div>
 
-    <script src="~/js/site.js"></script>
-    <script src="~/js/observe/orderView.js"></script>
+    <div class="item-input-group">
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Вступает в силу с:
+            </h5>
+            <p class="field-content">
+                @Model.OrderEffectiveDate
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Тип приказа:
+            </h5>
+            <p class="field-content">
+                @Model.OrderRussianTypeName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Полное название приказа:
+            </h5>
+            <p class="field-content">
+                @Model.OrderFullName
+            </p>
+        </div>
+        <div class="data-row">
+            <h5 class="field-h-title">
+                Описание приказа:
+            </h5>
+            <p class="field-content">
+                @Model.OrderDescription
+            </p>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row mt-2">
+        <h3 class="group-title">
+            Содержание приказа (движения)
+        </h3>
+        <div class="flex-fill">
+
+        </div>
+        <button class="standard-button-prim" id="delete_history">
+            УДАЛИТЬ ИСТОРИЮ ПРИКАЗА
+        </button>
+    </div>
+    <div class="d-flex">
+        <table class="table flex-fill">
+            <thead>
+                <th scope="col" style="width: 20%;">Номер в поименной книге</th>
+                <th scope="col" class="width: 60%">ФИО</th>
+                <th scope="col" style="width: 10%">Группа откуда</th>
+                <th scope="col" style="width: 10%">Группа куда</th>
+            </thead>
+            <tbody id="students_in_order">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="~/js/observe/order.js" type="module"></script>

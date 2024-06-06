@@ -25,7 +25,7 @@ public class Settlement : IAddressPart
             s =>
             s._parentSettlementArea is not null
                 ? s._parentSettlementArea.Equals(settlement._parentSettlementArea)
-                : s._parentDistrict.Equals(settlement._parentDistrict)
+                : s._parentDistrict!.Equals(settlement._parentDistrict)
             && s._settlementName.Equals(settlement._settlementName)
             && s._settlementType == settlement._settlementType
         );
@@ -261,7 +261,7 @@ public class Settlement : IAddressPart
             AddressPartId = _id,
             AddressLevelCode = ADDRESS_LEVEL,
             AddressName = _settlementName.UnformattedName,
-            ParentId = _parentDistrict is null ? _parentSettlementArea.Id : _parentDistrict.Id,
+            ParentId = _parentDistrict is null ? _parentSettlementArea!.Id : _parentDistrict.Id,
             ToponymType = (int)_settlementType
         };
     }

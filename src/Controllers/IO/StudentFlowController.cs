@@ -81,7 +81,7 @@ public class StudentFlowController : Controller
                 student,
                 rec.GroupTo,
                 previous,
-                rec.ByOrder
+                rec.OrderNullRestrict
             ));
             previous = rec.GroupTo;
 

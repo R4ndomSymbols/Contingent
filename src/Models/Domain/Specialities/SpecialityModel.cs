@@ -131,7 +131,7 @@ public class SpecialtyModel
         {
             return Result<SpecialtyModel>.Failure(new ValidationError("dto не может быть null"));
         }
-        IList<ValidationError?> errors = new List<ValidationError?>();
+        IList<ValidationError> errors = new List<ValidationError>();
         SpecialtyModel model = new();
         SpecialtyModel? fromDb = null;
         if (dto.Id is not null)

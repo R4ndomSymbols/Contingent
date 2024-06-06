@@ -29,7 +29,7 @@ public class StudentSearchController : Controller
         return View(@"Views/Search/Students.cshtml", new object());
 
     }
-    // поиск студента по паратетрам из тела запроса
+    // поиск студента по параметрам из тела запроса
     [HttpPost]
     [Route("students/search/query")]
     public IActionResult FindStudents()
@@ -42,7 +42,7 @@ public class StudentSearchController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос: " + e.Message));
         }
         if (dto is null)
         {
@@ -82,7 +82,8 @@ public class StudentSearchController : Controller
                 ExtractOrders = false,
                 ExtractStudents = true,
                 ExtractStudentUnique = true,
-                ExtractLastState = true
+                ExtractLastState = true,
+                IncludeNotRegisteredStudents = true
             },
             condition, parameters
         ).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo));

@@ -104,7 +104,7 @@ public class Apartment : IAddressPart
         );
         return Result<Apartment>.Success(got);
     }
-    public static Apartment? Create(AddressRecord from, Building parent)
+    public static Apartment? Create(AddressRecord from, Building? parent)
     {
         if (from.AddressLevelCode != ADDRESS_LEVEL || parent is null)
         {
@@ -162,5 +162,10 @@ public class Apartment : IAddressPart
     public override string ToString()
     {
         return _apartmentName.FormattedName;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }

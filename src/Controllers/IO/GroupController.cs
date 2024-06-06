@@ -7,6 +7,7 @@ using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Flow.History;
 using Utilities;
 using Utilities.Validation;
+using Microsoft.AspNetCore.Routing.Tree;
 
 namespace Contingent.Controllers;
 
@@ -106,7 +107,7 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON: " + e.Message));
         }
         var groupResult = GroupModel.Build(deserialized);
 
@@ -119,10 +120,10 @@ public class GroupController : Controller
 
     [HttpPost]
     [Route("/groups/history")]
-    public IActionResult GetHistory()
+    public async Task<IActionResult> GetHistory()
     {
         using var reader = new StreamReader(Request.Body);
-        var body = reader.ReadToEnd();
+        var body = await reader.ReadToEndAsync();
         GroupHistoryQueryDTO? deserialized;
         try
         {
@@ -130,7 +131,7 @@ public class GroupController : Controller
         }
         catch (Exception e)
         {
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON: " + e.Message));
         }
         if (deserialized is null)
         {
@@ -140,9 +141,8 @@ public class GroupController : Controller
         if (groupResult is not null)
         {
             var groupHistory = new GroupHistory(groupResult);
-            if (Utils.TryParseDate(deserialized.OnDate))
+            if (Utils.TryParseDate(deserialized.OnDate, out DateTime date))
             {
-                var date = Utils.ParseDate(deserialized.OnDate);
                 var toReturn = groupHistory.GetStateOnDate(date);
                 return Json(toReturn.Select(x => new InGroupRelation(x.Student, x.ByOrder)));
             }
