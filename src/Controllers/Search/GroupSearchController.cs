@@ -40,7 +40,7 @@ public class GroupSearchController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный поисковый запрос, не удалось разобрать параметры"));
         }
-        var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0, 30), dto.GroupName, dto.IsActive);
+        var searchResult = GroupModel.FindGroupsByName(new QueryLimits(0, 30), dto.GroupName, dto.OnlyActive);
         return Json(searchResult.Select(x => new GroupSearchResultDTO(x)));
     }
 }

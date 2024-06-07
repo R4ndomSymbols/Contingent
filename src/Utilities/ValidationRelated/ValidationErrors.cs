@@ -33,7 +33,7 @@ public class ValidationError
     public ValidationError(string exceptionMessage)
     {
         _message = exceptionMessage;
-        _propertyName = "whole_object";
+        _propertyName = ErrorCollectionDTO.EmptyInputIdentifier;
         _line = null;
         _path = null;
     }

@@ -108,7 +108,7 @@ html {
 }
 
 .standard-button-sec {
-  margin-left: 0.5rem;
+  margin-left: 0.0rem;
   max-height: 35px;
   min-height: 35px;
   border: 1px solid #181617;
@@ -118,7 +118,7 @@ html {
 
 .standard-button-prim {
   font-size: large;
-  margin-left: 0.5rem;
+  margin-left: 0.0rem;
   max-height: 35px;
   min-height: 35px;
   border: 1px solid #181617;

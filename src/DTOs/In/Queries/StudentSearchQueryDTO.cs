@@ -11,6 +11,7 @@ public class StudentSearchQueryDTO
     public int PageSize { get; set; }
     [JsonRequired]
     public int PageSkipCount { get; set; }
+    public StudentSearchQuerySourceDTO? Source { get; set; }
 
     public StudentSearchQueryDTO()
     {

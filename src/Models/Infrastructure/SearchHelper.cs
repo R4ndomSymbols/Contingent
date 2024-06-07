@@ -83,7 +83,7 @@ public class SearchHelper
                     new HistoryExtractSettings
                     {
                         ExtractByOrder = (order, OrderRelationMode.OnlyExcluded),
-                        ExtractLastState = true,
+                        ExtractAbsoluteLastState = true,
                         ExtractGroups = true,
                         ExtractStudents = true,
                         ExtractOrders = false
@@ -98,7 +98,7 @@ public class SearchHelper
                     new HistoryExtractSettings
                     {
                         ExtractByOrder = (order, OrderRelationMode.OnlyIncluded),
-                        ExtractLastState = false,
+                        ExtractAbsoluteLastState = false,
                         ExtractOrders = false,
                         ExtractStudentUnique = true,
                         ExtractGroups = true,

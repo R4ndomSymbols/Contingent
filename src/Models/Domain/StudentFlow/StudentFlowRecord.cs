@@ -80,7 +80,9 @@ public class StudentFlowRecord
             new Column("id", "rec_id", "student_flow"),
             new Column("student_id", "student_flow"),
             new Column("group_id_to", "student_flow"),
-            new Column("order_id", "student_flow")
+            new Column("order_id", "student_flow"),
+            new Column("start_status_date", "student_flow"),
+            new Column("end_status_date", "student_flow")
         };
 
         var historyMapper = new Mapper<StudentFlowRecord>(

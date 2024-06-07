@@ -8,6 +8,7 @@ using Contingent.Models.Infrastructure;
 using Contingent.SQL;
 using Contingent.Models.Domain.Citizenship;
 using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Orders;
 namespace Contingent.Controllers.Search;
 
 
@@ -50,6 +51,7 @@ public class StudentSearchController : Controller
         }
         SQLParameterCollection parameters = new();
         var condition = ComplexWhereCondition.Empty;
+        var byOrder = Order.GetOrderById(dto.Source?.OrderId);
         if (dto.Name is not null && dto.Name.Length > 2)
         {
             var parts = dto.Name.Split(' ').Where(x => x != string.Empty).Select(x => x.Trim());
@@ -67,9 +69,9 @@ public class StudentSearchController : Controller
         }
         if (!(string.IsNullOrEmpty(dto.GroupName) || string.IsNullOrWhiteSpace(dto.GroupName)))
         {
-            condition.Unite(
+            condition = condition.Unite(
                 ComplexWhereCondition.ConditionRelation.AND,
-                GroupModel.GetFilterForGroup(dto.GroupName, ref parameters)
+                GroupModel.GetFilterForGroup("%" + dto.GroupName.Trim().ToLower() + "%", ref parameters)
             );
         }
         var limits = new QueryLimits(dto.PageSkipCount, dto.PageSize);
@@ -82,8 +84,11 @@ public class StudentSearchController : Controller
                 ExtractOrders = false,
                 ExtractStudents = true,
                 ExtractStudentUnique = true,
-                ExtractLastState = true,
-                IncludeNotRegisteredStudents = true
+                ExtractAbsoluteLastState = true,
+                IncludeNotRegisteredStudents = true,
+                // source никогда не будет null 
+                ExtractByOrder = (byOrder is null) ? null : (byOrder, dto.Source!.OrderMode == OrderRelationMode.OnlyIncluded.ToString() ? OrderRelationMode.OnlyIncluded : OrderRelationMode.OnlyExcluded),
+
             },
             condition, parameters
         ).Select(x => new StudentSearchResultDTO(x.Student, x.GroupTo));

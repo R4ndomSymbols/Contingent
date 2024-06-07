@@ -1,3 +1,5 @@
+using Contingent.Models.Domain.Flow;
+
 namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
@@ -12,6 +14,6 @@ public class StudentSearchQuerySourceDTO
 
     public StudentSearchQuerySourceDTO()
     {
-        OrderMode = "";
+        OrderMode = OrderRelationMode.OnlyIncluded.ToString();
     }
 }

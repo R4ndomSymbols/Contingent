@@ -240,7 +240,7 @@ public class StudentHistory
         }
         var found = FlowHistory.GetRecordsByFilter(new QueryLimits(0, 1), new HistoryExtractSettings()
         {
-            ExtractLastState = true,
+            ExtractAbsoluteLastState = true,
             ExtractByStudent = student,
             IncludeNotRegisteredStudents = true
         });
@@ -260,7 +260,7 @@ public class StudentHistory
         {
             ExtractAddress = addressSettings,
             IncludeNotRegisteredStudents = true,
-            ExtractLastState = true,
+            ExtractAbsoluteLastState = true,
             ExtractGroups = true,
             ExtractOrders = true,
             ExtractStudents = true,

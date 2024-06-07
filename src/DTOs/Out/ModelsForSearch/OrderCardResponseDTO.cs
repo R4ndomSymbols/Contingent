@@ -18,14 +18,14 @@ public class OrderSearchDTO
     public string OrderEffectiveDate { get; set; }
     public string OrderSpecifiedDate { get; set; }
     public string OrderOrgId { get; set; }
-    public string OrderGroupChangePolicy { get; init; }
+    public string OrderInputPolicy { get; init; }
     public bool IsClosed { get; set; }
     public string OrderDescription { get; set; }
 
     public OrderSearchDTO(Order order)
     {
         OrderId = order.Id;
-        OrderGroupChangePolicy = order.GetOrderTypeDetails().FrontendGroupBehavior.ToString();
+        OrderInputPolicy = order.GetOrderTypeDetails().FrontendGroupBehavior.ToString();
         IsClosed = order.IsClosed;
         if (!IsClosed)
         {

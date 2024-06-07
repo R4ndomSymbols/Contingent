@@ -51,6 +51,10 @@
                 alert("Произошла неотслеживаемая ошибка: \n" + errorText + "\n Обратитесь к администратору");
                 return;
             }
+            if (errorName === "NULL_RECEIVED_ERROR") {
+                alert("Ошибка содержимого запроса: \n" + errorText);
+                return;
+            }
         }
         let currentObj = this;
 

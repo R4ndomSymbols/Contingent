@@ -14,10 +14,10 @@ public class OrderTypeInfo
 
     public enum GroupDisplayBehavior
     {
-        NoChange = 1,
         MustChange = 2,
         WipeOut = 3,
         Undefined = 4,
+        PeriodInput = 5,
     }
 
     private static readonly Dictionary<OrderTypes, OrderTypeInfo> _types = new()
@@ -101,9 +101,9 @@ public class OrderTypeInfo
             )
         },
          {
-            OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+            OrderTypes.FreeDeductionWithEducationProcessNotInitiated,
             new(
-                OrderTypes.FreeDeductionWithAcademicVacationNoReturn,
+                OrderTypes.FreeDeductionWithEducationProcessNotInitiated,
                 "Отчисление в связи с неприступлением к обучению (бюджет)",
                 GroupDisplayBehavior.WipeOut
             )
@@ -113,7 +113,7 @@ public class OrderTypeInfo
             new (
                 OrderTypes.FreeAcademicVacationSend,
                 "О предоставлении академического отпуска (бюджет)",
-                GroupDisplayBehavior.NoChange
+                GroupDisplayBehavior.PeriodInput
             )
         },
         {
@@ -218,6 +218,22 @@ public class OrderTypeInfo
                 OrderTypes.PaidDeductionWithTransfer,
                 "Отчисление в связи с неприступлением к обучению (внебюджет)",
                 GroupDisplayBehavior.WipeOut
+            )
+        },
+        {
+            OrderTypes.PaidAcademicVacationReturn,
+            new (
+                OrderTypes.PaidAcademicVacationReturn,
+                "Отчисление в связи с неприступлением к обучению (внебюджет)",
+                GroupDisplayBehavior.MustChange
+            )
+        },
+        {
+            OrderTypes.PaidAcademicVacationSend,
+            new (
+                OrderTypes.PaidAcademicVacationSend,
+                "Отчисление в связи с неприступлением к обучению (внебюджет)",
+                GroupDisplayBehavior.PeriodInput
             )
         },
         {

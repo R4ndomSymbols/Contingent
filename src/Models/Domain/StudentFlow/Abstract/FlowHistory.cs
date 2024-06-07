@@ -30,9 +30,8 @@ public static class FlowHistory
         );
         var joins = new JoinSection().AppendJoin(
             JoinSection.JoinType.InnerJoin,
-            new Column("id", "orders"),
-            new Column("order_id", innerFlowTableName)
-
+            new Column("order_id", innerFlowTableName),
+            new Column("id", "orders")
         );
         var where = new ComplexWhereCondition(
             new WhereCondition(
@@ -62,6 +61,8 @@ public static class FlowHistory
         DateTime? before = null
         )
     {
+        string alias = "stdflow";
+
         if (queryParameters is null)
         {
             throw new Exception("Параметры запроса должны быть указаны");
@@ -139,17 +140,17 @@ public static class FlowHistory
             );
         }
 
-        
+
 
         ComplexWhereCondition basicFilter = ComplexWhereCondition.Empty;
         var sqlParameters = parameters ?? new SQLParameterCollection();
-        if (queryParameters.ExtractLastState)
+        if (queryParameters.ExtractAbsoluteLastState)
         {
             basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND,
              new ComplexWhereCondition(
             new WhereCondition(
                 new Column("creation_timestamp", "orders"),
-                GetLastOrderDateSubquery("student_flow"),
+                GetLastOrderDateSubquery(alias),
                 WhereCondition.Relations.Equal
             ),
             new WhereCondition(
@@ -194,7 +195,7 @@ public static class FlowHistory
         }
         if (queryParameters.ExtractByStudent is not null)
         {
-            var p1 = sqlParameters.Add<int>((int)queryParameters.ExtractByStudent.Id);
+            var p1 = sqlParameters.Add((int)queryParameters.ExtractByStudent.Id!);
             ComplexWhereCondition? filter = new ComplexWhereCondition(
                 new WhereCondition(
                     new Column("id", "students"),
@@ -234,11 +235,7 @@ public static class FlowHistory
             queryParameters.OverallHistorical ?
             new OrderByCondition(
                 new Column("id", "student_flow"),
-                OrderByCondition.OrderByTypes.DESC
-            ) : queryParameters.ExtractStudentUnique ?
-            new OrderByCondition(
-                new Column("id", "students"),
-                OrderByCondition.OrderByTypes.ASC
+                OrderByCondition.OrderByTypes.DESC, false
             ) : null
         )
         .AddParameters(sqlParameters)
@@ -275,8 +272,8 @@ public static class FlowHistory
 
 public enum OrderRelationMode
 {
-    OnlyExcluded,
-    OnlyIncluded
+    OnlyExcluded = 0,
+    OnlyIncluded = 1,
 }
 
 public class HistoryExtractSettings
@@ -290,29 +287,13 @@ public class HistoryExtractSettings
     private bool _extractGroups;
     private bool _extractStudent;
     private bool _overallHistorical;
-
-    public bool ExtractLastState
+    // последнее состояние студента
+    public bool ExtractAbsoluteLastState
     {
         get => _extractLastState;
         set
         {
-            if (value)
-            {
-                if (ExtractByOrder is not null)
-                {
-                    if (ExtractByOrder.Value.mode == OrderRelationMode.OnlyIncluded)
-                    {
-                        ExtractByOrder = null;
-                    }
-                    ExtractByGroup = null;
-                }
-                _extractStudentUnique = false;
-                _extractLastState = value;
-            }
-            else
-            {
-                _extractLastState = false;
-            }
+            _extractLastState = value;
         }
     }
     public bool ExtractStudentUnique
@@ -322,7 +303,6 @@ public class HistoryExtractSettings
         {
             _extractStudentUnique = value;
         }
-
     }
 
     public (bool actual, bool legal) ExtractAddress { get; set; }
@@ -384,8 +364,9 @@ public class HistoryExtractSettings
         {
             if (value is not null)
             {
-                IncludeNotRegisteredStudents = value.Value.mode == OrderRelationMode.OnlyExcluded;
-                ExtractStudentUnique = true;
+                // невозможно извлечь незарегистрированных студентов
+                // т.к. их никогда не будет в приказе
+                IncludeNotRegisteredStudents = false;
                 ExtractOrders = false;
             }
             _extractByOrder = value;
@@ -398,20 +379,19 @@ public class HistoryExtractSettings
         {
             if (value is not null)
             {
+                // тоже самое, в группе всегда зарегистрированный студент
+                IncludeNotRegisteredStudents = false;
                 ExtractGroups = false;
             }
             _extractByGroup = value;
         }
     }
+    // отвечает за порядок выдачи, исторический или случайный
     public bool OverallHistorical
     {
         get => _overallHistorical;
         set
         {
-            if (value)
-            {
-                ExtractStudentUnique = false;
-            }
             _overallHistorical = value;
         }
     }

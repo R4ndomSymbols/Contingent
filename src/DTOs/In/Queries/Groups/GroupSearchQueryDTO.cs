@@ -8,8 +8,7 @@ public class GroupSearchQueryDTO
     {
         GroupName = null;
     }
-
-    public string? GroupName { get; set; }
     [JsonRequired]
-    public bool IsActive { get; set; }
+    public string? GroupName { get; set; }
+    public bool OnlyActive { get; set; }
 }
