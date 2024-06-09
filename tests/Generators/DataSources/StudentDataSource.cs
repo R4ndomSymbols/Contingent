@@ -43,7 +43,7 @@ public static class StudentDataSource
     );
     public static readonly NamedField PaidAgreement = new(StudentInDTO.PaidAgreementFieldName,
     () => gen.NextDouble() > 0.85 ? "есть" : "нет");
-    public static readonly NamedField AddmissionScore = new(StudentInDTO.AdmissionScoreFieldName,
+    public static readonly NamedField AdmissionScore = new(StudentInDTO.AdmissionScoreFieldName,
     () => (3 + gen.NextDouble() * 2).ToString("N2"));
     public static readonly NamedField GiaMark = new(StudentInDTO.GiaMarkFieldName,
     () => gen.NextDouble() > 0.9 ? (3 + gen.NextDouble() * 2).ToString("N2") : "");

@@ -1,10 +1,11 @@
 using Contingent.Models.Domain.Specialties;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.Out;
 public class SpecialityOutDTO
 {
 
-    public int? Id { get; set; }
+    public int Id { get; set; }
     public string FgosCode { get; set; }
     public string FgosName { get; set; }
     public string Qualification { get; set; }
@@ -42,7 +43,7 @@ public class SpecialityOutDTO
 
     public SpecialityOutDTO()
     {
-        Id = null;
+        Id = Utils.INVALID_ID;
         FgosCode = "";
         FgosName = "";
         Qualification = "";

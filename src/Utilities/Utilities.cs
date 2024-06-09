@@ -1,9 +1,7 @@
 using System.Globalization;
 using Npgsql;
-using Contingent.Models;
-using System.Security.Cryptography.X509Certificates;
 
-namespace Utilities;
+namespace Contingent.Utilities;
 
 
 public static class Utils
@@ -12,10 +10,12 @@ public static class Utils
     private static string? DatabaseConnectionString = null;
     public const int INVALID_ID = -1;
 
-    public static bool IsValidId(int id){
-        return id != INVALID_ID; 
+    public static bool IsValidId(int id)
+    {
+        return id != INVALID_ID;
     }
-    public static bool IsValidId(int? id){
+    public static bool IsValidId(int? id)
+    {
         return id != null && IsValidId(id.Value);
     }
 

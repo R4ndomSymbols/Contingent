@@ -16,27 +16,7 @@ public class HistoryByOrderEffectiveDateAsc : OrderedHistory
         {
             throw new Exception("Приказ должен быть указан");
         }
-        if (orderLeft.Equals(orderRight))
-        {
-            return 0;
-        }
-        if (orderLeft.EffectiveDate == orderRight.EffectiveDate)
-        {
-            if (orderLeft.OrderCreationDate == orderRight.OrderCreationDate)
-            {
-                return 0;
-            }
-            else if (orderLeft.OrderCreationDate > orderRight.OrderCreationDate)
-            {
-                return 1;
-            }
-            return -1;
-        }
-        else if (orderLeft.EffectiveDate > orderRight.EffectiveDate)
-        {
-            return 1;
-        }
-        return -1;
+        return Order.OrderByEffectiveDateComparison(orderLeft, orderRight);
     };
 
     public HistoryByOrderEffectiveDateAsc(IEnumerable<StudentFlowRecord> records) : base(records)

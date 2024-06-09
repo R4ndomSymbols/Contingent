@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Metadata;
 using Contingent.Import;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.In;
 

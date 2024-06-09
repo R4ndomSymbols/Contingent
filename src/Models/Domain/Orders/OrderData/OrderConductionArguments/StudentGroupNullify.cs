@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Students;
 using Contingent.SQL;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders.OrderData;
 

@@ -2,8 +2,8 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Address;
 using Contingent.SQL;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 
 namespace Contingent.Models.Domain.Citizenship;
 

@@ -1,3 +1,5 @@
+using Xunit.Sdk;
+
 namespace Tests;
 
 public class RandomPicker<T>

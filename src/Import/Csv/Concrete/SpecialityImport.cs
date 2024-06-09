@@ -1,25 +1,46 @@
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Specialties;
-using Utilities;
+using Contingent.Utilities;
 
-namespace Contingent.Import;
+namespace Contingent.Import.CSV;
 
-public class SpecialityImport : IFromCSV<SpecialityImport>
+public class SpecialtyImport : ImportCSV
 {
-    public SpecialtyModel? Speciality { get; private set; }
-    public SpecialityImport()
+    private readonly List<SpecialtyModel> _specialties;
+    public SpecialtyImport(Stream dataSource, ObservableTransaction scope) : base(dataSource, scope)
     {
-        Speciality = null;
+        _specialties = new List<SpecialtyModel>();
     }
-    public Result<SpecialityImport> MapFromCSV(CSVRow row)
+
+    public override ResultWithoutValue Import()
     {
-        var specialityDTO = new SpecialtyDTO().MapFromCSV(row).ResultObject;
-        var speciality = SpecialtyModel.Build(specialityDTO);
-        if (speciality.IsFailure)
+        var dtos = Read(() => new SpecialtyInDTO(), out List<CSVRow> rows);
+        if (dtos.IsFailure)
         {
-            return Result<SpecialityImport>.Failure(speciality.Errors);
+            return ResultWithoutValue.Failure(dtos.Errors);
         }
-        Speciality = speciality.ResultObject;
-        return Result<SpecialityImport>.Success(this);
+        foreach (var specialtyDTO in dtos.ResultObject)
+        {
+            var specialty = SpecialtyModel.Build(specialtyDTO);
+            if (specialty.IsFailure)
+            {
+                return ResultWithoutValue.Failure(specialty.Errors);
+            }
+            _specialties.Add(specialty.ResultObject);
+        }
+        return ResultWithoutValue.Success();
+    }
+    public override ResultWithoutValue Save(bool commit)
+    {
+        foreach (var specialty in _specialties)
+        {
+            var result = specialty.Save(_scope);
+            if (result.IsFailure)
+            {
+                return result;
+            }
+        }
+        FinishImport(commit);
+        return ResultWithoutValue.Success();
     }
 }

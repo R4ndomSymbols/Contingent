@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,9 +50,9 @@ public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
     }
 
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_transfer.ToRecords(this));
+        ConductBase(_transfer.ToRecords(this), scope);
         foreach (var move in _transfer)
         {
             move.Student.TerminatePaidEducationAgreement();
@@ -65,11 +65,11 @@ public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
         return OrderTypes.FreeTransferFromPaidToFree;
     }
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _transfer)
         {
-            var history = move.Student.History;
+            var history = move.Student.GetHistory(scope);
             var groupNow = history.GetCurrentGroup();
             var groupTo = move.GroupTo;
             var groupCheck =

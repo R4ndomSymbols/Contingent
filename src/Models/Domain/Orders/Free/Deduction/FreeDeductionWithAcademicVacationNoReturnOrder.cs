@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -51,9 +51,9 @@ public class FreeDeductionWithAcademicVacationNoReturnOrder : FreeContingentOrde
     }
 
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_leavers.ToRecords(this));
+        ConductBase(_leavers.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -62,17 +62,17 @@ public class FreeDeductionWithAcademicVacationNoReturnOrder : FreeContingentOrde
         return OrderTypes.FreeDeductionWithAcademicVacationNoReturn;
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         // студент находился в академическом отпуске
         // но в течении x дней не вышел из него
         foreach (var leaver in _leavers)
         {
-            var history = leaver.Student.History;
+            var history = leaver.Student.GetHistory(scope);
             if (history.IsStudentSentInAcademicVacation())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент на находится в академическом отпуске", leaver.Student));

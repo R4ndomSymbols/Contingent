@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -54,13 +54,13 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
 
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_desiredToDeduct.ToRecords(this));
+        ConductBase(_desiredToDeduct.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -72,11 +72,11 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     // приказ об отчислении по собственному желанию
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
     // проверка на бесплатную группу не нужна, т.к. студент не может быть зачислен в такую группу
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var graduate in _desiredToDeduct)
         {
-            if (!graduate.Student.History.IsStudentEnlisted())
+            if (!graduate.Student.GetHistory(scope).IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен прежде собственного зачисления", graduate.Student));
             }

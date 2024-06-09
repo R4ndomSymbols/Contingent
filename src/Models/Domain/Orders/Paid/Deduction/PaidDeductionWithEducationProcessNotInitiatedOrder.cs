@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using System.Text.RegularExpressions;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
@@ -52,9 +52,9 @@ public class PaidDeductionWithEducationProcessNotInitiatedOrder : AdditionalCont
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_whoDisregard?.ToRecords(this));
+        ConductBase(_whoDisregard?.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -63,11 +63,11 @@ public class PaidDeductionWithEducationProcessNotInitiatedOrder : AdditionalCont
         return OrderTypes.PaidDeductionWithEducationProcessNotInitiated;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var record in _whoDisregard)
         {
-            if (!record.Student.History.IsStudentEnlisted())
+            if (!record.Student.GetHistory(scope).IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент должен быть зачислен прежде, чем быть отчисленным", record.Student));
             }

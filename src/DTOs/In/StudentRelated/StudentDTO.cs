@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Import;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Specialties;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.In;
 

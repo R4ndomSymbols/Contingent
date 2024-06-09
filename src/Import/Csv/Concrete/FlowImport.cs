@@ -1,153 +1,98 @@
 using System.Security.Cryptography.X509Certificates;
+using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 
-namespace Contingent.Import;
+namespace Contingent.Import.CSV;
 
-public class FlowImport : IFromCSV<FlowImport>
+public class FlowImport : ImportCSV
 {
-    public const string GradeBookFieldName = "номер зачетной книжки";
-    public const string StudentFullNameFieldName = "фамилия";
-    public const string GroupFieldName = "группа";
-    public const string OrderFieldOrgIdName = "приказ";
-    public const string OrderFieldDateName = "дата приказа";
-    private static int _index = 0;
-    private static int CurrentNumber
+    private List<Order> _ordersToConduct;
+    public bool CloseOrders { get; set; }
+    public FlowImport(Stream dataSource, ObservableTransaction scope) : base(dataSource, scope)
     {
-        get
-        {
-            _index++;
-            return _index;
-        }
+        _ordersToConduct = new List<Order>();
     }
 
-    private int _rowNumber;
-    private Order? _toConduct;
-    private FlowImportBatch _batch;
-    public Order? ByOrder => _toConduct;
-    public FlowImport(FlowImportBatch batch)
+    public override ResultWithoutValue Import()
     {
-        _batch = batch;
-        _rowNumber = CurrentNumber;
-    }
-    public Result<FlowImport> MapFromCSV(CSVRow row)
-    {
-        string? orderOrgId = row[OrderFieldOrgIdName];
-        string? orderDateRaw = row[OrderFieldDateName];
-        Order orderDetermined = null!;
-        if (orderOrgId is not null && int.TryParse(orderDateRaw, out int year) && !string.IsNullOrEmpty(orderOrgId))
+        var dtos = Read(() => new OrderIdentityDTO(), out List<CSVRow> rows);
+        if (dtos.IsFailure)
         {
-            var orders = _batch.GetOrderBy(orderOrgId, year);
-            if (orders.Count == 0)
+            return ResultWithoutValue.Failure(dtos.Errors);
+        }
+        int rowNumber = 1;
+        foreach (var orderDTO in dtos.ResultObject)
+        {
+            if (string.IsNullOrEmpty(orderDTO.OrgId) || string.IsNullOrEmpty(orderDTO.OrderSpecifiedYear))
             {
+                return ResultWithoutValue.Failure(new ImportValidationError(
+                   string.Format("Не указан год приказа или его номер, строка {0} ", rowNumber)
+                ));
+            }
+            if (!int.TryParse(orderDTO.OrderSpecifiedYear, out int year))
+            {
+                return ResultWithoutValue.Failure(new ImportValidationError(
+                    "Год приказа указан неверно, строка " + rowNumber
+                ));
+            }
+            var orderDetermined = _ordersToConduct.Find(o =>
+                o.OrderOrgId.Equals(orderDTO.OrgId, StringComparison.OrdinalIgnoreCase) &&
+                o.SpecifiedDate.Year == year
+            );
+            if (orderDetermined is null)
+            {
+                // поиск приказа в базе данных
                 var ordersFromDb = Order.FindOrdersByParameters(new OrderSearchParameters()
                 {
-                    OrderOrgId = orderOrgId,
+                    OrderOrgId = orderDTO.OrgId,
                     Year = year
                 });
                 if (ordersFromDb.Count != 1)
                 {
-                    return Result<FlowImport>.Failure(new ValidationError(
-                        string.Format("Приказ на строке {0} не получилось однозначно определить", row.LineNumber)
+                    return ResultWithoutValue.Failure(new ImportValidationError(
+                        "Приказ не удалось определить однозначно, либо его не удалось найти, строка " + rowNumber
                     ));
                 }
                 orderDetermined = ordersFromDb.First();
+                _ordersToConduct.Add(orderDetermined);
             }
-            else if (orders.Count == 1)
+            var mapped = orderDetermined.MapFromCSV(rows[rowNumber - 1]);
+            if (mapped.IsFailure)
             {
-                orderDetermined = orders.First();
-            }
-            else
-            {
-                return Result<FlowImport>.Failure(new ValidationError(
-                    string.Format("Приказ на строке {0} не получилось однозначно определить", row.LineNumber)
+                return ResultWithoutValue.Failure(new ImportValidationError(
+                    string.Format("Ошибка при получении данных для проведения по приказу, строка {0}, ошибка: {1} ", rowNumber, mapped)
                 ));
             }
-            var orderInsertionResult = orderDetermined.MapFromCSV(row);
-            if (orderInsertionResult.IsFailure)
-            {
-                return Result<FlowImport>.Failure(orderInsertionResult.Errors);
-            }
-            _toConduct = orderInsertionResult.ResultObject;
-            _batch.AddImport(this);
-            return Result<FlowImport>.Success(this);
+            rowNumber++;
+
         }
-        return Result<FlowImport>.Failure(new ValidationError("Год или номер приказа не указан или указан неверно: строка " + row.LineNumber));
-
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj is null || obj is not FlowImport)
-        {
-            return false;
-        }
-        return ((FlowImport)obj)._rowNumber == _rowNumber;
-    }
-
-    public override int GetHashCode()
-    {
-        throw new NotImplementedException();
-    }
-}
-
-public class FlowImportBatch
-{
-    private List<FlowImport> _imports;
-    private List<Order> _ordersToConduct;
-
-    public FlowImportBatch()
-    {
-        _imports = new List<FlowImport>();
-        _ordersToConduct = new List<Order>();
-    }
-
-    public bool AddImport(FlowImport import)
-    {
-        if (import.ByOrder is not null)
-        {
-            if (!CheckImportUniqueness(import))
-            {
-                return false;
-            }
-            if (CheckOrderUniqueness(import.ByOrder))
-            {
-                _ordersToConduct.Add(import.ByOrder);
-            }
-            _imports.Add(import);
-            return true;
-        }
-        return false;
-    }
-
-    public List<Order> GetOrderBy(string orgId, int year)
-    {
-        return _ordersToConduct.Where(o => o.OrderOrgId == orgId && o.SpecifiedDate.Year == year).ToList();
-    }
-    public ResultWithoutValue MassConduct()
-    {
-        foreach (var order in _ordersToConduct)
-        {
-            var conductionResult = order.ConductByOrder();
-            if (conductionResult.IsFailure)
-            {
-                Console.WriteLine(conductionResult);
-            }
-        }
-        _imports.Clear();
-        _ordersToConduct.Clear();
         return ResultWithoutValue.Success();
     }
 
-    private bool CheckOrderUniqueness(Order order)
+    public override ResultWithoutValue Save(bool commit)
     {
-        return !_ordersToConduct.Any(x => x.Equals(order));
+        // приказы нужно отсортировать
+        // по дате, чтобы импортировать последовательно
+        // в добавок, из-за механизма кеширования истории студентов, все студенты в приказах должны быть разными
+        // даже если у них один и тот же ID
+        _ordersToConduct.Sort(Order.OrderByEffectiveDateComparison);
+        Console.WriteLine("ЧИСЛО ПРИКАЗОВ " + _ordersToConduct.Count);
+        foreach (var order in _ordersToConduct)
+        {
+            var result = order.ConductByOrder(_scope);
+            if (result.IsFailure)
+            {
+                FinishImport(false);
+                return ResultWithoutValue.Failure(new ImportValidationError(result.ToString()));
+            }
+            if (CloseOrders)
+            {
+                order.Close(_scope);
+            }
+        }
+        FinishImport(commit);
+        return ResultWithoutValue.Success();
     }
-    private bool CheckImportUniqueness(FlowImport import)
-    {
-        return !_imports.Any(x => x.Equals(import));
-    }
-
-
 }

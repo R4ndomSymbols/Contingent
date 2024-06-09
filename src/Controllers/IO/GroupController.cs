@@ -5,8 +5,8 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Flow.History;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 using Microsoft.AspNetCore.Routing.Tree;
 
 namespace Contingent.Controllers;
@@ -78,19 +78,23 @@ public class GroupController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON: " + e.Message));
         }
-        var groupResult = GroupModel.Build(deserialized);
+        using var scope = ObservableTransaction.New;
+        var groupResult = GroupModel.Build(deserialized, scope);
         if (groupResult.IsFailure)
         {
+            scope.RollbackAsync().Wait();
             return BadRequest(groupResult.Errors.AsErrorCollection());
         }
         var group = groupResult.ResultObject;
         var saved = group.Save(null);
         if (saved.IsSuccess)
         {
+            scope.CommitAsync().Wait();
             return Json(new GroupOutDTO(group));
         }
         else
         {
+            scope.RollbackAsync().Wait();
             return BadRequest(saved.Errors.AsErrorCollection());
         }
     }
@@ -109,12 +113,14 @@ public class GroupController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат JSON: " + e.Message));
         }
-        var groupResult = GroupModel.Build(deserialized);
-
+        using var scope = ObservableTransaction.New;
+        var groupResult = GroupModel.Build(deserialized, scope);
         if (groupResult.IsFailure)
         {
+            scope.RollbackAsync().Wait();
             return BadRequest(groupResult.Errors.AsErrorCollection());
         }
+        scope.RollbackAsync().Wait();
         return Json(new { GroupName = groupResult.ResultObject.ThreadNames });
     }
 

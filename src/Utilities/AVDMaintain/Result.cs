@@ -1,4 +1,4 @@
-namespace Utilities;
+namespace Contingent.Utilities;
 
 public sealed class Result<T> : IResult
 {
@@ -80,9 +80,9 @@ public sealed class Result<T> : IResult
         return new Result<T>(new List<ValidationError> { err });
     }
 
-    public static Result<T> Failure(IResult errorConatainer)
+    public static Result<T> Failure(IResult errorContainer)
     {
-        return Result<T>.Failure(errorConatainer.GetErrors());
+        return Result<T>.Failure(errorContainer.GetErrors());
     }
 
     public Result<U> Retrace<U>(U resultObject)
@@ -107,7 +107,7 @@ public sealed class Result<T> : IResult
 
     public object GetResultObject()
     {
-        return ResultObject;
+        return ResultObject!;
     }
 
     public IReadOnlyCollection<ValidationError> GetErrors()
@@ -184,7 +184,7 @@ public class ResultWithoutValue : IResult
         }
         else
         {
-            return Result<U>.Success(resultObject);
+            return Result<U>.Success(resultObject!);
         }
     }
 

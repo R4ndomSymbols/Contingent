@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -53,13 +53,13 @@ public class FreeDeductionWithTransferOrder : FreeContingentOrder
 
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_toBeLeftForAnotherOrg.ToRecords(this));
+        ConductBase(_toBeLeftForAnotherOrg.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -70,11 +70,11 @@ public class FreeDeductionWithTransferOrder : FreeContingentOrder
     }
     // приказ об отчислении в связи с переводом
     // студент должен быть зачислен
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var left in _toBeLeftForAnotherOrg)
         {
-            if (!left.Student.History.IsStudentEnlisted())
+            if (!left.Student.GetHistory(scope).IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен прежде собственного зачисления", left.Student));
             }

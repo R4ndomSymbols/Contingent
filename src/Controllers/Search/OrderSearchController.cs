@@ -6,7 +6,7 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Infrastructure;
 using Contingent.SQL;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.Search;
 
@@ -45,33 +45,36 @@ public class OrderSearchController : Controller
         var orderBy = new OrderByCondition(
             new Column("id", "orders"), OrderByCondition.OrderByTypes.ASC
         );
-        float tableSize = 0;
-        using (var conn = Utils.GetAndOpenConnectionFactory().Result)
+        var where = ComplexWhereCondition.Empty;
+        var parameters = new SQLParameterCollection();
+        if (!string.IsNullOrEmpty(dto.SearchText) && !string.IsNullOrWhiteSpace(dto.SearchText))
         {
-            var cmd = new NpgsqlCommand("SELECT reltuples AS estimate FROM pg_class WHERE relname = \'orders\'", conn);
-            using (cmd)
-            {
-                using var reader = cmd.ExecuteReader();
-                reader.Read();
-                tableSize = (float)reader["estimate"];
-            }
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.OR,
+                new ComplexWhereCondition(
+                new WhereCondition(
+                    new Column("lower", "name", "orders", null),
+                    parameters.Add("%" + dto.SearchText.ToLower() + "%"),
+                    WhereCondition.Relations.Like
+                )));
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.OR,
+                new ComplexWhereCondition(
+                new WhereCondition(
+                    new Column("lower", "org_id", "orders", null),
+                    parameters.Add(dto.SearchText.ToLower()),
+                    WhereCondition.Relations.Like
+                )));
         }
-        List<OrderSearchDTO> found = new List<OrderSearchDTO>();
-        var filter = new SearchHelper().GetFilterForOrder(dto);
-        int page = 0;
-        int offset = 0;
-        while (found.Count < dto.PageSize && offset < tableSize)
-        {
-            offset = page * dto.PageSize;
-            found.AddRange(
-                filter.Execute(
-                    Order.FindOrders(new QueryLimits(page, dto.PageSize),
-                    orderBy: orderBy
-            ).Result).Select(x => new OrderSearchDTO(x)));
-            page++;
 
-        }
-        return Json(found);
+        var found = Order.FindOrders(
+            new QueryLimits(0, dto.PageSize),
+            where,
+            null, parameters,
+            orderBy
+        ).Result;
+
+        return Json(found.Select(x => new OrderSearchDTO(x)));
     }
 
 }

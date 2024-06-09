@@ -1,3 +1,5 @@
+using Contingent.Utilities;
+
 namespace Contingent.Controllers.DTO.Out;
 
 [Serializable]

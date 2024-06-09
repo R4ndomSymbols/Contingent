@@ -3,25 +3,48 @@ using Contingent.Controllers.DTO;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models;
 using Contingent.Models.Domain.Students;
-using Utilities;
+using Contingent.Utilities;
 
-namespace Contingent.Import.Concrete;
+namespace Contingent.Import.CSV;
 
-public class StudentImport : IFromCSV<StudentImport>
+public class StudentImport : ImportCSV
 {
-    public StudentModel? Student { get; set; }
-    public StudentImport()
+    private List<StudentModel> _students;
+    public StudentImport(Stream source, ObservableTransaction scope) : base(source, scope)
     {
-        Student = null;
+        _students = new List<StudentModel>();
     }
-    public Result<StudentImport> MapFromCSV(CSVRow row)
+    public override ResultWithoutValue Import()
     {
-        var studentResult = StudentModel.Build(new StudentInDTO().MapFromCSV(row).ResultObject);
-        if (studentResult.IsFailure)
+        var dtos = Read(() => new StudentInDTO(), out List<CSVRow> rows);
+        if (dtos.IsFailure)
         {
-            return Result<StudentImport>.Failure(studentResult.Errors);
+            return ResultWithoutValue.Failure(dtos.Errors);
         }
-        Student = studentResult.ResultObject;
-        return Result<StudentImport>.Success(this);
+        foreach (var studentDTO in dtos.ResultObject)
+        {
+            var student = StudentModel.Build(studentDTO, _scope);
+            if (student.IsFailure)
+            {
+                return ResultWithoutValue.Failure(student.Errors);
+            }
+            _students.Add(student.ResultObject);
+        }
+        return ResultWithoutValue.Success();
+    }
+
+    public override ResultWithoutValue Save(bool commit)
+    {
+        foreach (var student in _students)
+        {
+            var result = student.Save(_scope);
+            if (result.IsFailure)
+            {
+                FinishImport(false);
+                return result;
+            }
+        }
+        FinishImport(commit);
+        return ResultWithoutValue.Success();
     }
 }

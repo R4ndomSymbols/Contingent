@@ -2,7 +2,7 @@ using Contingent.Models.Domain.Students;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.Infrastructure;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -27,7 +27,7 @@ public sealed class EmptyOrder : Order
 
     protected override OrderSequentialGuardian SequentialGuardian => throw new NotImplementedException();
 
-    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> students)
+    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> students, ObservableTransaction scope)
     {
         throw new NotImplementedException("Невозможно проверить проводимость пустого приказа");
     }
@@ -37,12 +37,12 @@ public sealed class EmptyOrder : Order
         return OrderTypes.EmptyOrder;
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         throw new NotImplementedException("Невозможно сохранить пустой приказ");
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
         throw new NotImplementedException("Невозможно провести пустой приказ");
     }

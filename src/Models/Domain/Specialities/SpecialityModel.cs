@@ -1,9 +1,10 @@
 using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.SQL;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 using Contingent.Models.Domain.Students;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Specialties;
 
@@ -11,7 +12,7 @@ public class SpecialtyModel
 {
     public const int MINIMAL_COURSE_COUNT = 1;
     public const int MAXIMUM_COURSE_COUNT = 6;
-    private int? _id;
+    private int _id;
     private string _fgosCode;
     private string _fgosName;
     private string _qualification;
@@ -23,7 +24,7 @@ public class SpecialtyModel
     private TeachingDepth _teachingDepth;
     private TrainingProgram _trainingProgram;
 
-    public int? Id
+    public int Id
     {
         get => _id;
     }
@@ -71,7 +72,7 @@ public class SpecialtyModel
 
     private SpecialtyModel()
     {
-        _id = null;
+        _id = Utils.INVALID_ID;
         _fgosCode = "";
         _fgosName = "";
         _qualification = "";
@@ -125,7 +126,7 @@ public class SpecialtyModel
         return mapper;
     }
 
-    public static Result<SpecialtyModel> Build(SpecialtyDTO dto)
+    public static Result<SpecialtyModel> Build(SpecialtyInDTO dto)
     {
         if (dto is null)
         {
@@ -134,7 +135,7 @@ public class SpecialtyModel
         IList<ValidationError> errors = new List<ValidationError>();
         SpecialtyModel model = new();
         SpecialtyModel? fromDb = null;
-        if (dto.Id is not null)
+        if (Utils.IsValidId(dto.Id))
         {
             fromDb = SpecialtyModel.GetById(dto.Id).Result;
             errors.IsValidRule(
@@ -260,15 +261,15 @@ public class SpecialtyModel
         }
     }
 
-    public static async Task<IReadOnlyCollection<SpecialtyModel>> FindSpecialties(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? addtioinalOrderBy = null, ComplexWhereCondition? addtioinalWhere = null, SQLParameterCollection? additionalParameters = null)
+    public static async Task<IReadOnlyCollection<SpecialtyModel>> FindSpecialties(QueryLimits limits, JoinSection? additionalJoins = null, OrderByCondition? additionalOrderBy = null, ComplexWhereCondition? additionalWhere = null, SQLParameterCollection? additionalParameters = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
         var selectQuery = SelectQuery<SpecialtyModel>.Init("educational_program")
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
-        .AddOrderByStatement(addtioinalOrderBy)
-        .AddWhereStatement(addtioinalWhere)
+        .AddOrderByStatement(additionalOrderBy)
+        .AddWhereStatement(additionalWhere)
         .AddParameters(additionalParameters)
         .Finish();
         if (selectQuery.IsFailure)
@@ -276,25 +277,53 @@ public class SpecialtyModel
             throw new Exception("Запрос не может быть составлен");
         }
         return await selectQuery.ResultObject.Execute(conn, limits);
-
     }
 
-    public void Save(ObservableTransaction? scope = null)
+    public static IReadOnlyCollection<SpecialtyModel> FindByNameAndQualification(string? name, string? qualification)
     {
-        if (_id is not null || _id == Utils.INVALID_ID)
+        if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
         {
-            Update(scope);
-            return;
+            return new List<SpecialtyModel>();
+        }
+        SQLParameterCollection parameters = new();
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("lower", "fgos_name", "educational_program", null),
+                parameters.Add(name.ToLower().Trim()),
+                WhereCondition.Relations.Like
+            )
+        );
+        if (!(string.IsNullOrEmpty(qualification) || string.IsNullOrWhiteSpace(qualification)))
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                new ComplexWhereCondition(
+                    new WhereCondition(
+                        new Column("lower", "qualification", "educational_program", null),
+                        parameters.Add(qualification.ToLower().Trim()),
+                        WhereCondition.Relations.Like
+                    )
+                )
+            );
+        }
+        return FindSpecialties(QueryLimits.Unlimited, null, null, where, parameters).Result;
+    }
+
+
+    public ResultWithoutValue Save(ObservableTransaction? scope = null)
+    {
+        if (Utils.IsValidId(_id))
+        {
+            return Update(scope);
         }
 
-
-        NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
+        NpgsqlConnection? conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "INSERT INTO public.educational_program( " +
         " fgos_code, fgos_name, qualification, course_count, " +
         " speciality_out_education_level, speciality_in_education_level, knowledge_depth, group_prefix, group_postfix, training_program_type) " +
         " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9,@p10) RETURNING id";
         NpgsqlCommand cmd;
-        if (scope != null)
+        if (scope is not null)
         {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
@@ -320,9 +349,10 @@ public class SpecialtyModel
             _id = (int)reader["id"];
         }
         conn?.Dispose();
+        return ResultWithoutValue.Success();
     }
 
-    public void Update(ObservableTransaction? scope = null)
+    private ResultWithoutValue Update(ObservableTransaction? scope = null)
     {
         string updateText =
         // изменить id, количество курсов, выходной и необходимый уровень образования нельзя
@@ -330,14 +360,15 @@ public class SpecialtyModel
         "SET fgos_code = @p1, fgos_name = @p2, qualification = @p3, knowledge_depth = @p4, training_program_type = @p5 " +
         "WHERE id = @p6";
         NpgsqlCommand cmd;
-        using var connection = scope is null ? Utils.GetAndOpenConnectionFactory().Result : null;
-        if (scope is null)
+        using var connection = Utils.GetAndOpenConnectionFactory().Result;
+        if (scope is not null)
         {
-            cmd = new NpgsqlCommand(updateText, connection);
+            cmd = new NpgsqlCommand(updateText, scope.Connection, scope.Transaction);
+
         }
         else
         {
-            cmd = new NpgsqlCommand(updateText, scope.Connection, scope.Transaction);
+            cmd = new NpgsqlCommand(updateText, connection);
         }
         cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _fgosCode));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p2", _fgosName));
@@ -348,8 +379,9 @@ public class SpecialtyModel
         using (cmd)
         {
             cmd.ExecuteNonQuery();
-            return;
         }
+        connection.Dispose();
+        return ResultWithoutValue.Success();
     }
 
     public static async Task<SpecialtyModel?> GetById(int? id, ObservableTransaction? scope = null)
@@ -365,7 +397,7 @@ public class SpecialtyModel
             p1,
             WhereCondition.Relations.Equal
         ));
-        var found = await FindSpecialties(new QueryLimits(0, 1), additionalParameters: parameters, addtioinalWhere: where);
+        var found = await FindSpecialties(new QueryLimits(0, 1), additionalParameters: parameters, additionalWhere: where);
         if (found.Any())
         {
             return found.First();

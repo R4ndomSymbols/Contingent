@@ -1,19 +1,19 @@
 using Microsoft.AspNetCore.Http.Features;
 using Npgsql;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders.Infrastructure;
 
 public class FreeOrderSequentialGuardian : OrderSequentialGuardian
 {
 
-    private List<(FreeContingentOrder order, int bias)> _foundFree;
+    private List<FreeContingentOrder> _foundFree;
 
     private static FreeOrderSequentialGuardian? _instance;
 
     private FreeOrderSequentialGuardian()
     {
-        _foundFree = new List<(FreeContingentOrder order, int bias)>();
+        _foundFree = new List<FreeContingentOrder>();
     }
 
     public static FreeOrderSequentialGuardian Instance
@@ -28,38 +28,29 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
     protected override int YearWithin
     {
         get => _yearEnd.Year;
-        set
-        {
-            if (_yearStart.Year != value)
-            {
-                _yearStart = new DateTime(value, 1, 1);
-                _yearEnd = new DateTime(value, 12, 31);
-                SetSource(_yearStart, _yearEnd);
-            }
-        }
     }
 
-    public override int GetSequentialOrderNumber(Order? toInsert)
+    public override int GetSequentialOrderNumber(Order? toInsert, ObservableTransaction? scope)
     {
         if (toInsert is null || toInsert is not FreeContingentOrder)
         {
             throw new Exception("Приказ не может быть не указан и должнен иметь правильный тип");
         }
-        YearWithin = toInsert.SpecifiedDate.Year;
+        SetYearWithin(toInsert.SpecifiedDate.Year, scope);
         // если приказов на год нет, то это первый
         if (!_foundFree.Any())
         {
             return 1;
         }
         // если приказ уже есть, то возвращается он же
-        if (_foundFree.Any(o => o.order.Equals(toInsert)))
+        if (_foundFree.Any(o => o.Equals(toInsert)))
         {
             return toInsert.OrderNumber;
         }
         // ищется приказ с минимально большей датой
         // его замещает приказ, который нужно вставить
         int orderNumber = 0;
-        for (; orderNumber < _foundFree.Count && _foundFree[orderNumber].order.SpecifiedDate <= toInsert.SpecifiedDate; orderNumber++)
+        for (; orderNumber < _foundFree.Count && _foundFree[orderNumber].SpecifiedDate <= toInsert.SpecifiedDate; orderNumber++)
         // итерация до того момента, пока дата приказа в списке приказов меньше либо равна дате приказа
         {
             // неявная зависимость от способа сортировки времени, когда приказ был создан
@@ -70,50 +61,67 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
         return ++orderNumber;
     }
 
-    public override void Insert(Order toInsert)
+    public override void Insert(Order toInsert, ObservableTransaction scope)
     {
-        var orderNumber = GetSequentialOrderNumber(toInsert);
-        if (_foundFree.Any(o => o.order.Equals(toInsert)))
+        var orderNumber = GetSequentialOrderNumber(toInsert, scope);
+        if (_foundFree.Any(o => o.Equals(toInsert)))
         {
             return;
         }
-        _foundFree.Insert(orderNumber - 1, ((FreeContingentOrder)toInsert, 0));
-        for (int i = orderNumber; i < _foundFree.Count; i++)
-        {
-            _foundFree[i] = (_foundFree[i].order, _foundFree[i].bias + 1);
-        }
+        _foundFree.Insert(orderNumber - 1, (FreeContingentOrder)toInsert);
     }
 
-    public override void Save()
+    public override void Save(ObservableTransaction scope)
     {
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
         var cmdText = "UPDATE orders SET serial_number = @p1, org_id = @p3 WHERE id = @p2";
         for (int orderIndex = 0; orderIndex < _foundFree.Count; orderIndex++)
         {
-            if (_foundFree[orderIndex].order.Id == Utils.INVALID_ID)
+            if (!Utils.IsValidId(_foundFree[orderIndex].Id))
             {
                 throw new Exception("Приказ должен быть сохранен прежде, чем обновлен");
             }
-            if (_foundFree[orderIndex].bias != 0 || _foundFree[orderIndex].order.OrderNumber != orderIndex + 1)
+            int rightPlacement = orderIndex + 1;
+            // если смещение равно нулю или приказ на своем месте
+            if (_foundFree[orderIndex].OrderNumber == rightPlacement)
             {
-                using var cmd = new NpgsqlCommand(cmdText, conn);
-                // новый индекс приказа - складывается из текущего положения, единицы и смещения
-                var newNumber = orderIndex + 1 + _foundFree[orderIndex].bias;
-                // по идее, так быть не должно, но я не вижу другого способа инкапсулировать смену состояния
-                _foundFree[orderIndex].order.OrderNumber = newNumber;
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p1", newNumber));
-                cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _foundFree[orderIndex].order.Id));
-                cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _foundFree[orderIndex].order.OrderOrgId));
+                continue;
+            }
+            NpgsqlCommand cmd;
+            if (scope is not null)
+            {
+                cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            }
+            else
+            {
+                cmd = new NpgsqlCommand(cmdText, conn);
+            }
+            // по идее, так быть не должно, но я не вижу другого способа инкапсулировать смену состояния
+            _foundFree[orderIndex].OrderNumber = rightPlacement;
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", rightPlacement));
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _foundFree[orderIndex].Id));
+            cmd.Parameters.Add(new NpgsqlParameter<string>("p3", _foundFree[orderIndex].OrderOrgId));
+            using (cmd)
+            {
                 cmd.ExecuteNonQuery();
-                _foundFree[orderIndex] = (_foundFree[orderIndex].order, 0);
-
             }
         }
     }
 
-    private void SetSource(DateTime start, DateTime end)
+    private void SetSource(DateTime start, DateTime end, ObservableTransaction? scope)
     {
-        _foundFree = Order.FindWithinRangeSortedByTime(start, end, SQL.OrderByCondition.OrderByTypes.ASC)
-        .Where(ord => ord is FreeContingentOrder).Select(o => ((FreeContingentOrder)o, 0)).ToList();
+        _foundFree = Order.FindWithinRangeSortedByTime(start, end, SQL.OrderByCondition.OrderByTypes.ASC, scope)
+        .Where(ord => ord is FreeContingentOrder).Select(o => (FreeContingentOrder)o).ToList();
+    }
+
+    protected override void SetYearWithin(int year, ObservableTransaction? scope)
+    {
+        if (_yearStart.Year != year)
+        {
+            _yearStart = new DateTime(year, 1, 1);
+            _yearEnd = new DateTime(year, 12, 31);
+            SetSource(_yearStart, _yearEnd, scope);
+        }
+
     }
 }

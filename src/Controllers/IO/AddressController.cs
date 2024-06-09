@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Address;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers;
 

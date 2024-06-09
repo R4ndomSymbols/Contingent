@@ -1,3 +1,4 @@
+@using Contingent.Utilities;
 @using Contingent.Models.Domain.Specialties;
 @model Contingent.Controllers.DTO.Out.SpecialityOutDTO;
 
@@ -139,7 +140,7 @@
             </div>
         </div>
     </div>
-    @if (Model.Id is not null)
+    @if (Model.Id != Utils.INVALID_ID)
     {
         <div id="id_section" spec_id="@Model.Id" />
     }

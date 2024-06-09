@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Microsoft.AspNetCore.Components.Forms;
 using Contingent.Models.Domain.Students;
 
@@ -50,9 +50,9 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_transfer.ToRecords(this));
+        ConductBase(_transfer.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -61,11 +61,11 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
         return OrderTypes.PaidTransferNextCourse;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _transfer)
         {
-            var history = move.Student.History;
+            var history = move.Student.GetHistory(scope);
             var group = move.GroupTo;
             var groupCheck = group.GetRelationTo(history.GetCurrentGroup()) == Groups.GroupRelations.DirectChild;
             // группа студента элиминирует почти все проверки:

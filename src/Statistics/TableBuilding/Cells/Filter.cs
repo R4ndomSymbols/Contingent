@@ -1,3 +1,5 @@
+using Contingent.Utilities;
+
 namespace Contingent.Statistics;
 
 public class Filter<T>

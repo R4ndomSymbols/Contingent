@@ -37,7 +37,7 @@ public class CSVGenerator
     {
         var source = new IDataSource[]{
             StudentDataSource.GradeBook,
-            StudentDataSource.AddmissionScore,
+            StudentDataSource.AdmissionScore,
             StudentDataSource.DateOfBirth,
             StudentDataSource.Gender,
             StudentDataSource.Names,
@@ -55,9 +55,9 @@ public class CSVGenerator
     {
         return GenerateBase(new OrderRowDataSource(), count);
     }
-    public string GetSpecialities()
+    public string GetSpecialties()
     {
-        var source = new SpecialityDataSource();
+        var source = new SpecialtyDataSource();
         return GenerateBase(source, source.Length);
     }
     public string GenerateFlow(int count, OrderTypes type)

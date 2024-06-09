@@ -3,7 +3,8 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.SQL;
 using System.Data;
-using Utilities;
+using Contingent.Utilities;
+
 public class AddressModel
 {
     private FederalSubject? _subjectPart;

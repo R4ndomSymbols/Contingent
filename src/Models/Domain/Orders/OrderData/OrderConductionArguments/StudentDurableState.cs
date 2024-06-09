@@ -4,7 +4,7 @@ using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Infrastructure;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders.OrderData;
 

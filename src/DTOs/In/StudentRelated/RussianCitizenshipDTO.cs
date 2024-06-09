@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using Contingent.Import;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.In;
 

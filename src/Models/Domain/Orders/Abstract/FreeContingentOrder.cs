@@ -1,6 +1,6 @@
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Orders.Infrastructure;
-using Utilities;
+using Contingent.Utilities;
 
 
 namespace Contingent.Models.Domain.Orders;
@@ -24,7 +24,7 @@ public abstract class FreeContingentOrder : Order
     }
     // проверяет отсутствие у студента договора о платном обучении
     // а так же проводит базовую проверку, свойственную любому приказу
-    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck)
+    protected override ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck, ObservableTransaction scope)
     {
         // приказ о переводе на бюджет требует того, чтобы у студента был договор,
         // но он к
@@ -44,16 +44,16 @@ public abstract class FreeContingentOrder : Order
                 );
             }
         }
-        var lowerCheck = CheckTypeSpecificConductionPossibility();
+        var lowerCheck = CheckTypeSpecificConductionPossibility(scope);
         return lowerCheck;
     }
-    protected abstract ResultWithoutValue CheckTypeSpecificConductionPossibility();
+    protected abstract ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope);
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
-        SequentialGuardian.Insert(this);
-        SequentialGuardian.Save();
+        SequentialGuardian.Insert(this, scope);
+        SequentialGuardian.Save(scope);
     }
 
     public override bool Equals(object? obj)

@@ -1,4 +1,4 @@
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Flow;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Orders.OrderData;
@@ -54,7 +54,7 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -68,18 +68,24 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     // группа должна быть бесплатной
     // первый курс для группы необязателен
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var stm in _moves.Moves)
         {
-            var history = stm.Student.History;
+            var history = stm.Student.GetHistory(scope);
             var studentCheck = !history.IsStudentEnlisted();
+            if (!studentCheck)
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError(
+                    string.Format("Студент уже зачислен по приказу: {0}", history.GetLastRecord()!.OrderNullRestrict.OrderDisplayedName), stm.Student));
+            }
             var targetGroup = stm.GroupTo;
             var groupCheck = targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) && targetGroup.SponsorshipType.IsFree();
-            if (!studentCheck || !groupCheck)
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления", stm.Student));
             }
+
         }
         return ResultWithoutValue.Success();
     }
@@ -89,9 +95,9 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         return OrderTypes.FreeEnrollment;
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_moves.ToRecords(this));
+        ConductBase(_moves.ToRecords(this), scope);
         // делает активной группы, куда зачислены студенты и группу после
         foreach (var group in _moves.Select(x => x.GroupTo).Distinct())
         {
@@ -109,7 +115,6 @@ public class FreeEnrollmentOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var enrolled = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var move = StudentToGroupMove.Create(enrolled);
         if (move.IsFailure)

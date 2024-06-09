@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Students;
 
@@ -58,13 +58,13 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
     }
 
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_enrollers.ToRecords(this));
+        ConductBase(_enrollers.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -76,11 +76,11 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
     // первый курс не обязателен
     // TODO: спросить, можно ли зачислять студента, отчислившегося по собственному желанию на другую специальность
     // без приказа о восстановлении
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _enrollers)
         {
-            var history = move.Student.History;
+            var history = move.Student.GetHistory(scope);
             var lastRecord = history.GetLastRecord();
             var orderCheck = lastRecord is not null && ForbiddenPreviousOrderTypes.All(x => lastRecord.OrderNullRestrict.GetOrderTypeDetails().Type != x);
             // разница более чем в 5 лет между приказами является основанием для игнорирования статуса

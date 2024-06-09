@@ -1,5 +1,5 @@
 using Npgsql;
-using Utilities;
+using Contingent.Utilities;
 namespace Contingent.Models.Domain.Students;
 
 

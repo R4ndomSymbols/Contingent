@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,9 +50,9 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_studentLeaving?.ToRecords(this));
+        ConductBase(_studentLeaving?.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -61,11 +61,11 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
         return OrderTypes.PaidDeductionWithAcademicDebt;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _studentLeaving)
         {
-            if (!student.Student.History.IsStudentEnlisted())
+            if (!student.Student.GetHistory(scope).IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(

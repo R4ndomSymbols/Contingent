@@ -1,6 +1,6 @@
 using System.Text;
 using Npgsql;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.SQL;
 

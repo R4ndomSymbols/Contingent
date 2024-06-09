@@ -2,14 +2,15 @@ namespace Contingent.Models.Domain.Groups;
 
 public class GroupEducationFormat
 {
-
     public string RussianName { get; private init; }
     public string GroupNamePostfix { get; private init; }
     public GroupEducationFormatTypes FormatType { get; private init; }
 
     private GroupEducationFormat()
     {
-
+        RussianName = string.Empty;
+        GroupNamePostfix = string.Empty;
+        FormatType = GroupEducationFormatTypes.NotMentioned;
     }
 
     public static IReadOnlyCollection<GroupEducationFormat> ListOfFormats => new List<GroupEducationFormat>{
@@ -34,6 +35,15 @@ public class GroupEducationFormat
             FormatType = GroupEducationFormatTypes.PartTime,
         },
     };
+    public static GroupEducationFormat? GetByTypeName(string? name)
+    {
+        if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
+        {
+            return ListOfFormats.First(x => x.FormatType == GroupEducationFormatTypes.NotMentioned);
+        }
+        string correctName = name.Trim().ToLower();
+        return ListOfFormats.FirstOrDefault(x => x.RussianName.ToLower() == correctName);
+    }
 
     public static bool TryGetByTypeCode(int code, out GroupEducationFormat? type)
     {
@@ -42,7 +52,7 @@ public class GroupEducationFormat
     }
     public static GroupEducationFormat GetByTypeCode(int code)
     {
-        return ListOfFormats.Where(x => (int)x.FormatType == code).First();
+        return ListOfFormats.First(x => (int)x.FormatType == code);
     }
 
     public bool IsDefined()

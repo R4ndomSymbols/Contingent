@@ -132,7 +132,7 @@ public class AgeTable : ITable
         var enlistedFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.StudentNullRestrict.History.IsStudentEnlisted();
+                return std.StudentNullRestrict.GetHistory(null).IsStudentEnlisted();
             })
         );
         var enlistedWomanFilter3 = new Filter<StudentFlowRecord>(
@@ -145,7 +145,7 @@ public class AgeTable : ITable
         var studyingFilter3 = new Filter<StudentFlowRecord>(
             (students) => students.Where(std =>
             {
-                return std.StudentNullRestrict.History.IsStudentEnlisted() && std.GroupTo?.FormatOfEducation.FormatType == GroupEducationFormatTypes.FullTime;
+                return std.StudentNullRestrict.GetHistory(null).IsStudentEnlisted() && std.GroupTo?.FormatOfEducation.FormatType == GroupEducationFormatTypes.FullTime;
             })
         );
         var studyingWomanFilter3 = new Filter<StudentFlowRecord>(

@@ -1,7 +1,7 @@
 using Npgsql;
 using Contingent.Models.Domain.Orders;
 using Contingent.SQL;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
 
@@ -241,7 +241,7 @@ public static class FlowHistory
         .AddParameters(sqlParameters)
         .Finish().ResultObject;
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        return await query.Execute(conn, limits);
+        return await query.Execute(conn, limits, queryParameters.Transaction, queryParameters.SuppressLogs);
     }
 
     public static IEnumerable<StudentFlowRecord> GetRecordsByFilter(QueryLimits limits, HistoryExtractSettings settings, ComplexWhereCondition? specific = null, SQLParameterCollection? parameters = null)
@@ -395,8 +395,12 @@ public class HistoryExtractSettings
             _overallHistorical = value;
         }
     }
+
+    public ObservableTransaction? Transaction { get; set; }
+    public bool SuppressLogs;
     public HistoryExtractSettings()
     {
+        SuppressLogs = false;
         _extractLastState = false;
         _extractStudentUnique = false;
         ExtractByOrder = null;

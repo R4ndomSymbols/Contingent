@@ -4,7 +4,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,9 +50,9 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         return result;
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_toEnroll.ToRecords(this));
+        ConductBase(_toEnroll.ToRecords(this), scope);
         // делает активной группы, куда зачислены студенты и группу после
         foreach (var group in _toEnroll.Select(x => x.GroupTo).Distinct())
         {
@@ -68,7 +68,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -80,11 +80,11 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     // 
     // приказ о переводе с другой организации
     // бесплатная группа, студент незачислен
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var rec in _toEnroll)
         {
-            var history = rec.Student.History;
+            var history = rec.Student.GetHistory(scope);
             var groupCheck = rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student)
                 && rec.GroupTo.SponsorshipType.IsFree();
             if (history.IsStudentEnlisted() || !groupCheck)

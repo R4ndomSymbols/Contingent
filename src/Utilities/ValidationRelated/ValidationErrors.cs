@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Students;
 
+namespace Contingent.Utilities;
 [Serializable]
 public class ValidationError
 {
@@ -117,6 +118,15 @@ public class OrderValidationError : ValidationError
         string exceptionMessage,
         StudentModel student)
         : base("OrderGenericError", string.Format("Студент {0} не может быть проведен по причине {1}", student.GetName(), exceptionMessage))
+    {
+
+    }
+}
+
+public class ImportValidationError : ValidationError
+{
+    public const string ImportErrorName = "IMPORT_ERROR";
+    public ImportValidationError(string exceptionMessage) : base(ImportErrorName, exceptionMessage)
     {
 
     }

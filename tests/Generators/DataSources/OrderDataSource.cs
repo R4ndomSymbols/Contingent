@@ -1,5 +1,6 @@
+using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Tests;
 
@@ -17,11 +18,11 @@ public class OrderRowDataSource : IRowSource
     {
         _rng = new Random();
         _headers = new[] {
-            "название приказа",
-            "тип приказа",
-            "дата приказа",
-            "дата вступления в силу",
-            "описание приказа"
+            OrderDTO.OrderNameFieldName,
+            OrderDTO.OrderTypeFieldName,
+            OrderDTO.SpecifiedDateFieldName,
+            OrderDTO.EffectiveDateFieldName,
+            OrderDTO.OrderDescriptionFieldName
         };
         UpdateState();
     }

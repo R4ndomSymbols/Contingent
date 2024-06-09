@@ -26,12 +26,12 @@ public class GroupSponsorship
         },
         new() {
             RussianName = "Бюджет субъекта",
-            GroupNamePostfix = "",
+            GroupNamePostfix = "_бс",
             TypeOfSponsorship = GroupSponsorshipTypes.FederalSubjectGovernmentSponsorship
         },
         new() {
             RussianName = "Местный бюджет",
-            GroupNamePostfix = "",
+            GroupNamePostfix = "_бм",
             TypeOfSponsorship = GroupSponsorshipTypes.LocalGovernmentSponsorship
         },
         new() {
@@ -62,6 +62,16 @@ public class GroupSponsorship
         type = ListOfSponsorships.FirstOrDefault(x => (int)x.TypeOfSponsorship == code, null);
         return type is not null;
     }
+    public static GroupSponsorship? GetByTypeName(string? name)
+    {
+        if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
+        {
+            return ListOfSponsorships.First(x => x.TypeOfSponsorship == GroupSponsorshipTypes.NotMentioned);
+        }
+        string correctName = name.Trim().ToLower();
+        return ListOfSponsorships.FirstOrDefault(x => x.RussianName.ToLower() == correctName);
+    }
+
     public bool IsDefined()
     {
         return TypeOfSponsorship != GroupSponsorshipTypes.NotMentioned;

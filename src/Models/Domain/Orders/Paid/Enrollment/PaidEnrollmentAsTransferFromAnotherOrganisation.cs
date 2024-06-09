@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -49,9 +49,9 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
 
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_enrollers.ToRecords(this));
+        ConductBase(_enrollers.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -60,11 +60,11 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
         return OrderTypes.PaidEnrollmentWithTransfer;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _enrollers)
         {
-            var history = move.Student.History;
+            var history = move.Student.GetHistory(scope);
             var group = move.GroupTo;
             var stateCheck = history.IsStudentDeducted() || history.IsStudentNotRecorded();
             var groupCheck = group.SponsorshipType.IsPaid() && group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student);

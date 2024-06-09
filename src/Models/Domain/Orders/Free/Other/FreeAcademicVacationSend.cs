@@ -3,7 +3,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Contingent.Models.Domain.Students;
 using Npgsql;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -53,12 +53,12 @@ public class FreeAcademicVacationSendOrder : FreeContingentOrder
         throw new NotImplementedException();
     }
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _toSendToVacation)
         {
             // для данного приказа студент должен быть зачислен
-            var studentState = student.Student.History;
+            var studentState = student.Student.GetHistory(scope);
             if (!studentState.IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", student.Student));
@@ -67,14 +67,14 @@ public class FreeAcademicVacationSendOrder : FreeContingentOrder
         return ResultWithoutValue.Success();
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction scope)
     {
         // группа у студента будет в любом случае, т.к. он должен быть зачислен прежде, чем уйдет в академ
         ConductBase(
              _toSendToVacation.States.Select(x => x.ToRecord(
                 this,
-                x.Student.History.GetLastRecord()!.GroupToNullRestrict
-             )));
+                x.Student.GetHistory(scope).GetLastRecord()!.GroupToNullRestrict
+             )), scope);
 
         return ResultWithoutValue.Success();
     }

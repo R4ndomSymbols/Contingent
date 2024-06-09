@@ -2,7 +2,7 @@ using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,9 +50,9 @@ public class PaidDeductionWithAcademicVacationNoReturnOrder : AdditionalContinge
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_leftForReason.ToRecords(this));
+        ConductBase(_leftForReason.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -61,13 +61,13 @@ public class PaidDeductionWithAcademicVacationNoReturnOrder : AdditionalContinge
         return OrderTypes.PaidDeductionWithAcademicVacationNoReturn;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         // предыдущий приказ - это приказ об академическом отпуске
         // академ закончился, в добавок прошло еще x дней
         foreach (var record in _leftForReason)
         {
-            var history = record.Student.History;
+            var history = record.Student.GetHistory(scope);
             if (!history.IsStudentSentInAcademicVacation())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не находится в академическом отпуске", record.Student));

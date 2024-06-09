@@ -49,10 +49,10 @@ public class SpecialtyController : Controller
     {
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync();
-        SpecialtyDTO? dto;
+        SpecialtyInDTO? dto;
         try
         {
-            dto = JsonSerializer.Deserialize<SpecialtyDTO>(body);
+            dto = JsonSerializer.Deserialize<SpecialtyInDTO>(body);
         }
         catch (Exception)
         {

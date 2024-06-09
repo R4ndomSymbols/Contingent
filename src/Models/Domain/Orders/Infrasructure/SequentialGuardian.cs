@@ -1,6 +1,6 @@
 using Npgsql;
 using Npgsql.Replication.PgOutput.Messages;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders.Infrastructure;
 
@@ -15,16 +15,19 @@ public abstract class OrderSequentialGuardian
     // список отсортирован по возрастанию даты 
     protected DateTime _yearStart;
     protected DateTime _yearEnd;
-    protected abstract int YearWithin { get; set; }
+    protected abstract int YearWithin { get; }
+
     protected OrderSequentialGuardian()
     {
 
     }
+    // устанавливает источник данных
+    protected abstract void SetYearWithin(int year, ObservableTransaction scope);
     // получает индeкс для данного приказа
-    public abstract int GetSequentialOrderNumber(Order? toInsert);
+    public abstract int GetSequentialOrderNumber(Order? toInsert, ObservableTransaction? scope);
     // метод обновляет индекс всех приказов
-    public abstract void Insert(Order toInsert);
+    public abstract void Insert(Order toInsert, ObservableTransaction scope);
     // мтеод обновляет индекс приказа
-    public abstract void Save();
+    public abstract void Save(ObservableTransaction scope);
 }
 

@@ -1,26 +1,42 @@
 using System.Text.Json;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Orders;
-using Utilities;
+using Contingent.Utilities;
 
-namespace Contingent.Import;
+namespace Contingent.Import.CSV;
 
-public class OrderImport : IFromCSV<OrderImport>
+public class OrderImport : ImportCSV
 {
-    public Order? ImportedOrder { get; set; }
-    public OrderImport()
+    private List<Order> _orders = new List<Order>();
+    public OrderImport(Stream dataSource, ObservableTransaction scope) : base(dataSource, scope)
     {
-        ImportedOrder = null;
+        _orders = new List<Order>();
     }
-    public Result<OrderImport> MapFromCSV(CSVRow row)
+    public override ResultWithoutValue Import()
     {
-        var orderDTO = new OrderDTO().MapFromCSV(row).ResultObject;
-        var order = Order.Build(JsonSerializer.Serialize(orderDTO));
-        if (order.IsFailure)
+        var dtos = Read(() => new OrderDTO(), out List<CSVRow> rows);
+        if (dtos.IsFailure)
         {
-            return Result<OrderImport>.Failure(order.Errors);
+            return ResultWithoutValue.Failure(dtos.Errors);
         }
-        ImportedOrder = order.ResultObject;
-        return Result<OrderImport>.Success(this);
+        foreach (var orderDTO in dtos.ResultObject)
+        {
+            var order = Order.Build(JsonSerializer.Serialize(orderDTO));
+            if (order.IsFailure)
+            {
+                return ResultWithoutValue.Failure(order.Errors);
+            }
+            _orders.Add(order.ResultObject);
+        }
+        return ResultWithoutValue.Success();
+    }
+    public override ResultWithoutValue Save(bool commit)
+    {
+        foreach (var order in _orders)
+        {
+            order.Save(_scope);
+        }
+        FinishImport(commit);
+        return ResultWithoutValue.Success();
     }
 }

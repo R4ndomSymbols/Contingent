@@ -5,7 +5,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Specialties;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers;
 public class StudentController : Controller
@@ -72,8 +72,7 @@ public class StudentController : Controller
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
-            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат данных"));
+            return BadRequest(ErrorCollectionDTO.GetGeneralError("Неверный формат данных, " + e.Message));
         }
         if (dto is null)
         {

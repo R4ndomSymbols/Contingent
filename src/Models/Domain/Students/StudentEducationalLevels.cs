@@ -1,7 +1,7 @@
 using Npgsql;
 using Contingent.Models.Domain.Specialties;
 using Contingent.Controllers.DTO.In;
-using Utilities;
+using Contingent.Utilities;
 using System.Collections;
 
 

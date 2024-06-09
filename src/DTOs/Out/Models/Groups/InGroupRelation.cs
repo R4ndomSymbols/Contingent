@@ -1,6 +1,6 @@
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Orders;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.Out;
 

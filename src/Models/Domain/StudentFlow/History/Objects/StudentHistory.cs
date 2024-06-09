@@ -4,25 +4,39 @@ using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
 using Contingent.SQL;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Flow;
 
 
 public class StudentHistory
 {
+    private ObservableTransaction? _scope;
     private HistoryByOrderEffectiveDateAsc _history;
-    private StudentModel _byStudent;
+    private readonly StudentModel _byStudent;
     public HistoryByOrderEffectiveDateAsc History => _history;
-    public StudentHistory(StudentModel student)
+
+    public ObservableTransaction? CurrentTransaction
     {
-        if (student is null || student.Id is null || student.Id == Utils.INVALID_ID)
+        get => _scope;
+        set
+        {
+            _scope = value;
+            _history = new HistoryByOrderEffectiveDateAsc(GetHistory());
+        }
+    }
+
+    public StudentHistory(StudentModel student, ObservableTransaction? scope)
+    {
+        if (student is null || !Utils.IsValidId(student.Id))
         {
             throw new Exception("Студент должен быть сохранен прежде получения истории на него");
         }
         _byStudent = student;
-        _history = new HistoryByOrderEffectiveDateAsc(GetHistory(student));
+        _scope = scope;
+        _history = new HistoryByOrderEffectiveDateAsc(GetHistory());
     }
+
     public Order? GetNextGroupChangingOrder(GroupModel groupFrom)
     {
         // история отсортирована
@@ -107,40 +121,21 @@ public class StudentHistory
     }
 
     // получает всю историю студента в приказах
-    private static IEnumerable<StudentFlowRecord> GetHistory(StudentModel byStudent)
+    private IEnumerable<StudentFlowRecord> GetHistory()
     {
         var found = FlowHistory.GetRecordsByFilter(
             new QueryLimits(0, 50),
             new HistoryExtractSettings
             {
-                ExtractByStudent = byStudent,
+                ExtractByStudent = _byStudent,
                 ExtractGroups = true,
                 ExtractOrders = true,
-                IncludeNotRegisteredStudents = false
+                IncludeNotRegisteredStudents = false,
+                Transaction = _scope,
+                SuppressLogs = true
             }
         ).ToList();
         return found;
-    }
-
-    public static async Task<bool> IsAnyStudentInNotClosedOrder(IEnumerable<StudentModel> students)
-    {
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-        var cmdText = "SELECT bool_and(orders.is_closed) as all_students_in_closed, COUNT(student_flow.id) AS count_ids FROM student_flow " +
-        " JOIN orders on student_flow.order_id = orders.id" +
-        " WHERE student_flow.student_id = ANY(@p1)";
-        using var cmd = new NpgsqlCommand(cmdText, conn);
-        var parameter = new NpgsqlParameter();
-        parameter.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer;
-        parameter.Value = students.Select(x => x.Id).ToArray();
-        parameter.ParameterName = "p1";
-        cmd.Parameters.Add(parameter);
-        using var reader = await cmd.ExecuteReaderAsync();
-        reader.Read();
-        if ((long)reader["count_ids"] == 0)
-        {
-            return false;
-        }
-        return !(bool)reader["all_students_in_closed"];
     }
 
     public GroupModel? GetCurrentGroup()
@@ -232,7 +227,7 @@ public class StudentHistory
     // параметер оставлен в случае, если потребуется
     // добавить опциональные приказы
 
-    public static StudentFlowRecord? GetLastRecordOnStudent(StudentModel? student)
+    public static StudentFlowRecord? GetLastRecordOnStudent(StudentModel? student, ObservableTransaction? scope = null)
     {
         if (student is null)
         {
@@ -242,7 +237,8 @@ public class StudentHistory
         {
             ExtractAbsoluteLastState = true,
             ExtractByStudent = student,
-            IncludeNotRegisteredStudents = true
+            IncludeNotRegisteredStudents = true,
+            Transaction = scope
         });
         if (found.Any())
         {
@@ -254,7 +250,7 @@ public class StudentHistory
         }
     }
 
-    public static IEnumerable<StudentFlowRecord> GetLastRecordsForManyStudents(QueryLimits limits, (bool actual, bool legal) addressSettings)
+    public static IEnumerable<StudentFlowRecord> GetLastRecordsForManyStudents(QueryLimits limits, (bool actual, bool legal) addressSettings, ObservableTransaction? scope = null)
     {
         return FlowHistory.GetRecordsByFilter(limits, new HistoryExtractSettings()
         {
@@ -264,6 +260,7 @@ public class StudentHistory
             ExtractGroups = true,
             ExtractOrders = true,
             ExtractStudents = true,
+            Transaction = scope
         });
     }
 }

@@ -3,7 +3,7 @@ using Contingent.Import;
 using Contingent.Models.Domain.Orders.OrderData;
 using Contingent.Models.Domain.Students;
 using Npgsql;
-using Utilities;
+using Contingent.Utilities;
 // приказ об возвращении из академического отпуска
 namespace Contingent.Models.Domain.Orders;
 
@@ -53,14 +53,14 @@ public class FreeAcademicVacationReturnOrder : FreeContingentOrder
         throw new NotImplementedException();
     }
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         // предыдущим приказом должен быть приказ о направлении в академический отпуск
         // студент должен быть в академическом отпуске
         // группа должна быть бюджетной и того же курса
         foreach (var move in _returners)
         {
-            var studentState = move.Student.History;
+            var studentState = move.Student.GetHistory(scope);
             var lastState = studentState.GetLastRecord();
             if (lastState is null)
             {
@@ -87,10 +87,10 @@ public class FreeAcademicVacationReturnOrder : FreeContingentOrder
         return ResultWithoutValue.Success();
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
         // группа у студента будет в любом случае, т.к. он должен быть зачислен прежде, чем уйдет в академ
-        ConductBase(_returners.ToRecords(this));
+        ConductBase(_returners.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 

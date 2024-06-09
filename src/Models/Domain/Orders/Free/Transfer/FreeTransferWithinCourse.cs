@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -53,13 +53,13 @@ public class FreeTransferWithinCourseOrder : FreeContingentOrder
 
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_moves.ToRecords(this));
+        ConductBase(_moves.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -72,11 +72,11 @@ public class FreeTransferWithinCourseOrder : FreeContingentOrder
     // приказ о переводе внутри колледжа 
     // тот же курс тот же год поступления, различие в специальности не обязательно (???)
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _moves)
         {
-            var currentStudentGroup = move.Student.History.GetCurrentGroup();
+            var currentStudentGroup = move.Student.GetHistory(scope).GetCurrentGroup();
             var conditionsSatisfied = currentStudentGroup is not null &&
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear && move.GroupTo.SponsorshipType.IsFree();

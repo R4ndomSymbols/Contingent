@@ -1,5 +1,4 @@
-namespace Utilities;
-
+namespace Contingent.Utilities;
 public interface IResult
 {
 

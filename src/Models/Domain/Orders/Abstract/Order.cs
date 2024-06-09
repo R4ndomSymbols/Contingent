@@ -1,6 +1,6 @@
 using Npgsql;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 using Contingent.SQL;
 using Contingent.Controllers.DTO.In;
 using System.Text.Json;
@@ -368,7 +368,7 @@ public abstract class Order : IFromCSV<Order>
             return false;
         }
     }
-    protected static Result<T> MapBase<T>(OrderDTO? source, T model) where T : Order
+    protected static Result<T> MapBase<T>(OrderDTO? source, T model, ObservableTransaction? scope = null) where T : Order
     {
         // добавить проверку на диапазон дат дату, но потом
         var errors = new List<ValidationError>();
@@ -420,7 +420,7 @@ public abstract class Order : IFromCSV<Order>
         else
         {
             model._creationTimestamp = DateTime.Now;
-            model._orderNumber = model.SequentialGuardian.GetSequentialOrderNumber(model);
+            model._orderNumber = model.SequentialGuardian.GetSequentialOrderNumber(model, scope);
             return Result<T>.Success(model);
         }
     }
@@ -459,20 +459,20 @@ public abstract class Order : IFromCSV<Order>
         return Result<T>.Success((T)got);
     }
     // все проводимые приказы всегда будут хронологически последними на каждого из студентов, входящих в приказ
-    protected void ConductBase(IEnumerable<StudentFlowRecord>? records)
+    protected void ConductBase(IEnumerable<StudentFlowRecord>? records, ObservableTransaction? scope)
     {
         if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || IsClosed)
         {
             throw new Exception("Ошибка при записи в таблицу движения: данные приказа или приказ не соотвествуют форме или приказ закрыт");
         }
-        StudentFlowRecord.InsertBatch(records);
+        StudentFlowRecord.InsertBatch(records, scope);
         _conductionStatus = OrderConductionStatus.Conducted;
     }
     protected abstract OrderTypes GetOrderType();
-    public virtual void Save(ObservableTransaction? scope = null)
+    public virtual void Save(ObservableTransaction scope)
     {
         _conductionStatus = OrderConductionStatus.ConductionNotValidated;
-        if (Id != Utils.INVALID_ID)
+        if (Utils.IsValidId(_id))
         {
             return;
         }
@@ -481,13 +481,14 @@ public abstract class Order : IFromCSV<Order>
         " specified_date, effective_date, serial_number, org_id, type, name, description, is_closed, creation_timestamp) " +
         " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9) RETURNING id";
         NpgsqlCommand cmd;
-        if (scope is null)
+        if (scope is not null)
         {
-            cmd = new NpgsqlCommand(cmdText, conn);
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
         else
         {
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            cmd = new NpgsqlCommand(cmdText, conn);
+
         }
 
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p1", _specifiedDate));
@@ -518,7 +519,7 @@ public abstract class Order : IFromCSV<Order>
     }
 
     // проверяет только студентов на предмет общих зависимостей
-    internal ResultWithoutValue CheckTreeConductionPossibility()
+    internal ResultWithoutValue CheckTreeConductionPossibility(ObservableTransaction scope)
     {
         var toCheck = GetStudentsForCheck();
         // эта проверка элиминирует необходимость проверки студента на прикрепленность к этому же самому приказу, 
@@ -529,11 +530,11 @@ public abstract class Order : IFromCSV<Order>
         }
         if (IsClosed)
         {
-            return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Провдение для закрытого приказа невозможно"));
+            return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Проведение для закрытого приказа невозможно"));
         }
         foreach (var student in toCheck)
         {
-            var record = student.History.GetLastRecord();
+            var record = student.GetHistory(scope).GetLastRecord();
             if (record is not null)
             {
                 var order = record.OrderNullRestrict;
@@ -557,7 +558,7 @@ public abstract class Order : IFromCSV<Order>
                 }
             }
         }
-        var subclassCheck = CheckOrderClassSpecificConductionPossibility(toCheck);
+        var subclassCheck = CheckOrderClassSpecificConductionPossibility(toCheck, scope);
         if (subclassCheck.IsFailure)
         {
             return subclassCheck;
@@ -566,24 +567,24 @@ public abstract class Order : IFromCSV<Order>
         return ResultWithoutValue.Success();
     }
 
-    protected abstract ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck);
+    protected abstract ResultWithoutValue CheckOrderClassSpecificConductionPossibility(IEnumerable<StudentModel> toCheck, ObservableTransaction scope);
     protected abstract IEnumerable<StudentModel>? GetStudentsForCheck();
 
     public OrderTypeInfo GetOrderTypeDetails()
     {
         return OrderTypeInfo.GetByType(GetOrderType());
     }
-    public ResultWithoutValue ConductByOrder()
+    public ResultWithoutValue ConductByOrder(ObservableTransaction scope)
     {
-        var check = CheckTreeConductionPossibility();
+        var check = CheckTreeConductionPossibility(scope);
         if (check.IsFailure)
         {
             return check;
         }
-        return ConductByOrderInternal();
+        return ConductByOrderInternal(scope);
     }
-    protected abstract ResultWithoutValue ConductByOrderInternal();
-    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null)
+    protected abstract ResultWithoutValue ConductByOrderInternal(ObservableTransaction scope);
+    public static async Task<IReadOnlyCollection<Order>> FindOrders(QueryLimits limits, ComplexWhereCondition? filter = null, JoinSection? additionalJoins = null, SQLParameterCollection? additionalParams = null, OrderByCondition? orderBy = null, ObservableTransaction? scope = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
@@ -593,7 +594,7 @@ public abstract class Order : IFromCSV<Order>
         .AddMapper(mapper)
         .AddJoins(additionalJoins)
         .AddWhereStatement(filter)
-        .AddOrderByStatement(orderBy is null ? predefinedOrderBy : orderBy)
+        .AddOrderByStatement(orderBy ?? predefinedOrderBy)
         .AddParameters(additionalParams)
         .Finish();
         if (result.IsFailure)
@@ -601,7 +602,7 @@ public abstract class Order : IFromCSV<Order>
             throw new Exception("Запрос сгенерирован неверно");
         }
         var query = result.ResultObject;
-        return await query.Execute(conn, limits);
+        return await query.Execute(conn, limits, scope);
     }
     // получение приказа по Id независимо от типа
     public static Order? GetOrderById(int? id)
@@ -703,11 +704,11 @@ public abstract class Order : IFromCSV<Order>
         }
         return Result<Order>.Success((Order)result.GetResultObject());
     }
-    public void Close()
+    public void Close(ObservableTransaction scope)
     {
         if (IsOpen)
         {
-            SetOpenCloseState(true);
+            SetOpenCloseState(true, scope);
         }
     }
 
@@ -715,23 +716,34 @@ public abstract class Order : IFromCSV<Order>
     {
         if (IsClosed)
         {
-            SetOpenCloseState(false);
+            SetOpenCloseState(false, null);
         }
     }
 
-    private void SetOpenCloseState(bool closed)
+    private void SetOpenCloseState(bool closed, ObservableTransaction? scope)
     {
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
         var cmdText = "UPDATE orders SET is_closed = @p2 WHERE id = @p1";
-        var cmd = new NpgsqlCommand(cmdText, conn);
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
-        cmd.Parameters.Add(new NpgsqlParameter<bool>("p2", closed));
-        cmd.ExecuteNonQuery();
-        cmd.Dispose();
-        _isClosed = closed;
+        NpgsqlCommand cmd;
+        if (scope is not null)
+        {
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+        using (cmd)
+        {
+            cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
+            cmd.Parameters.Add(new NpgsqlParameter<bool>("p2", closed));
+            cmd.ExecuteNonQuery();
+            cmd.Dispose();
+            _isClosed = closed;
+        }
     }
 
-    public static IReadOnlyCollection<Order> FindWithinRangeSortedByTime(DateTime start, DateTime end, OrderByCondition.OrderByTypes orderBy = OrderByCondition.OrderByTypes.ASC)
+    public static IReadOnlyCollection<Order> FindWithinRangeSortedByTime(DateTime start, DateTime end, OrderByCondition.OrderByTypes orderBy = OrderByCondition.OrderByTypes.ASC, ObservableTransaction? scope = null)
     {
         if (end < start)
         {
@@ -753,9 +765,9 @@ public abstract class Order : IFromCSV<Order>
             );
         var orderByClause = new OrderByCondition(new Column("specified_date", "orders"), orderBy);
         orderByClause.AddColumn(
-            new Column("creation_timestamp", "orders"), orderBy
+            new Column("creation_timestamp", "orders"), orderBy == OrderByCondition.OrderByTypes.DESC ? OrderByCondition.OrderByTypes.ASC : OrderByCondition.OrderByTypes.DESC
         );
-        return FindOrders(new QueryLimits(0, 500), additionalParams: parameters, filter: where, orderBy: orderByClause).Result;
+        return FindOrders(new QueryLimits(0, 500), additionalParams: parameters, filter: where, orderBy: orderByClause, scope: scope).Result;
     }
     public static IReadOnlyCollection<Order> FindOrdersByParameters(OrderSearchParameters parameters)
     {
@@ -816,7 +828,7 @@ public abstract class Order : IFromCSV<Order>
     }
 
 
-    public virtual void RevertAllConducted()
+    public virtual void RevertAllConducted(ObservableTransaction scope)
     {
         var history = new OrderHistory(this);
         foreach (var rec in history.History)
@@ -826,15 +838,15 @@ public abstract class Order : IFromCSV<Order>
             {
                 throw new Exception("Студент в истории должен быть указан");
             }
-            student.History.RevertHistory(this);
+            student.GetHistory(scope).RevertHistory(this);
             Open();
         }
     }
-    public virtual void RevertConducted(IEnumerable<StudentModel> student)
+    public virtual void RevertConducted(IEnumerable<StudentModel> student, ObservableTransaction scope)
     {
         foreach (var std in student)
         {
-            var history = std.History;
+            var history = std.GetHistory(scope);
             history.RevertHistory(this);
         }
 
@@ -854,4 +866,32 @@ public abstract class Order : IFromCSV<Order>
     }
 
     public abstract Result<Order> MapFromCSV(CSVRow row);
+
+    public readonly static Comparison<Order> OrderByEffectiveDateComparison = (orderLeft, orderRight) =>
+    {
+
+        if (orderLeft.Equals(orderRight))
+        {
+            return 0;
+        }
+        if (orderLeft.EffectiveDate == orderRight.EffectiveDate)
+        {
+            if (orderLeft.OrderCreationDate == orderRight.OrderCreationDate)
+            {
+                return 0;
+            }
+            else if (orderLeft.OrderCreationDate > orderRight.OrderCreationDate)
+            {
+                return 1;
+            }
+            return -1;
+        }
+        else if (orderLeft.EffectiveDate > orderRight.EffectiveDate)
+        {
+            return 1;
+        }
+        return -1;
+    };
+
+
 }

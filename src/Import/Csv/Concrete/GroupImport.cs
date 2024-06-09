@@ -1,26 +1,53 @@
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Groups;
-using Utilities;
+using Contingent.Utilities;
 
-namespace Contingent.Import;
+namespace Contingent.Import.CSV;
 
-public class GroupImport : IFromCSV<GroupImport>
+public class GroupImport : ImportCSV
 {
-    public GroupModel? Group { get; set; }
+    private List<GroupModel> _groups = new List<GroupModel>();
 
-    public GroupImport()
+    public GroupImport(Stream dataSource, ObservableTransaction scope) : base(dataSource, scope)
     {
-        Group = null;
+        _groups = new List<GroupModel>();
     }
-    public Result<GroupImport> MapFromCSV(CSVRow row)
+
+    public override ResultWithoutValue Save(bool commit)
     {
-        var groupDTO = new GroupInDTO().MapFromCSV(row).ResultObject;
-        var group = GroupModel.Build(groupDTO);
-        if (group.IsFailure)
+        foreach (var group in _groups)
         {
-            return Result<GroupImport>.Failure(group.Errors);
+            group.Save(_scope);
         }
-        Group = group.ResultObject;
-        return Result<GroupImport>.Success(this);
+        FinishImport(commit);
+        return ResultWithoutValue.Success();
+    }
+
+    public override ResultWithoutValue Import()
+    {
+        if (_groups.Any())
+        {
+            return ResultWithoutValue.Success();
+        }
+
+        var dtos = Read(() => new GroupInDTO(), out List<CSVRow> rows);
+        if (dtos.IsFailure)
+        {
+            return ResultWithoutValue.Failure(dtos.Errors);
+        }
+        foreach (var groupDTO in dtos.ResultObject)
+        {
+            var group = GroupModel.Build(groupDTO, _scope);
+            if (group.IsFailure)
+            {
+                return ResultWithoutValue.Failure(group.Errors);
+            }
+            _groups.Add(group.ResultObject);
+            // проблема в том, что группа получает неверные
+            // идентификаторы потока и т.д.
+            // потому что база данных не может отследить несохраненное состояние
+            group.ResultObject.Save(_scope);
+        }
+        return ResultWithoutValue.Success();
     }
 }

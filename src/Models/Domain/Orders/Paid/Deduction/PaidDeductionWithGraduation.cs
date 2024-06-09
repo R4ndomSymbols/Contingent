@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using System.Text.RegularExpressions;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
@@ -52,9 +52,9 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_graduates?.ToRecords(this));
+        ConductBase(_graduates?.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -63,11 +63,11 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
         return OrderTypes.PaidDeductionWithGraduation;
     }
 
-    protected override ResultWithoutValue CheckSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _graduates)
         {
-            var group = student.Student.History.GetCurrentGroup();
+            var group = student.Student.GetHistory(scope).GetCurrentGroup();
             var check = group is not null && group.IsGraduationGroup();
             if (!check)
             {

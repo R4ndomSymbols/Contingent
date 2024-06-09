@@ -3,8 +3,8 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
 using Contingent.Models.Domain.Students;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders;
 
@@ -53,13 +53,13 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
         return result;
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_debtHolders.ToRecords(this));
+        ConductBase(_debtHolders.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
-    public override void Save(ObservableTransaction? scope = null)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -71,11 +71,11 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     // приказ об отчислении в связи с неуспеваемостью
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
     // не нужна проверка группы
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var debtHolder in _debtHolders)
         {
-            if (debtHolder.Student.History.IsStudentEnlisted())
+            if (debtHolder.Student.GetHistory(scope).IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен раньше своего зачисления", debtHolder.Student));
             }
@@ -85,7 +85,6 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save();
         var result = new StudentGroupNullifyMoveDTO().MapFromCSV(row);
         var holder = StudentGroupNullifyMove.Create(result.ResultObject);
         if (holder.IsFailure)

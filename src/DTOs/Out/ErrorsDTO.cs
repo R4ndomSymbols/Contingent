@@ -1,4 +1,5 @@
 using System.Globalization;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.Out;
 
@@ -13,7 +14,7 @@ public class ErrorCollectionDTO
     public const string EmptyInputIdentifier = "NULL_RECEIVED_ERROR";
     public IReadOnlyCollection<ErrorDTO> Errors { get; private init; }
 
-    public ErrorCollectionDTO(IEnumerable<ValidationError?>? errors)
+    public ErrorCollectionDTO(IEnumerable<ValidationError>? errors)
     {
         if (errors is null)
         {

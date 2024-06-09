@@ -3,7 +3,7 @@ using Tests;
 
 namespace Contingent.Tests;
 
-public class SpecialityDataSource : IRowSource
+public class SpecialtyDataSource : IRowSource
 {
     private static int _now = 0;
     private static readonly string[][] _data = new[] {
@@ -133,16 +133,16 @@ public class SpecialityDataSource : IRowSource
     };
     private static readonly string[] _headers =
     {
-        SpecialtyDTO.FgosCodeFieldName,
-        SpecialtyDTO.FgosNameFieldName,
-        SpecialtyDTO.QualificationFieldName,
-        SpecialtyDTO.CourseCountFieldName,
-        SpecialtyDTO.FgosPrefixFieldName,
-        SpecialtyDTO.QualificationPostfixFieldName,
-        SpecialtyDTO.TeachingDepthFieldName,
-        SpecialtyDTO.EducationalLevelInFieldName,
-        SpecialtyDTO.EducationalLevelOutFieldName,
-        SpecialtyDTO.ProgramTypeFieldName
+        SpecialtyInDTO.FgosCodeFieldName,
+        SpecialtyInDTO.FgosNameFieldName,
+        SpecialtyInDTO.QualificationFieldName,
+        SpecialtyInDTO.CourseCountFieldName,
+        SpecialtyInDTO.FgosPrefixFieldName,
+        SpecialtyInDTO.QualificationPostfixFieldName,
+        SpecialtyInDTO.TeachingDepthFieldName,
+        SpecialtyInDTO.EducationalLevelInFieldName,
+        SpecialtyInDTO.EducationalLevelOutFieldName,
+        SpecialtyInDTO.ProgramTypeFieldName
     };
 
 

@@ -1,85 +1,113 @@
 using Contingent.Import;
-using Contingent.Import.Concrete;
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Orders.OrderData;
-using System.ComponentModel;
 using System.Text;
-using Utilities;
+using Contingent.Utilities;
+using Contingent.Import.CSV;
 namespace Tests;
 
 
 public class Tests
 {
-    public void GenerateTable()
+    public void GenerateStudents()
     {
-        var csv = new CSVGenerator().GenerateStudents(500);
+        var csv = new CSVGenerator().GenerateStudents(10000);
         Console.WriteLine(csv);
-        var result = ImportCSV<StudentImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new StudentImport());
-        Console.WriteLine(result);
-        foreach (var student in result.ResultObject)
+        using var transaction = ObservableTransaction.New;
+        var import = new StudentImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
+        var importResult = import.Import();
+        if (importResult.IsFailure)
         {
-            var saved = student.Student!.Save();
-            if (saved.IsFailure)
-            {
-                Console.WriteLine(saved.Errors.First());
-            };
+            Console.WriteLine(importResult);
+            return;
+        }
+        var saveResult = import.Save(true);
+        if (saveResult.IsFailure)
+        {
+            Console.WriteLine(saveResult);
+            return;
         }
     }
-    private void GenerateTable1()
+    public void GenerateSpecialities()
+    {
+        var csv = new CSVGenerator().GetSpecialties();
+        Console.WriteLine(csv);
+        using var transaction = ObservableTransaction.New;
+        var import = new SpecialtyImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
+        var importResult = import.Import();
+        if (importResult.IsFailure)
+        {
+            Console.WriteLine(importResult);
+            return;
+        }
+        var saveResult = import.Save(true);
+        if (saveResult.IsFailure)
+        {
+            Console.WriteLine(saveResult);
+            return;
+        }
+
+    }
+    private void GenerateGroups()
+    {
+        var csv = new CSVGenerator().GenerateGroups(100);
+        Console.WriteLine(csv);
+        using var transaction = ObservableTransaction.New;
+        var import = new GroupImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
+        var importResult = import.Import();
+        if (importResult.IsFailure)
+        {
+            Console.WriteLine(importResult);
+            return;
+        }
+        var saveResult = import.Save(true);
+        if (saveResult.IsFailure)
+        {
+            Console.WriteLine(saveResult);
+            return;
+        }
+
+    }
+    public void GenerateOrdersTest()
     {
         var csv = new CSVGenerator().GenerateOrders(100);
         Console.WriteLine(csv);
-        var result = ImportCSV<OrderImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new OrderImport());
-        Console.WriteLine(result);
-        if (result.IsSuccess)
+        using var transaction = ObservableTransaction.New;
+        var import = new OrderImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
+        var importResult = import.Import();
+        if (importResult.IsFailure)
         {
-            foreach (var order in result.ResultObject)
-            {
-                order.ImportedOrder!.Save();
-            }
+            Console.WriteLine(importResult);
+            return;
+        }
+        var saveResult = import.Save(true);
+        if (saveResult.IsFailure)
+        {
+            Console.WriteLine(saveResult);
+            return;
         }
     }
-    private void GenerateTable2()
-    {
-        var csv = new CSVGenerator().GetSpecialities();
-        Console.WriteLine(csv);
-        var result = ImportCSV<SpecialityImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new SpecialityImport());
-        Console.WriteLine(result);
-        if (result.IsSuccess)
-        {
-            foreach (var speciality in result.ResultObject)
-            {
-                speciality.Speciality!.Save();
-            }
-        }
-    }
-    public void GroupImportTest()
-    {
-        var csv = new CSVGenerator().GenerateGroups(30);
-        Console.WriteLine(csv);
-        var result = ImportCSV<GroupImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new GroupImport());
-        Console.WriteLine(result);
-        if (result.IsSuccess)
-        {
-            foreach (var group in result.ResultObject)
-            {
-                group.Group!.Save();
-            }
-        }
-    }
-
     [Fact]
     public void FlowImportTest()
     {
-        var csv = new CSVGenerator().GenerateFlow(150, OrderTypes.FreeEnrollmentFromAnotherOrg);
-        var batch = new FlowImportBatch();
+        var csv = new CSVGenerator().GenerateFlow(100, OrderTypes.FreeEnrollment);
         Console.WriteLine(csv);
-        var result = ImportCSV<FlowImport>.Read(new MemoryStream(Encoding.UTF8.GetBytes(csv)), () => new FlowImport(batch));
-        Console.WriteLine(result);
-        if (result.IsSuccess)
+        using var transaction = ObservableTransaction.New;
+        var import = new FlowImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
+        import.CloseOrders = true;
+        var importResult = import.Import();
+        if (importResult.IsFailure)
         {
-            batch.MassConduct();
+            Console.WriteLine(importResult);
+            return;
         }
+        var saveResult = import.Save(true);
+        if (saveResult.IsFailure)
+        {
+            Console.WriteLine(saveResult);
+            return;
+        }
+
     }
 
     public void OrderTypesTest()

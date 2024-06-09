@@ -1,10 +1,11 @@
 using Contingent.Models.Domain.Orders;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Students;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.SQL;
 using Npgsql;
 using Contingent.Models.Infrastructure;
+using System.Text;
 
 namespace Contingent.Models.Domain.Flow;
 
@@ -111,57 +112,53 @@ public class StudentFlowRecord
         return historyMapper;
     }
 
-    public static void InsertBatch(IEnumerable<StudentFlowRecord> records)
+    public static ResultWithoutValue InsertBatch(IEnumerable<StudentFlowRecord> records, ObservableTransaction? scope)
     {
         if (records is null || !records.Any())
         {
-            return;
+            return ResultWithoutValue.Failure(new ValidationError("records", "Не указаны записи для проведения приказа"));
         }
         // основная запись в таблицу движения студентов
         NpgsqlConnection conn = Utils.GetAndOpenConnectionFactory().Result;
-        string cmdText = "COPY student_flow (student_id, order_id, group_id_to, start_status_date, end_status_date)" +
-        " FROM STDIN (FORMAT BINARY) ";
-        using (var writer = conn.BeginBinaryImport(cmdText))
+        StringBuilder query = new();
+        query.Append("INSERT INTO student_flow (student_id, order_id, group_id_to, start_status_date, end_status_date) VALUES ");
+        SQLParameterCollection parameters = new();
+
+        foreach (var record in records)
         {
-            foreach (var record in records)
-            {
-                var raw = record.AsRaw();
-                writer.StartRow();
-                writer.Write<int>(raw.StudentId);
-                writer.Write<int>(raw.OrderId);
-                if (raw.GroupToId is not null)
-                {
-                    writer.Write<int>(raw.GroupToId.Value);
-                }
-                else
-                {
-                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer);
-                }
-                if (raw.StartStatusDate is not null)
-                {
-                    writer.Write<DateTime>(raw.StartStatusDate.Value);
-                }
-                else
-                {
-                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Timestamp);
-                }
-                if (raw.EndStatusDate is not null)
-                {
-                    writer.Write<DateTime>(raw.EndStatusDate.Value);
-                }
-                else
-                {
-                    writer.Write(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Timestamp);
-                }
-            }
-            writer.Complete();
+            var raw = record.AsRaw();
+            var p1 = parameters.Add(raw.StudentId, NpgsqlTypes.NpgsqlDbType.Integer);
+            var p2 = parameters.Add(raw.OrderId, NpgsqlTypes.NpgsqlDbType.Integer);
+            var p3 = parameters.Add(raw.GroupToId is null ? DBNull.Value : raw.GroupToId, NpgsqlTypes.NpgsqlDbType.Integer);
+            var p4 = parameters.Add(raw.StartStatusDate is null ? DBNull.Value : raw.StartStatusDate, NpgsqlTypes.NpgsqlDbType.Timestamp);
+            var p5 = parameters.Add(raw.EndStatusDate is null ? DBNull.Value : raw.EndStatusDate, NpgsqlTypes.NpgsqlDbType.Timestamp);
+            query.Append(string.Format("({0}, {1}, {2}, {3}, {4}),\n", p1.GetName(), p2.GetName(), p3.GetName(), p4.GetName(), p5.GetName()));
         }
+        // убираем последнюю запятую и \n
+        query.Remove(query.Length - 2, 1);
 
+        var commandText = query.ToString();
+        Console.WriteLine(commandText);
+        NpgsqlCommand cmd;
+        if (scope is null)
+        {
+            cmd = new NpgsqlCommand(commandText, conn);
+        }
+        else
+        {
+            cmd = new NpgsqlCommand(commandText, scope.Connection, scope.Transaction);
+        }
+        foreach (var p in parameters)
+        {
+            cmd.Parameters.Add(p.ToNpgsqlParameter());
+        }
+        using (cmd)
+        {
+            cmd.ExecuteNonQuery();
+        }
+        conn.Dispose();
+        return ResultWithoutValue.Success();
     }
-
-
-
-
 }
 
 

@@ -6,6 +6,7 @@ using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Flow.History;
 using Contingent.Models.Domain.Orders;
 using Contingent.SQL;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers;
 
@@ -71,8 +72,10 @@ public class OrderController : Controller
             var built = Order.Build(body);
             if (built.IsSuccess && built.ResultObject is not null)
             {
+                using var transaction = ObservableTransaction.New;
                 var order = built.ResultObject;
-                order.Save(null);
+                order.Save(transaction);
+                await transaction.CommitAsync();
                 return Json(new OrderSearchDTO(order));
             }
             return BadRequest(new ErrorCollectionDTO(built.Errors));
@@ -104,7 +107,9 @@ public class OrderController : Controller
         {
             return BadRequest("Неверно указан id приказа");
         }
-        order.Close();
+        var transaction = ObservableTransaction.New;
+        order.Close(transaction);
+        transaction.Commit();
         return Ok();
     }
     [HttpGet]
@@ -117,10 +122,11 @@ public class OrderController : Controller
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Несуществующий приказ"));
         };
         var found = new OrderHistory(order);
+        using var transaction = ObservableTransaction.New;
         var studentMovesHistoryRecords = new List<StudentHistoryMoveDTO>();
         foreach (var record in found.History)
         {
-            var history = new StudentHistory(record.StudentNullRestrict);
+            var history = record.StudentNullRestrict.GetHistory(transaction);
             var byAnchor = history.GetByOrder(order);
             var previous = history.GetClosestBefore(order);
             studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.StudentNullRestrict, byAnchor?.GroupTo, previous?.GroupTo, order));

@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -50,9 +50,9 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
     }
 
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_graduates.ToRecords(this));
+        ConductBase(_graduates.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -61,16 +61,16 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         return OrderTypes.FreeDeductionWithGraduation;
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
     // выпускная группа
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var graduate in _graduates)
         {
-            var group = graduate.Student.History.GetCurrentGroup();
+            var group = graduate.Student.GetHistory(scope).GetCurrentGroup();
             if (group is null || !group.IsGraduationGroup())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не учится в выпуской группе", graduate.Student));

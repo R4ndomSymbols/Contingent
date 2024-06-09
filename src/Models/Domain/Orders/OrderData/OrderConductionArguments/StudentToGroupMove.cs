@@ -3,13 +3,12 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Orders.OrderData;
 
 public class StudentToGroupMove
 {
-
     public StudentModel Student { get; private set; }
     public GroupModel GroupTo { get; private set; }
 

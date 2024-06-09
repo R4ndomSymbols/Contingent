@@ -1,6 +1,6 @@
 using System.Security.AccessControl;
 using System.Text.RegularExpressions;
-using Utilities;
+using Contingent.Utilities;
 namespace Contingent.Models.Domain.Address;
 public class District : IAddressPart
 {

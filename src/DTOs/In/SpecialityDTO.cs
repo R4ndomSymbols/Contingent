@@ -1,12 +1,12 @@
 using System.Text.Json.Serialization;
 using Contingent.Import;
 using Contingent.Models.Domain.Specialties;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.In;
 
 [Serializable]
-public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
+public class SpecialtyInDTO : IFromCSV<SpecialtyInDTO>
 {
     public const string FgosCodeFieldName = "номер фгос";
     public const string FgosNameFieldName = "название фгос";
@@ -19,7 +19,7 @@ public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
     public const string TeachingDepthFieldName = "глубина образовательной программы";
     public const string ProgramTypeFieldName = "тип образовательной программы";
 
-    public int? Id { get; set; }
+    public int Id { get; set; }
 
     [JsonInclude]
     public string FgosCode { get; set; }
@@ -42,8 +42,9 @@ public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
     [JsonInclude]
     public int ProgramType { get; set; }
 
-    public SpecialtyDTO()
+    public SpecialtyInDTO()
     {
+        Id = Utils.INVALID_ID;
         FgosCode = "";
         FgosName = "";
         Qualification = "";
@@ -51,7 +52,7 @@ public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
         QualificationPostfix = null;
     }
 
-    public Result<SpecialtyDTO> MapFromCSV(CSVRow row)
+    public Result<SpecialtyInDTO> MapFromCSV(CSVRow row)
     {
         FgosCode = row[FgosCodeFieldName]!;
         FgosName = row[FgosNameFieldName]!;
@@ -66,6 +67,6 @@ public class SpecialtyDTO : IFromCSV<SpecialtyDTO>
         EducationalLevelOut = LevelOfEducation.ImportLevelCode(row[EducationalLevelOutFieldName]);
         ProgramType = TrainingProgram.ImportProgramTypeCode(row[ProgramTypeFieldName]);
         TeachingDepthCode = TeachingDepth.ImportTeachingDepthCode(row[TeachingDepthFieldName]);
-        return Result<SpecialtyDTO>.Success(this);
+        return Result<SpecialtyInDTO>.Success(this);
     }
 }

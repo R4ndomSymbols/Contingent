@@ -4,6 +4,8 @@ using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
 using Contingent.Controllers.DTO.Out;
 using System.Text.Json;
+using System.Transactions;
+using Contingent.Utilities;
 namespace Contingent.Controllers;
 public class StudentFlowController : Controller
 {
@@ -37,13 +39,14 @@ public class StudentFlowController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("неверный номер приказа"));
         }
+        using var transaction = ObservableTransaction.New;
         using (var stream = new StreamReader(Request.Body))
         {
             var jsonString = await stream.ReadToEndAsync();
             var result = await Order.GetOrderForConduction(orderId, jsonString);
             if (result.IsSuccess)
             {
-                var conductionStatus = result.ResultObject.ConductByOrder();
+                var conductionStatus = result.ResultObject.ConductByOrder(transaction);
                 if (conductionStatus.IsSuccess)
                 {
                     return Ok();
@@ -65,18 +68,17 @@ public class StudentFlowController : Controller
     [Route("/studentflow/history/{id:int?}")]
     public async Task<IActionResult> GetHistory(int id)
     {
-
         var student = await StudentModel.GetStudentById(id);
         if (student is null)
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("такого студента не существует"));
         }
-        var history = student.History.History;
+        using var transaction = ObservableTransaction.New;
+        var history = student.GetHistory(transaction).History;
         List<StudentHistoryMoveDTO> moves = new();
         GroupModel? previous = null;
         foreach (var rec in history)
         {
-
             moves.Add(new StudentHistoryMoveDTO(
                 student,
                 rec.GroupTo,
@@ -86,6 +88,7 @@ public class StudentFlowController : Controller
             previous = rec.GroupTo;
 
         }
+        transaction.Commit();
         return Json(moves);
     }
     // удаление истории студента в приказа либо всей истории приказа
@@ -98,6 +101,7 @@ public class StudentFlowController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Id приказа указан неверно"));
         }
+        var transaction = ObservableTransaction.New;
         if (studentId is not null)
         {
             var student = StudentModel.GetStudentById(studentId).Result;
@@ -105,10 +109,11 @@ public class StudentFlowController : Controller
             {
                 return BadRequest(ErrorCollectionDTO.GetGeneralError("Id студента указан неверно"));
             }
-            order.RevertConducted(new StudentModel[] { student });
+            order.RevertConducted(new StudentModel[] { student }, transaction);
             return Ok();
         }
-        order.RevertAllConducted();
+        order.RevertAllConducted(transaction);
+        transaction.Commit();
         return Ok();
     }
 }

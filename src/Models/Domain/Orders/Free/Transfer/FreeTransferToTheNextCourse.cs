@@ -3,7 +3,7 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Import;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Orders.OrderData;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 
 namespace Contingent.Models.Domain.Orders;
@@ -51,9 +51,9 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         return MapPartialFromDbBase(reader, order);
     }
 
-    protected override ResultWithoutValue ConductByOrderInternal()
+    protected override ResultWithoutValue ConductByOrderInternal(ObservableTransaction? scope)
     {
-        ConductBase(_moves.ToRecords(this));
+        ConductBase(_moves.ToRecords(this), scope);
         return ResultWithoutValue.Success();
     }
 
@@ -62,7 +62,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         return OrderTypes.FreeTransferNextCourse;
     }
 
-    public override void Save(ObservableTransaction? scope)
+    public override void Save(ObservableTransaction scope)
     {
         base.Save(scope);
     }
@@ -71,12 +71,12 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
     // одинаковая последовательность
     // отличия в курсе строго 1
 
-    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility()
+    protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _moves.Moves)
         {
 
-            var history = move.Student.History;
+            var history = move.Student.GetHistory(scope);
             var currentGroup = history.GetCurrentGroup();
             if (currentGroup is null)
             {

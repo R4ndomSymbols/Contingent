@@ -4,10 +4,11 @@ using Contingent.Models.Domain.Address;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Citizenship;
 using Contingent.SQL;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 using Contingent.Models.Domain.Specialties;
 using System.Runtime.InteropServices;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Students;
 
@@ -121,15 +122,14 @@ public class StudentModel
             return _education;
         }
     }
-    public StudentHistory History
+    public StudentHistory GetHistory(ObservableTransaction? transaction)
     {
-        get
+        if (_history is null || (_history.CurrentTransaction != transaction && transaction is not null))
         {
-            _history ??= new StudentHistory(this);
-            return _history;
+            _history = new StudentHistory(this, transaction);
         }
+        return _history;
     }
-
 
     private StudentModel()
     {
@@ -413,12 +413,10 @@ public class StudentModel
 
     public static async Task<StudentModel?> GetStudentById(int? id)
     {
-        if (id is null || id == Utils.INVALID_ID)
+        if (!Utils.IsValidId(id))
         {
             return null;
         }
-        using var conn = await Utils.GetAndOpenConnectionFactory();
-
         var sParams = new SQLParameterCollection();
         var p1 = sParams.Add((int)id);
         var where = new ComplexWhereCondition(

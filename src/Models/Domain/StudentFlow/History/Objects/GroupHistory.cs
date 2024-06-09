@@ -21,7 +21,7 @@ public class GroupHistory
         List<StudentFlowRecord> stateNow = new List<StudentFlowRecord>();
         foreach (var rec in before)
         {
-            var studentHistory = rec.StudentNullRestrict.History;
+            var studentHistory = rec.StudentNullRestrict.GetHistory(null);
             var nextChangedOrder = studentHistory.GetNextGroupChangingOrder(_historySubject);
             if (nextChangedOrder is null || nextChangedOrder.EffectiveDate >= onDate)
             {

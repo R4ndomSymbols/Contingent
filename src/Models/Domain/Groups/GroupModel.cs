@@ -1,7 +1,7 @@
 using Contingent.Models.Domain.Specialties;
 using Npgsql;
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 using Contingent.SQL;
 using Contingent.Controllers.DTO.In;
 using Contingent.Models.Domain.Flow.History;
@@ -29,7 +29,7 @@ public class GroupModel
     private GroupEducationFormat _formatOfEducation;
     private GroupSponsorship _groupSponsorship;
     private int _creationYear;
-    private string? _sequenceLetter;
+    private string _sequenceLetter;
     private bool _nameGenerated;
     private int _historyThreadId;
     // поле отвечает за упрощение поисковой выдачи
@@ -106,6 +106,10 @@ public class GroupModel
     private GroupModel()
     {
         _id = Utils.INVALID_ID;
+        _educationProgram = null!;
+        _formatOfEducation = null!; // заменить на пустые, но не null
+        _groupName = string.Empty;
+        _groupSponsorship = null!;
 
     }
 
@@ -140,7 +144,7 @@ public class GroupModel
                 group._creationYear = (int)reader["creation_year"];
                 group._formatOfEducation = GroupEducationFormat.GetByTypeCode((int)reader["form_of_education"]);
                 group._groupSponsorship = GroupSponsorship.GetByTypeCode((int)reader["type_of_financing"]);
-                group._sequenceLetter = reader["letter"].GetType() == typeof(DBNull) ? null : (string)reader["letter"];
+                group._sequenceLetter = reader["letter"] is DBNull ? "" : (string)reader["letter"];
                 group._nameGenerated = (bool)reader["name_generated"];
                 group._groupName = (string)reader["group_name"];
                 var specialty = specialtyMapper.Map(reader);
@@ -163,7 +167,7 @@ public class GroupModel
 
 
     // только первый курс
-    public static Result<GroupModel> Build(GroupInDTO? dtoIn)
+    public static Result<GroupModel> Build(GroupInDTO? dtoIn, ObservableTransaction? scope)
     {
         if (dtoIn is null)
         {
@@ -236,9 +240,9 @@ public class GroupModel
             // порядковый номер группы среди других таких же групп (совпадает специальность и курс)
             model._courseOn = 1;
             model._isActive = true;
-            model._historyThreadId = GetNextSequenceId();
+            model._historyThreadId = GetNextSequenceId(scope);
             model._nameGenerated = dto.AutogenerateName;
-            model._sequenceLetter = model.GetSequenceLetter();
+            model._sequenceLetter = model.GetSequenceLetter(scope);
             model._groupName = model.GenerateGroupName();
             return Result<GroupModel>.Success(model);
 
@@ -344,7 +348,7 @@ public class GroupModel
                 model._isActive = true;
                 model._historyThreadId = GetNextSequenceId();
                 model._nameGenerated = false;
-                model._sequenceLetter = null;
+                model._sequenceLetter = "";
                 return Result<GroupModel>.Success(model);
             }
         }
@@ -367,7 +371,7 @@ public class GroupModel
 
     public ResultWithoutValue Save(ObservableTransaction? scope = null)
     {
-        if (_id != Utils.INVALID_ID)
+        if (Utils.IsValidId(_id))
         {
             return Update(scope);
         }
@@ -390,13 +394,13 @@ public class GroupModel
 
     private ResultWithoutValue SaveBase(ObservableTransaction? scope)
     {
-        NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
+        using NpgsqlConnection? conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "INSERT INTO public.educational_group( " +
             " program_id, course_on, group_name, type_of_financing, " +
             " form_of_education, education_program_type, creation_year, letter, name_generated, group_sequence_id, is_active) " +
             " VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11) RETURNING group_id";
         NpgsqlCommand cmd;
-        if (scope != null)
+        if (scope is not null)
         {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
@@ -411,7 +415,7 @@ public class GroupModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p5", (int)_formatOfEducation.FormatType));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p6", -1));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p7", _creationYear));
-        cmd.Parameters.Add(new NpgsqlParameter<string?>("p8", _sequenceLetter));
+        cmd.Parameters.Add(new NpgsqlParameter<string>("p8", _sequenceLetter));
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p9", _nameGenerated));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p10", _historyThreadId));
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p11", _isActive));
@@ -421,7 +425,6 @@ public class GroupModel
             reader.Read();
             _id = (int)reader["group_id"];
         }
-        conn?.Dispose();
         return ResultWithoutValue.Success();
     }
     private ResultWithoutValue Update(ObservableTransaction? scope = null)
@@ -430,16 +433,16 @@ public class GroupModel
         {
             return ResultWithoutValue.Success();
         }
-        var connection = Utils.GetAndOpenConnectionFactory().Result;
+        using var connection = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "UPDATE educational_group SET is_active = @p1 WHERE group_id = @p2";
         NpgsqlCommand cmd;
-        if (scope is null)
+        if (scope is not null)
         {
-            cmd = new NpgsqlCommand(cmdText, connection);
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
         else
         {
-            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+            cmd = new NpgsqlCommand(cmdText, connection);
         }
         cmd.Parameters.Add(new NpgsqlParameter<bool>("p1", _isActive));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p2", _id));
@@ -447,7 +450,6 @@ public class GroupModel
         {
             cmd.ExecuteNonQuery();
         }
-        connection.Dispose();
         _changed = false;
         return ResultWithoutValue.Success();
     }
@@ -455,15 +457,15 @@ public class GroupModel
 
     // хранить букву в базе
     // если не получается получить последнюю, то буква не указывается
-    private string GetSequenceLetter(ObservableTransaction? scope = null)
+    private string GetSequenceLetter(ObservableTransaction? scope)
     {
-        NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
+        using NpgsqlConnection? conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText =
         "SELECT MAX(letter) AS letter FROM educational_group WHERE letter IS NOT NULL AND " +
         " program_id = @p1 AND type_of_financing = @p2 AND form_of_education = @p3 " +
         " AND creation_year = @p4 AND name_generated";
         NpgsqlCommand cmd;
-        if (scope != null)
+        if (scope is not null)
         {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
@@ -492,16 +494,15 @@ public class GroupModel
             result = result == string.Empty ? "Я" : result;
             result = ((char)(result[0] + 1)).ToString();
         }
-        conn?.Dispose();
         return result;
     }
 
     private static int GetNextSequenceId(ObservableTransaction? scope = null)
     {
-        NpgsqlConnection? conn = scope == null ? Utils.GetAndOpenConnectionFactory().Result : null;
+        using NpgsqlConnection? conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "SELECT MAX(group_sequence_id) AS seq_id FROM educational_group";
         NpgsqlCommand cmd;
-        if (scope != null)
+        if (scope is not null)
         {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
@@ -524,7 +525,6 @@ public class GroupModel
             }
             result = (int)reader["seq_id"] + 1;
         }
-        conn?.Dispose();
         return result;
     }
 

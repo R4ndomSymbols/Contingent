@@ -1,5 +1,5 @@
-using Utilities;
-using Utilities.Validation;
+using Contingent.Utilities;
+using Contingent.Utilities.Validation;
 
 namespace Contingent.Models.Domain.Citizenship;
 

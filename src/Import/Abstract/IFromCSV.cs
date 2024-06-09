@@ -1,4 +1,4 @@
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Import;
 

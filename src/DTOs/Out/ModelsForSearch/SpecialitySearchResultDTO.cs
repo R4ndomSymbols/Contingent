@@ -1,4 +1,5 @@
 using Contingent.Models.Domain.Specialties;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.Out;
 
@@ -18,7 +19,7 @@ public class SpecialtySearchResultDTO
         FgosName = model.FgosName;
         FgosCode = model.FgosCode;
         QualificationName = model.Qualification;
-        if (model.Id is not null)
+        if (Utils.IsValidId(model.Id))
         {
             LinkToModify = "/specialities/modify/" + Id.ToString();
             LinkToView = "/specialities/about/" + Id.ToString();

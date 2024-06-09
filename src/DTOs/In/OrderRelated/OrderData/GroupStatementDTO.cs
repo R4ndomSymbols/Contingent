@@ -1,10 +1,11 @@
 using Contingent.Import;
-using Utilities;
+using Contingent.Utilities;
 
 namespace Contingent.Controllers.DTO.In;
 
 public class GroupStatementDTO : IFromCSV<GroupStatementDTO>
 {
+    public const string GroupNameFieldName = "Название группы";
     public int GroupId { get; set; }
     public string GroupName { get; set; }
 
@@ -16,7 +17,7 @@ public class GroupStatementDTO : IFromCSV<GroupStatementDTO>
 
     public Result<GroupStatementDTO> MapFromCSV(CSVRow row)
     {
-        GroupName = row[FlowImport.GroupFieldName]!;
+        GroupName = row[GroupNameFieldName]!;
         GroupName ??= "";
         return Result<GroupStatementDTO>.Success(this);
     }

@@ -1,6 +1,6 @@
 using Contingent.Controllers.DTO.In;
 using Contingent.SQL;
-using Utilities;
+using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Citizenship;
@@ -57,26 +57,30 @@ public static class OrderDataExtractions
         {
             return Result<GroupModel>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
         }
-        var group = GroupModel.GetGroupById(dto.GroupId);
-        if (group is null)
+        if (Utils.IsValidId(dto.GroupId))
         {
-            var groupsFound = GroupModel.FindGroupsByName(
-                new QueryLimits(0, 2),
-                dto.GroupName,
-                false,
-                true
-            );
-            if (groupsFound.Count == 0)
+            var group = GroupModel.GetGroupById(dto.GroupId);
+            if (group is null)
             {
                 return Result<GroupModel>.Failure(new ValidationError("Группа не найдена"));
             }
-            if (groupsFound.Count != 1)
-            {
-                return Result<GroupModel>.Failure(new ValidationError("Группа не может быть определена однозначно"));
-            }
-            return Result<GroupModel>.Success(groupsFound.First());
+            return Result<GroupModel>.Success(group);
         }
-        return Result<GroupModel>.Success(group);
+        var groupsFound = GroupModel.FindGroupsByName(
+            new QueryLimits(0, 2),
+            dto.GroupName,
+            false,
+            true
+        );
+        if (groupsFound.Count == 0)
+        {
+            return Result<GroupModel>.Failure(new ValidationError("Группа не найдена"));
+        }
+        if (groupsFound.Count != 1)
+        {
+            return Result<GroupModel>.Failure(new ValidationError("Группа не может быть определена однозначно"));
+        }
+        return Result<GroupModel>.Success(groupsFound.First());
     }
 }
 
