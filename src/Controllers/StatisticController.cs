@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Contingent.Models.Domain.Specialties;
 using Contingent.Statistics.Tables;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers;
 
@@ -12,19 +14,31 @@ public class StatisticController : Controller
     {
         _logger = logger;
     }
-    // добавить уровень квалификации (специалист или квалифицированный рабочий)
-
 
     [HttpGet]
-    [Route("statistics/{query?}")]
-    public IActionResult GetAgeStatistics(string query)
+    [AllowAnonymous]
+    [Route("/statistics/{table}")]
+    public IActionResult GetMainPage(string table)
     {
-        if (string.IsNullOrEmpty(query))
+        return View("Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/statistics/" + table,
+            RequestType = "GET",
+        });
+    }
+
+    // добавить уровень квалификации (специалист или квалифицированный рабочий)
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/statistics/{tableName?}")]
+    public IActionResult GetAgeStatistics(string tableName)
+    {
+        if (string.IsNullOrEmpty(tableName))
         {
             return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");
         }
         ITable? table = null;
-        switch (query)
+        switch (tableName)
         {
             case "age_qualified":
                 table = new AgeTable(TrainingProgramTypes.QualifiedWorker);
@@ -32,8 +46,8 @@ public class StatisticController : Controller
             case "age_specialist":
                 table = new AgeTable(TrainingProgramTypes.GenericSpecialist);
                 break;
-            case "speciality":
-                table = new GenericSpeciality();
+            case "specialty":
+                table = new GenericSpecialty();
                 break;
             case "legalAddress":
                 table = new AddressTable();

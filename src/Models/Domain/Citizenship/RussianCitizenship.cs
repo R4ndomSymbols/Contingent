@@ -26,7 +26,7 @@ public class RussianCitizenship : Citizenship
                     _patronymic = reader["patronymic"].GetType() == typeof(DBNull) ? null : NamePart.CreateFromDatabase((string)reader["patronymic"]),
                 };
                 found._legalAddressId = reader["legal_address"].GetType() == typeof(DBNull) ? null : (int)reader["legal_address"];
-                found._legalAddress = includeAddress && found._legalAddressId is not null ? AddressModel.GetAddressById((int)reader["legal_address"]).Result : null;
+                found._legalAddress = includeAddress && found._legalAddressId is not null ? AddressModel.GetAddressById((int)reader["legal_address"], null).Result : null;
                 return QueryResult<RussianCitizenship>.Found(found);
 
             },
@@ -119,7 +119,7 @@ public class RussianCitizenship : Citizenship
         {
             if (_legalAddress is null)
             {
-                _legalAddress = AddressModel.GetAddressById(_legalAddressId).Result;
+                _legalAddress = AddressModel.GetAddressById(_legalAddressId, null).Result;
             }
             return _legalAddress;
         }

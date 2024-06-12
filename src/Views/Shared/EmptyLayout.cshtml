@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.min.css" />
+    <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.structure.min.css" />
+    <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.theme.min.css" />
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery-ui/jquery-ui.min.js"></script>
+</head>
+
+<body>
+    <div class="body-wrapper">
+        <header>
+
+        </header>
+        <div class="content-wrapper p-3">
+            <div class="container d-flex justify-content-center align-content-center">
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+
+
+        <footer class="border-top text-muted d-flex p-3 justify-content-end">
+            <h6>Контингент</h6>
+        </footer>
+    </div>
+</body>
+
+</html>

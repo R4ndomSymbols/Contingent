@@ -6,7 +6,7 @@
         <div class="flex-fill">
 
         </div>
-        <button class="standard-button-prim">
+        <button class="standard-button-prim" id="import">
             Импортировать данные
         </button>
     </div>
@@ -14,28 +14,24 @@
         <h5 class="field-title">
             Выберите файл(CSV таблица):
         </h5>
-        <input class="standard-input mb-1" type="file" accept=".csv" />
+        <input class="standard-input mb-1" type="file" accept=".csv" id="input_file" />
+        <small class="error_box" id="IMPORT_ERROR_err">
+
+        </small>
         <h5 class="field-title">
             Выберите тип импорта:
         </h5>
-        <select class="standard-select mb-1">
-            @foreach (var type in @Contingent.Import.ImportTypeInfo.AvailableImports)
+        <select class="standard-select mb-1" id="import_type">
+            @foreach (var type in Contingent.Import.ImportTypeInfo.AvailableImports)
             {
-                <option value="@((int)type.Type)">
+                int typeInt = (int)type.Type;
+                <option value="@typeInt">
                     @type.RussianName
                 </option>
             }
         </select>
-        <div class=".hidden-element d-flex flex-column">
-            <h5>
-                Выберите приказ
-            </h5>
-            <input type="text" class="standard-input" />
-        </div>
     </div>
-
-
-
-
-
 </div>
+
+<script src="~/js/processing/import.js" type="module"></script>
+

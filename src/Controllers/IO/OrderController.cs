@@ -7,22 +7,36 @@ using Contingent.Models.Domain.Flow.History;
 using Contingent.Models.Domain.Orders;
 using Contingent.SQL;
 using Contingent.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers;
 
 
 public class OrderController : Controller
 {
-
     private readonly ILogger<OrderController> _logger;
 
     public OrderController(ILogger<OrderController> logger)
     {
         _logger = logger;
     }
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/orders/modify/{query}")]
+    public IActionResult GetOrderModifyPage(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/orders/modify/" + query,
+            RequestType = "GET",
+        });
+    }
+
 
     [HttpGet]
-    [Route("/orders/modify/{query}")]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/orders/modify/{query}")]
     public IActionResult ProcessOrder(string query)
     {
         if (query == "new")
@@ -47,8 +61,23 @@ public class OrderController : Controller
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id приказа");
         }
     }
+
     [HttpGet]
-    [Route("/orders/view/{id:int?}")]
+    [AllowAnonymous]
+    [Route("/orders/view/{query}")]
+    public IActionResult GetOrderViewPage(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/orders/view/" + query,
+            RequestType = "GET",
+        });
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/orders/view/{id:int?}")]
     public IActionResult ViewOrder(int id)
     {
         var order = Order.GetOrderById(id);
@@ -63,6 +92,7 @@ public class OrderController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/orders/save")]
     public async Task<IActionResult> Save()
     {
@@ -82,8 +112,9 @@ public class OrderController : Controller
         }
     }
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/orders/generateIdentity")]
-    public async Task<IActionResult> GenerateIndentity()
+    public async Task<IActionResult> GenerateIdentity()
     {
         using (var reader = new StreamReader(Request.Body))
         {
@@ -98,6 +129,7 @@ public class OrderController : Controller
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     [Route("/orders/close/{id:int?}")]
     public IActionResult CloseOrder(int? id)
     {
@@ -113,6 +145,7 @@ public class OrderController : Controller
         return Ok();
     }
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     [Route("/orders/history/{id?}")]
     public IActionResult GetStudentsInOrder(int? id)
     {

@@ -21,8 +21,8 @@ public class SpecialtySearchResultDTO
         QualificationName = model.Qualification;
         if (Utils.IsValidId(model.Id))
         {
-            LinkToModify = "/specialities/modify/" + Id.ToString();
-            LinkToView = "/specialities/about/" + Id.ToString();
+            LinkToModify = "/specialties/modify/" + Id.ToString();
+            LinkToView = "/specialties/view/" + Id.ToString();
         }
         else
         {

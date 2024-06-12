@@ -12,8 +12,6 @@ let currentOrderId = undefined;
 let pinnedTable = undefined;
 let unpinnedTable = undefined;
 
-
-
 // здесь хранятся все студенты
 let studentsPool = [];
 // здесь находятся прикрепленные студенты
@@ -22,20 +20,22 @@ let studentsPinned = [];
 // removed - свойство, отвечающее за удаление
 let studentsInOrder = [];
 
-$(document).ready(function () {
+init();
+
+function init() {
     currentOrderId = Number($("#current_order").attr("order_id"));
     currentDisplayingPolicy = String($("#current_order").attr("group_behavior"))
     if (currentDisplayingPolicy === "PeriodInput") {
         $("#input_title").text("Период отпуска");
     }
-
     setStudentsInOrder();
     unpinnedTable = $("#students_not_in_order");
     pinnedTable = $("#students_in_order");
     $("#close_order").on("click", function () {
         closeOrder();
     });
-});
+}
+
 
 function setUpStudents(students) {
     // в пуле не должно быть уже прикрепленных студентов
@@ -145,7 +145,7 @@ function getUnPinFunc(student) {
 function setStudentsInOrder() {
     $.ajax({
         type: "POST",
-        url: "/students/search/query",
+        url: "/students/search/find",
         data: JSON.stringify(
             {
                 Name: "",
@@ -159,6 +159,7 @@ function setStudentsInOrder() {
             }
         ),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             $.each(response, function (index, student) {
                 const studentClosure = student;
@@ -200,7 +201,7 @@ $("#find_students").on("click", function () {
     studentsPool = [];
     $.ajax({
         type: "POST",
-        url: "/students/search/query",
+        url: "/students/search/find",
         data: JSON.stringify(
             {
                 Name: getStudentSearchText(),
@@ -213,6 +214,8 @@ $("#find_students").on("click", function () {
                 PageSkipCount: 0
             }
         ),
+        contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (studentsJSON) {
             setUpStudents(studentsJSON)
         }
@@ -230,12 +233,13 @@ function findGroupsAndSetAutoComplete(student) {
         let groupsAvailable = [];
         $.ajax({
             type: "POST",
-            url: "/groups/search/query",
+            url: "/groups/search/find",
             data: JSON.stringify({
                 GroupName: searchText
             }),
             dataType: "json",
             contentType: "application/json",
+            beforeSend: utils.setAuthHeader,
             success: function (response) {
                 $.each(response, function (i, group) {
                     groupsAvailable.push(
@@ -272,6 +276,7 @@ $("#save_changes").on("click", function () {
         url: "/studentflow/save/" + String(currentOrderId),
         data: JSON.stringify(obj),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             alert("Сохранение новых студентов прошло успешно")
         },
@@ -285,6 +290,7 @@ $("#save_changes").on("click", function () {
             $.ajax({
                 type: "DELETE",
                 url: "/studentflow/revert/" + String(currentOrderId) + "/" + String(valueOfElement.studentId),
+                beforeSend: utils.setAuthHeader,
                 success: function (response) { },
                 error: function (xhr, a, b) {
                     utils.readAndSetErrors(xhr)

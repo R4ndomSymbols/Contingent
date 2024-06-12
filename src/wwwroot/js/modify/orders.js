@@ -1,7 +1,10 @@
 import { Utilities } from "../site.js";
 let utils = new Utilities();
 let id = null;
-$(document).ready(function () {
+
+init();
+
+function init() {
     id = $("#OrderOrgId").attr("orgid");
     if (id === "" || id === undefined || id == null || id === "-1") {
         $(".identity_dependency").focusout(
@@ -16,7 +19,8 @@ $(document).ready(function () {
         utils.disableField("EffectiveDate");
         utils.disableField("identity_dependency", utils.SELECTOR_CLASS)
     }
-});
+}
+
 
 function updateIdentity() {
 
@@ -33,6 +37,7 @@ function updateIdentity() {
             }
         ),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             $("#order_name").text("Приказ " + String(response["orderOrgId"]));
         },
@@ -58,6 +63,7 @@ $("#save").click(function () {
 
             }),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             id = response["orderId"];
             utils.notifySuccess();

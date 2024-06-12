@@ -1,0 +1,28 @@
+@{
+    Layout = "EmptyLayout";
+}
+
+<div class="page-layout-container">
+    <div class="login-box">
+        <div class="d-flex flex-column">
+            <h5 class="field-title">
+                Логин (с учетом регистра)
+            </h5>
+            <input type="text" class="standard-input" id="login_input" />
+            <h5>
+                Пароль
+            </h5>
+            <input type="password" id="password_input" class="standard-input" />
+            <button id="log_in_button" class="standard-button-prim mt-2 me-2">
+                Войти
+            </button>
+            <div id="auth">
+                <small class="error-box" id="auth_err">
+
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/auth.js" type="module"></script>

@@ -1,7 +1,30 @@
+using Contingent.Auth;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+
+// аутентификация
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+.AddJwtBearer(
+    options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = false,
+            ValidIssuer = Authentication.ISSUER,
+            ValidAudience = Authentication.AUDIENCE,
+            IssuerSigningKey = Authentication.JWTSecurityKey,
+            ValidateIssuerSigningKey = true
+        };
+    }
+);
 
 var app = builder.Build();
 
@@ -16,9 +39,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}"
 );
-app.UseAuthorization();
 app.Run();

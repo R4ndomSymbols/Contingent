@@ -39,7 +39,7 @@ public class AddressTable : ITable
         }
         // вертикальная шапка таблицы
         var horizontalRoot = new RowHeaderCell<StudentFlowRecord>();
-        var allRegions = AddressModel.FindByAddressLevel(FederalSubject.ADDRESS_LEVEL).Select(x => FederalSubject.Create(x));
+        var allRegions = AddressModel.FindByAddressLevel(FederalSubject.ADDRESS_LEVEL, null).Select(x => FederalSubject.Create(x));
         foreach (var reg in allRegions)
         {
             var regHeader = new RowHeaderCell<StudentFlowRecord>(
@@ -62,7 +62,7 @@ public class AddressTable : ITable
             // добавление к дерево происходит неявно
             TemplateHeaders.GetAddressRowHeader(
                 (StudentFlowRecord s) => s.Student?.RussianCitizenship?.LegalAddress,
-                reg.GetDescendants(),
+                reg.GetDescendants(null),
                 regHeader
             );
         }

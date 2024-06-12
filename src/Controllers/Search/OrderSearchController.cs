@@ -1,12 +1,11 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Npgsql;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Orders;
-using Contingent.Models.Infrastructure;
 using Contingent.SQL;
-using Contingent.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers.Search;
 
@@ -20,11 +19,24 @@ public class OrderSearchController : Controller
 
     [HttpGet]
     [Route("/orders/search")]
-    public IActionResult GetSearchPage()
+    public IActionResult GetMainPage()
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/orders/search",
+            RequestType = "GET",
+        });
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/orders/search")]
+    public IActionResult GetMainPageProtected()
     {
         return View(@"Views/Search/Orders.cshtml", new List<OrderSearchDTO>());
     }
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/orders/search/find")]
     public async Task<IActionResult> GetOrdersByFilters()
     {
@@ -64,6 +76,17 @@ public class OrderSearchController : Controller
                     new Column("lower", "org_id", "orders", null),
                     parameters.Add(dto.SearchText.ToLower()),
                     WhereCondition.Relations.Like
+                )));
+        }
+        if (dto.Type != -1)
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.OR,
+                new ComplexWhereCondition(
+                new WhereCondition(
+                    new Column("type", "orders"),
+                    parameters.Add(dto.Type),
+                    WhereCondition.Relations.Equal
                 )));
         }
 

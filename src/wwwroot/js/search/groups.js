@@ -1,39 +1,42 @@
-var resultTable;
+import { Utilities } from "../site.js";
+let utils = new Utilities();
+let resultTable = undefined;
 
-$(document).ready(function () {
+init();
+
+function init() {
     resultTable = $("#groups_found");
-});
-
-
-$("#search_button").on("click", function () {
-    resetSearch();
-    $.ajax({
-        type: "POST",
-        url: "/groups/search/query",
-        data: getSearchGroupData(),
-        contentType: "application/json",
-        success: function (response) {
-            $.each(response, function (indexInArray, valueOfElement) { 
-                 addCard(valueOfElement)
-            });      
-        }
+    $("#search_button").on("click", function () {
+        resetSearch();
+        $.ajax({
+            type: "POST",
+            url: "/groups/search/find",
+            data: getSearchGroupData(),
+            contentType: "application/json",
+            beforeSend: utils.setAuthHeader,
+            success: function (response) {
+                $.each(response, function (indexInArray, valueOfElement) {
+                    addCard(valueOfElement)
+                });
+            }
+        });
     });
-});
+}
 
-function getSearchGroupData(){
+function getSearchGroupData() {
     return JSON.stringify(
         {
             GroupName: $("#name_input").val(),
-            IsActive: $("#active_only").is(":checked")
+            OnlyActive: $("#active_only").is(":checked")
         }
     )
 }
 
-function resetSearch(){
+function resetSearch() {
     resultTable.empty();
 }
 
-function addCard(groupModel){
+function addCard(groupModel) {
     resultTable.append(
         `
         <tr id = "${groupModel.groupId}">

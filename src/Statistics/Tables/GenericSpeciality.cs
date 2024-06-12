@@ -3,7 +3,7 @@ using Contingent.Statistics.Tables.Headers;
 
 namespace Contingent.Statistics.Tables;
 
-public class GenericSpeciality : ITable
+public class GenericSpecialty : ITable
 {
     private StatisticTable<StudentFlowRecord> _model;
     public string DisplayedName => _model.TableName;
@@ -17,7 +17,7 @@ public class GenericSpeciality : ITable
     */
 
 
-    public GenericSpeciality()
+    public GenericSpecialty()
     {
         var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
         var rowHeaderColHeader = new ColumnHeaderCell<StudentFlowRecord>(

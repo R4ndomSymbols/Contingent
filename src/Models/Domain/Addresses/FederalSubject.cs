@@ -6,13 +6,6 @@ namespace Contingent.Models.Domain.Address;
 
 public class FederalSubject : IAddressPart
 {
-    private static List<FederalSubject> _duplicationBuffer;
-
-    static FederalSubject()
-    {
-        _duplicationBuffer = new List<FederalSubject>();
-    }
-
     public const int ADDRESS_LEVEL = 1;
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"республик(а|и)",RegexOptions.IgnoreCase),
@@ -35,7 +28,6 @@ public class FederalSubject : IAddressPart
     {
         _federalSubjectType = type;
         _subjectName = name;
-        _duplicationBuffer.Add(this);
         _id = Utils.INVALID_ID;
     }
     private FederalSubject(int id, FederalSubjectTypes type, AddressNameToken name)
@@ -43,15 +35,6 @@ public class FederalSubject : IAddressPart
         _id = id;
         _federalSubjectType = type;
         _subjectName = name;
-    }
-
-    private static IEnumerable<FederalSubject> GetDuplicates(FederalSubject subject)
-    {
-        return _duplicationBuffer.Where(
-            f =>
-            subject._federalSubjectType == f._federalSubjectType &&
-            subject._subjectName.Equals(f._subjectName)
-        );
     }
 
     public enum FederalSubjectTypes
@@ -75,7 +58,7 @@ public class FederalSubject : IAddressPart
     };
     // кода у субъекта не будет
     // метод одновременно ищет и в базе адресов
-    public static Result<FederalSubject> Create(string addressPart, ObservableTransaction? searchScope = null)
+    public static Result<FederalSubject> Create(string addressPart, ObservableTransaction? searchScope)
     {
         IEnumerable<ValidationError> errors = new List<ValidationError>();
         if (string.IsNullOrEmpty(addressPart) || addressPart.Contains(','))
@@ -98,7 +81,7 @@ public class FederalSubject : IAddressPart
         {
             return Result<FederalSubject>.Failure(new ValidationError(nameof(FederalSubject), "Субъект федерации не распознан"));
         }
-        var fromDb = AddressModel.FindRecords(null, found.UnformattedName, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(null, found, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
 
         if (fromDb.Any())
         {
@@ -135,20 +118,24 @@ public class FederalSubject : IAddressPart
     // 1 создается некоторое множество дупликатов адресов
     // 2 при попытке сохранить, сохранятеся только один дубликат,
     //   все остальные получают его Id
-    // 3 все дубликаты удаляются из списка
-    // 4 если будет создан новый дубликат, он уже будет получен с базы данных 
-    public async Task Save(ObservableTransaction? transaction = null)
+    public async Task Save(ObservableTransaction? scope)
     {
-        if (_id == Utils.INVALID_ID)
+        if (!Utils.IsValidId(_id))
         {
-            _id = await AddressModel.SaveRecord(this, transaction);
+            var same = await AddressModel.FindRecords(
+                null,
+                _subjectName,
+                (int)_federalSubjectType,
+                ADDRESS_LEVEL,
+                scope
+            );
+            if (same.Any())
+            {
+                _id = same.First().AddressPartId;
+                return;
+            }
+            _id = await AddressModel.SaveRecord(this, scope);
         }
-        var duplicates = GetDuplicates(this);
-        foreach (var d in duplicates)
-        {
-            d._id = this._id;
-        }
-        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
 
     public override bool Equals(object? obj)
@@ -178,9 +165,9 @@ public class FederalSubject : IAddressPart
         };
     }
 
-    public IEnumerable<IAddressPart> GetDescendants()
+    public IEnumerable<IAddressPart> GetDescendants(ObservableTransaction? scope)
     {
-        var found = AddressModel.FindRecords(_id).Result;
+        var found = AddressModel.FindRecords(_id, scope).Result;
         return found.Select(rec => District.Create(rec, this)!);
     }
 

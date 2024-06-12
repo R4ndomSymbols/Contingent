@@ -1,0 +1,29 @@
+@using Contingent.DTOs.Out;
+@model RedirectOptions;
+@{
+    Layout = null;
+}
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script>
+
+    $(document).ready(function () {
+        jQuery.ajax({
+            type: "@Model.RequestType",
+            url: "@Model.DisplayURL",
+            dataType: "html",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("jwt"));
+            },
+            success: function (response) {
+                document.open()
+                document.write(response);
+                document.close();
+            },
+            error: function (xhr, status, error) {
+                window.location.replace("/login");
+            }
+        })
+    });
+
+</script>
+

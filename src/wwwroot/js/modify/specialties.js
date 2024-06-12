@@ -2,7 +2,9 @@ import { Utilities } from "../site.js";
 let utils = new Utilities();
 let id = null;
 
-$(document).ready(function () {
+init();
+
+function init() {
     let possible = Number($("#id_section").attr("spec_id"));
     if (possible !== NaN && possible !== 0 && possible !== undefined) {
         id = possible
@@ -12,14 +14,15 @@ $(document).ready(function () {
         utils.disableField("EducationalLevelIn")
         utils.disableField("EducationalLevelOut")
     }
-});
+}
 
 $("#save").click(function () {
     $.ajax({
         type: "POST",
-        url: "/specialities/add",
+        url: "/specialties/add",
         data: getData(),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             id = Number(response["id"]);
             utils.notifySuccess();

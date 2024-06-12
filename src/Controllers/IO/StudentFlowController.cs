@@ -6,6 +6,8 @@ using Contingent.Controllers.DTO.Out;
 using System.Text.Json;
 using System.Transactions;
 using Contingent.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 namespace Contingent.Controllers;
 public class StudentFlowController : Controller
 {
@@ -16,10 +18,24 @@ public class StudentFlowController : Controller
     {
         _logger = logger;
     }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/studentflow/{id:int}")]
+    public IActionResult GetMainPage(int id)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/studentflow/" + id,
+            RequestType = "GET",
+        });
+    }
+
     // страница проведения приказов
     [HttpGet]
-    [Route("/studentflow/{id:int?}")]
-    public IActionResult GetMainPage(int? id)
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/studentflow/{id:int}")]
+    public IActionResult GetMainPageProtected(int id)
     {
         var order = Order.GetOrderById(id);
         if (order is null)
@@ -31,6 +47,7 @@ public class StudentFlowController : Controller
     }
     // сохранение результатов
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/studentflow/save/{id?}")]
     public async Task<IActionResult> SaveFlowChanges(string id)
     {
@@ -65,6 +82,7 @@ public class StudentFlowController : Controller
     }
     // получение истории студента
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     [Route("/studentflow/history/{id:int?}")]
     public async Task<IActionResult> GetHistory(int id)
     {
@@ -93,6 +111,7 @@ public class StudentFlowController : Controller
     }
     // удаление истории студента в приказа либо всей истории приказа
     [HttpDelete]
+    [Authorize(Roles = "Admin")]
     [Route("/studentflow/revert/{orderId:int}/{studentId:int?}")]
     public IActionResult DeleteFlowRecords(int orderId, int? studentId)
     {

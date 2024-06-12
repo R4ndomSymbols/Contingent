@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Specialties;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers;
 
@@ -16,21 +18,33 @@ public class SpecialtyController : Controller
     {
         _logger = logger;
     }
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/specialties/modify/{query}")]
+    public IActionResult GetProcessingPage(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/specialties/modify/" + query,
+            RequestType = "GET",
+        });
+    }
 
     [HttpGet]
-    [Route("specialities/modify/{query}")]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/specialties/modify/{query}")]
     public IActionResult ProcessSpecialty(string query)
     {
         if (query == "new")
         {
-            return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO());
+            return View(@"Views/Modify/SpecialtyModify.cshtml", new SpecialityOutDTO());
         }
         else if (int.TryParse(query, out int id))
         {
             var got = SpecialtyModel.GetById(id, null).Result;
             if (got != null)
             {
-                return View(@"Views/Modify/SpecialityModify.cshtml", new SpecialityOutDTO(got));
+                return View(@"Views/Modify/SpecialtyModify.cshtml", new SpecialityOutDTO(got));
             }
             else
             {
@@ -44,7 +58,8 @@ public class SpecialtyController : Controller
         }
     }
     [HttpPost]
-    [Route("specialities/add")]
+    [Authorize(Roles = "Admin")]
+    [Route("/specialties/add")]
     public async Task<IActionResult> AddOrUpdateSpecialty()
     {
         using var reader = new StreamReader(Request.Body);
@@ -76,15 +91,29 @@ public class SpecialtyController : Controller
     }
 
     [HttpGet]
-    [Route("specialities/about/{query?}")]
-    public IActionResult ViewSpeciality(string? query)
+    [AllowAnonymous]
+    [Route("/specialties/view/{query}")]
+    public IActionResult GetViewPage(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/specialties/view/" + query,
+            RequestType = "GET",
+        });
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/specialties/view/{query?}")]
+    public IActionResult ViewSpecialty(string? query)
     {
         if (int.TryParse(query, out int id))
         {
             var got = SpecialtyModel.GetById(id, null).Result;
             if (got != null)
             {
-                return View(@"Views/Observe/Speciality.cshtml", new SpecialityOutDTO(got));
+                return View(@"Views/Observe/Specialty.cshtml", new SpecialityOutDTO(got));
             }
             else
             {

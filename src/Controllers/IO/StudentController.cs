@@ -6,6 +6,8 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Specialties;
 using Contingent.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers;
 public class StudentController : Controller
@@ -16,10 +18,25 @@ public class StudentController : Controller
     {
         _logger = logger;
     }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/students/modify/{query}")]
+    public IActionResult GetStudentPageModify(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/students/modify/" + query,
+            RequestType = "GET",
+        });
+    }
+
+
     // отрисовка страницы редактирования и добавления
     [HttpGet]
-    [Route("students/modify/{query}")]
-    public async Task<IActionResult> ProcessStudent(string query)
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/students/modify/{query}")]
+    public async Task<IActionResult> GetStudentPageModifyProtected(string query)
     {
         if (query == "new")
         {
@@ -41,26 +58,35 @@ public class StudentController : Controller
 
     }
     [HttpGet]
-    [Route("students/view/{id?}")]
-    public async Task<IActionResult> ViewStudent(string id)
+    [AllowAnonymous]
+    [Route("/students/view/{id:int}")]
+    public IActionResult GetStudentPageView(int id)
     {
-        if (int.TryParse(id, out int parsed))
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
         {
-            StudentModel? student = await StudentModel.GetStudentById(parsed);
-            if (student == null)
-            {
-                return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
-            }
-            return View(@"Views/Observe/Student.cshtml", new StudentFullDTO(student));
-        }
-        else
+            DisplayURL = "/protected/students/view/" + id,
+            RequestType = "GET",
+        });
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/students/view/{id:int}")]
+    public async Task<IActionResult> ViewStudent(int id)
+    {
+        StudentModel? student = await StudentModel.GetStudentById(id);
+        if (student == null)
         {
-            return View(@"Views/Shared/Error.cshtml", "Недопустимый id");
+            return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
         }
+        return View(@"Views/Observe/Student.cshtml", new StudentFullDTO(student));
+
     }
 
     [HttpPost]
-    [Route("students/addcomplex")]
+    [Authorize(Roles = "Admin")]
+    [Route("/students/addcomplex")]
     public async Task<IActionResult> AddComplex()
     {
         using var reader = new StreamReader(Request.Body);
@@ -113,7 +139,8 @@ public class StudentController : Controller
     }
 
     [HttpGet]
-    [Route("students/tags")]
+    [Authorize(Roles = "Admin")]
+    [Route("/students/tags")]
     public IActionResult GetTags()
     {
         var tags = LevelOfEducation.ListOfLevels.Select(x => new EducationalLevelRecordDTO(x));

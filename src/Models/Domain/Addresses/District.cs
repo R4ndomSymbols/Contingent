@@ -5,12 +5,6 @@ namespace Contingent.Models.Domain.Address;
 public class District : IAddressPart
 {
     public const int ADDRESS_LEVEL = 2;
-
-    private static List<District> _duplicationBuffer;
-    static District()
-    {
-        _duplicationBuffer = new List<District>();
-    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"округ", RegexOptions.IgnoreCase),
         new Regex(@"район", RegexOptions.IgnoreCase)
@@ -49,7 +43,6 @@ public class District : IAddressPart
         _districtName = name;
         _parentFederalSubject = parent;
         _districtType = type;
-        _duplicationBuffer.Add(this);
     }
     private District(int id, FederalSubject parent, DistrictTypes type, AddressNameToken name)
     {
@@ -57,15 +50,6 @@ public class District : IAddressPart
         _districtName = name;
         _parentFederalSubject = parent;
         _districtType = type;
-    }
-    private static IEnumerable<District> GetDuplicates(District district)
-    {
-        return _duplicationBuffer.Where(
-            d =>
-            district._districtType == d._districtType &&
-            district._districtName.Equals(d._districtName) &&
-            district._parentFederalSubject.Equals(d._parentFederalSubject)
-        );
     }
     public static Result<District> Create(string addressPart, FederalSubject parent, ObservableTransaction? searchScope = null)
     {
@@ -89,7 +73,7 @@ public class District : IAddressPart
         {
             return Result<District>.Failure(new ValidationError(nameof(District), "Муниципальное образование верхнего уровня не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict.UnformattedName, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundDistrict, (int)subjectType, ADDRESS_LEVEL, searchScope).Result;
 
         if (fromDb.Any())
         {
@@ -130,21 +114,25 @@ public class District : IAddressPart
     }
 
 
-    public async Task Save(ObservableTransaction? scope = null)
+    public async Task Save(ObservableTransaction? scope)
     {
-
         await _parentFederalSubject.Save(scope);
-        if (_id == Utils.INVALID_ID)
+        if (!Utils.IsValidId(_id))
         {
+            var desc = await AddressModel.FindRecords(
+                    _parentFederalSubject.Id,
+                    _districtName,
+                    (int)_districtType,
+                    ADDRESS_LEVEL,
+                    scope
+                );
+            if (desc.Any())
+            {
+                _id = desc.First().AddressPartId;
+                return;
+            }
             _id = await AddressModel.SaveRecord(this, scope);
         }
-        var duplicates = GetDuplicates(this);
-        foreach (var d in duplicates)
-        {
-            d._id = this._id;
-        }
-        _duplicationBuffer.RemoveAll(d => d._id == this._id);
-
     }
     public AddressRecord ToAddressRecord()
     {
@@ -157,9 +145,9 @@ public class District : IAddressPart
             ToponymType = (int)_districtType
         };
     }
-    public IEnumerable<IAddressPart> GetDescendants()
+    public IEnumerable<IAddressPart> GetDescendants(ObservableTransaction? scope)
     {
-        var foundUntyped = AddressModel.FindRecords(_id).Result;
+        var foundUntyped = AddressModel.FindRecords(_id, scope).Result;
         return
         foundUntyped.Where(rec => rec.AddressLevelCode == Settlement.ADDRESS_LEVEL)
         .Select(rec => Settlement.Create(rec, this)!)

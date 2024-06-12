@@ -6,9 +6,6 @@ using Contingent.Models.Domain.Citizenship;
 using Contingent.SQL;
 using Contingent.Utilities;
 using Contingent.Utilities.Validation;
-using Contingent.Models.Domain.Specialties;
-using System.Runtime.InteropServices;
-using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Students;
 
@@ -102,7 +99,7 @@ public class StudentModel
         {
             if (_actualAddressId != Utils.INVALID_ID && _actualAddressId is not null && _actualAddress is null)
             {
-                _actualAddress = AddressModel.GetAddressById(_actualAddressId).Result;
+                _actualAddress = AddressModel.GetAddressById(_actualAddressId, null).Result;
                 _actualAddressId = _actualAddress!.Id;
             }
             return _actualAddress;
@@ -182,7 +179,7 @@ public class StudentModel
                     _giaMark = reader["gia_mark"].GetType() == typeof(DBNull) ? null : (int)reader["gia_mark"],
                 };
                 result._actualAddressId = reader["actual_address"].GetType() == typeof(DBNull) ? null : (int)reader["actual_address"];
-                result._actualAddress = includeAddresses.actual && result._actualAddressId is not null ? AddressModel.GetAddressById((int)reader["actual_address"]).Result : null;
+                result._actualAddress = includeAddresses.actual && result._actualAddressId is not null ? AddressModel.GetAddressById((int)reader["actual_address"], null).Result : null;
                 var rusCitizenship = russianCitizenshipMapper.Map(reader);
                 if (rusCitizenship.IsFound)
                 {

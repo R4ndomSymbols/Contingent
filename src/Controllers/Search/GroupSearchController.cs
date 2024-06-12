@@ -4,6 +4,8 @@ using Contingent.Controllers.DTO.In;
 using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Groups;
 using Contingent.SQL;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers.Search;
 
@@ -16,14 +18,28 @@ public class GroupSearchController : Controller
     }
 
     [HttpGet]
-    [Route("groups/search/menu")]
+    [AllowAnonymous]
+    [Route("/groups/search")]
+    public IActionResult GetSearchPage()
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/groups/search",
+            RequestType = "GET",
+        });
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/groups/search")]
     public IActionResult GetMainPage()
     {
         return View("Views/Search/Groups.cshtml", new List<GroupSearchResultDTO>());
     }
 
     [HttpPost]
-    [Route("groups/search/query")]
+    [Authorize(Roles = "Admin")]
+    [Route("/groups/search/find")]
     public IActionResult Search()
     {
         var request = new StreamReader(Request.Body);

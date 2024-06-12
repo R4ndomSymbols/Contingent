@@ -10,8 +10,9 @@ let addressId = utils.INVALID_ID;
 let russianCitizenshipId = utils.INVALID_ID;
 let legalAddress = utils.INVALID_ID;
 
+init();
 
-$(document).ready(function () {
+function init() {
     studentId = Number($("#StudentId").attr("assigned_id"))
     addressId = Number($("#AddressId").attr("assigned_id"))
     russianCitizenshipId = Number($("#RussianCitizenshipId").attr("assigned_id"))
@@ -25,6 +26,7 @@ $(document).ready(function () {
         type: "GET",
         url: "/students/tags",
         dataType: "JSON",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             $.each(response, function (index, obj) {
                 tags.push(
@@ -36,7 +38,7 @@ $(document).ready(function () {
             });
         }
     });
-});
+}
 
 function registerScheduledAddressSearch(searchFunc) {
     addressSearchLockCount += 1;
@@ -68,6 +70,7 @@ $("#ActualAddress").on("keyup", function () {
                 type: "GET",
                 url: "/addresses/suggest/" + address,
                 dataType: "JSON",
+                beforeSend: utils.setAuthHeader,
                 success: function (response) {
                     var search = $("#ActualAddress").autocomplete({
                         source: response.map(x => address + " " + x)
@@ -89,6 +92,7 @@ $("#LegalAddress").on("keyup", function () {
             $.ajax({
                 type: "GET",
                 url: "/addresses/suggest/" + address,
+                beforeSend: utils.setAuthHeader,
                 dataType: "JSON",
                 success: function (response) {
                     $("#LegalAddress").autocomplete({
@@ -106,6 +110,7 @@ $("#about").click(function () {
         type: "GET",
         url: "/addresses/explain/" + address,
         dataType: "JSON",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             var about = document.getElementById("AboutAddress");
             about.innerHTML = "";
@@ -123,6 +128,7 @@ $("#about_legal_address").click(function () {
         type: "GET",
         url: "/addresses/explain/" + address,
         dataType: "JSON",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             var about = document.getElementById("legal_address_info");
             about.innerHTML = "";
@@ -208,6 +214,8 @@ $("#save").click(function () {
 
             }),
         dataType: "JSON",
+        contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             addressId = response["addressId"];
             studentId = response["studentId"];

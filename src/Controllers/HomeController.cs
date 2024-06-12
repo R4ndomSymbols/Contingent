@@ -5,6 +5,8 @@ using Contingent.Models;
 using Contingent.Models.Domain.Flow;
 using Contingent.Models.Domain.Flow.History;
 using Contingent.SQL;
+using Contingent.DTOs.Out;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Contingent.Controllers;
 
@@ -16,12 +18,28 @@ public class HomeController : Controller
     {
         _logger = logger;
     }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/")]
     public IActionResult Index()
+    {
+        return View("~/Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/home",
+            RequestType = "GET",
+        });
+    }
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/home")]
+    public IActionResult IndexProtected()
     {
         return View("~/Views/Home/Index.cshtml");
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     [Route("/home/last")]
     public IActionResult GetLastHistoryRecords()
     {
@@ -43,16 +61,5 @@ public class HomeController : Controller
             studentMovesHistoryRecords.Add(new InGroupRelation(record.Student, record.ByOrder));
         }
         return Json(studentMovesHistoryRecords);
-    }
-
-    public IActionResult Privacy()
-    {
-        return View();
-    }
-
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

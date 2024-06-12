@@ -4,25 +4,10 @@ namespace Contingent.Models.Domain.Address;
 public class Apartment : IAddressPart
 {
     public const int ADDRESS_LEVEL = 7;
-    private static List<Apartment> _duplicationBuffer;
-    static Apartment()
-    {
-        _duplicationBuffer = new List<Apartment>();
-    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"квартира", RegexOptions.IgnoreCase),
         new Regex(@"кв\u002E", RegexOptions.IgnoreCase),
     };
-
-    private static IEnumerable<Apartment> GetDuplicates(Apartment apartment)
-    {
-        return _duplicationBuffer.Where(
-            a => a._parentBuilding.Equals(apartment._parentBuilding)
-            && a._apartmentName.Equals(apartment._apartmentName)
-            && apartment._apartmentType == a._apartmentType
-        );
-    }
-
     public static readonly IReadOnlyDictionary<ApartmentTypes, AddressNameFormatting> Names = new Dictionary<ApartmentTypes, AddressNameFormatting>(){
         {ApartmentTypes.Apartment, new AddressNameFormatting("кв.", "Квартира", AddressNameFormatting.BEFORE)},
     };
@@ -53,8 +38,6 @@ public class Apartment : IAddressPart
         _parentBuilding = parent;
         _apartmentType = type;
         _apartmentName = name;
-        _duplicationBuffer.Add(this);
-
     }
     public static Result<Apartment> Create(string addressPart, Building parent, ObservableTransaction? searchScope = null)
     {
@@ -78,7 +61,7 @@ public class Apartment : IAddressPart
         {
             return Result<Apartment>.Failure(new ValidationError(nameof(Apartment), "Квартира не распознана"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundApartment.UnformattedName, (int)apartmentType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundApartment, (int)apartmentType, ADDRESS_LEVEL, searchScope).Result;
 
         if (fromDb.Any())
         {
@@ -116,20 +99,27 @@ public class Apartment : IAddressPart
             new AddressNameToken(from.AddressName, Names[(ApartmentTypes)from.ToponymType])
         );
     }
-    public async Task Save(ObservableTransaction? scope = null)
+    public async Task Save(ObservableTransaction? scope)
     {
-        // итеративное сохрание всего дерева, чтобы не писать кучу ерунды
         await _parentBuilding.Save(scope);
-        if (_id == Utils.INVALID_ID)
+        // итеративное сохранение всего дерева, чтобы не писать кучу ерунды
+        if (!Utils.IsValidId(_id))
         {
+            var desc = await AddressModel.FindRecords(
+                _parentBuilding.Id,
+                _apartmentName,
+                (int)_apartmentType,
+                ADDRESS_LEVEL,
+                scope
+            );
+            if (desc.Any())
+            {
+                _id = desc.First().AddressPartId;
+                return;
+            }
             _id = await AddressModel.SaveRecord(this, scope);
         }
-        var duplicates = GetDuplicates(this);
-        foreach (var d in duplicates)
-        {
-            d._id = this._id;
-        }
-        _duplicationBuffer.RemoveAll(d => d._id == this._id);
+
     }
     public override bool Equals(object? other)
     {
@@ -155,7 +145,7 @@ public class Apartment : IAddressPart
             ParentId = _parentBuilding.Id
         };
     }
-    public IEnumerable<IAddressPart> GetDescendants()
+    public IEnumerable<IAddressPart> GetDescendants(ObservableTransaction? scope)
     {
         return new List<IAddressPart>();
     }

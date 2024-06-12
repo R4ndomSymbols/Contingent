@@ -8,6 +8,8 @@ using Contingent.Models.Domain.Flow.History;
 using Contingent.Utilities;
 using Contingent.Utilities.Validation;
 using Microsoft.AspNetCore.Routing.Tree;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers;
 
@@ -22,7 +24,20 @@ public class GroupController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous]
     [Route("groups/modify/{query}")]
+    public IActionResult GetGroupPageModify(string query)
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/groups/modify/" + query,
+            RequestType = "GET",
+        });
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("protected/groups/modify/{query}")]
     public IActionResult ProcessGroup(string query)
     {
         if (query == "new")
@@ -43,27 +58,35 @@ public class GroupController : Controller
             return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
         }
     }
+
     [HttpGet]
-    [Route("groups/view/{query}")]
-    public IActionResult ViewGroup(string query)
+    [AllowAnonymous]
+    [Route("/groups/view/{id:int}")]
+    public IActionResult GetGroupPageView(int id)
     {
-        if (int.TryParse(query, out int id))
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
         {
-            var got = GroupModel.GetGroupById(id, null);
-            if (got == null)
-            {
-                return View(@"Views/Shared/Error.cshtml", "Группы с таким id не существует");
-            }
-            return View(@"Views/Observe/Group.cshtml", new GroupOutDTO(got));
-        }
-        else
+            DisplayURL = "/protected/groups/view/" + id,
+            RequestType = "GET",
+        });
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/groups/view/{id:int}")]
+    public IActionResult ViewGroup(int id)
+    {
+        var got = GroupModel.GetGroupById(id, null);
+        if (got == null)
         {
-            return View(@"Views/Shared/Error.cshtml", "Недопустимый id группы");
+            return View(@"Views/Shared/Error.cshtml", "Группы с таким id не существует");
         }
+        return View(@"Views/Observe/Group.cshtml", new GroupOutDTO(got));
     }
 
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/groups/add")]
     public IActionResult Save()
     {
@@ -98,7 +121,9 @@ public class GroupController : Controller
             return BadRequest(saved.Errors.AsErrorCollection());
         }
     }
+
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/groups/getname")]
     public IActionResult GenerateName()
     {
@@ -125,6 +150,7 @@ public class GroupController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [Route("/groups/history")]
     public async Task<IActionResult> GetHistory()
     {

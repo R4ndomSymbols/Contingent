@@ -4,12 +4,6 @@ namespace Contingent.Models.Domain.Address;
 public class SettlementArea : IAddressPart
 {
     public const int ADDRESS_LEVEL = 3;
-
-    private static List<SettlementArea> _duplicationBuffer;
-    static SettlementArea()
-    {
-        _duplicationBuffer = new List<SettlementArea>();
-    }
     private static readonly IReadOnlyList<Regex> Restrictions = new List<Regex>(){
         new Regex(@"поселение", RegexOptions.IgnoreCase),
     };
@@ -50,17 +44,8 @@ public class SettlementArea : IAddressPart
         _parentDistrict = parent;
         _settlementAreaType = type;
         _settlementAreaName = name;
-        _duplicationBuffer.Add(this);
     }
 
-    private static IEnumerable<SettlementArea> GetDuplicates(SettlementArea area)
-    {
-        return _duplicationBuffer.Where(
-            a => a._parentDistrict.Equals(area._parentDistrict)
-            && a._settlementAreaName.Equals(area._settlementAreaName)
-            && a._settlementAreaType == area._settlementAreaType
-        );
-    }
     // добавить ограничение на создание 
     // исходя из типа родителя
     public static Result<SettlementArea> Create(string addressPart, District parent, ObservableTransaction? searchScope = null)
@@ -85,7 +70,7 @@ public class SettlementArea : IAddressPart
         {
             return Result<SettlementArea>.Failure(new ValidationError(nameof(SettlementArea), "Поселение не распознано"));
         }
-        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlementArea.UnformattedName, (int)settlementAreaType, ADDRESS_LEVEL, searchScope).Result;
+        var fromDb = AddressModel.FindRecords(parent.Id, foundSettlementArea, (int)settlementAreaType, ADDRESS_LEVEL, searchScope).Result;
 
         if (fromDb.Any())
         {
@@ -123,19 +108,25 @@ public class SettlementArea : IAddressPart
             new AddressNameToken(source.AddressName, Names[(SettlementAreaTypes)source.ToponymType])
         );
     }
-    public async Task Save(ObservableTransaction? scope = null)
+    public async Task Save(ObservableTransaction? scope)
     {
-        await _parentDistrict.Save(scope);
-        if (_id == Utils.INVALID_ID)
+        _parentDistrict.Save(scope).Wait();
+        if (!Utils.IsValidId(_id))
         {
+            var desc = await AddressModel.FindRecords(
+                _parentDistrict.Id,
+                _settlementAreaName,
+                (int)_settlementAreaType,
+                ADDRESS_LEVEL,
+                scope
+            );
+            if (desc.Any())
+            {
+                _id = desc.First().AddressPartId;
+                return;
+            }
             _id = await AddressModel.SaveRecord(this, scope);
         }
-        var duplicates = GetDuplicates(this);
-        foreach (var d in duplicates)
-        {
-            d._id = this._id;
-        }
-        _duplicationBuffer.RemoveAll(d => d._id == this._id);
     }
 
     public AddressRecord ToAddressRecord()
@@ -149,9 +140,9 @@ public class SettlementArea : IAddressPart
             ParentId = _parentDistrict.Id
         };
     }
-    public IEnumerable<IAddressPart> GetDescendants()
+    public IEnumerable<IAddressPart> GetDescendants(ObservableTransaction? scope)
     {
-        IEnumerable<AddressRecord> foundUntyped = AddressModel.FindRecords(_id).Result;
+        IEnumerable<AddressRecord> foundUntyped = AddressModel.FindRecords(_id, scope).Result;
         return foundUntyped.Select(rec => Settlement.Create(rec, this)!) ?? new List<Settlement>();
     }
     public override string ToString()

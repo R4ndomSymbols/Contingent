@@ -1,20 +1,23 @@
 import { Utilities } from "../site.js";
 
 // общее 
-let availableSpecialties = [];
 // индикатор создания группы / потока
 let created = false;
-
 let utils = new Utilities();
-let lockCount = 0;
 
+// секция для ручного ввода
+let ancestor = undefined;
+let availableGroups = [];
+let selectedSpecialtyNoGen = undefined;
 
-$(document).ready(function () {
+init();
+
+function init() {
     $("#AutogenerateName").on("click", function () {
         onGenerationChange(Boolean(document.getElementById("AutogenerateName").checked));
     });
     $("#AutogenerateName").trigger("click");
-});
+}
 
 function onGenerationChange(checkBoxValue) {
     if (checkBoxValue) {
@@ -41,6 +44,7 @@ function saveCommon(jsonObject) {
         data: JSON.stringify(jsonObject),
         dataType: "JSON",
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             utils.notifySuccess();
             created = true
@@ -62,11 +66,12 @@ function findSpecialtiesCommon(searchText, callback = undefined) {
 
     $.ajax({
         type: "POST",
-        url: "/specialities/search/query",
+        url: "/specialties/search/find",
         data: JSON.stringify({
             SearchString: searchText
         }),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             if (callback !== undefined) {
                 callback(response)
@@ -114,6 +119,7 @@ function updateName() {
         url: "/groups/getname",
         data: JSON.stringify(createJSONAutoGen()),
         dataType: "JSON",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             document.getElementById("names_generated").innerText = response["groupName"];
         }
@@ -165,10 +171,7 @@ function createJSONAutoGen() {
 
 
 
-// секция для ручного ввода
-let ancestor = undefined;
-let selectedSpecialtyNoGen = undefined;
-let availableGroups = [];
+
 
 function makeNoGenReady() {
     showNoGen();
@@ -184,7 +187,6 @@ function makeNoGenReady() {
 }
 function terminateNoGen() {
     ancestor = undefined;
-    selectedSpecialtyNoGen = undefined;
     availableGroups = [];
     $("#ancestor_group_input").off("keyup");
     $("#save").off("click");
@@ -238,12 +240,13 @@ function changeUiAndLogicOnInputGroup() {
 function findGroupsNoGen(callback) {
     $.ajax({
         type: "POST",
-        url: "/groups/search/query",
+        url: "/groups/search/find",
         data: JSON.stringify({
             GroupName: $("#ancestor_group_input").val(),
             IsActive: true
         }),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             availableGroups = response;
             $("#ancestor_group_input").autocomplete({
@@ -311,7 +314,7 @@ function createJsonNoGen() {
     let json = undefined
     if (ancestor === undefined) {
         json = {
-            EduProgramId: selectedSpecialtyAutoGen === undefined ? 0 : selectedSpecialtyAutoGen.id,
+            EduProgramId: selectedSpecialtyNoGen === undefined ? 0 : selectedSpecialtyNoGen.id,
             EduFormatCode: $("#no_gen_education_form").val(),
             SponsorshipTypeCode: $("#no_gen_financing_type").val(),
             CreationYear: $("#creation_year_no_gen").val(),

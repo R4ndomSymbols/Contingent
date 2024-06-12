@@ -138,5 +138,10 @@
     enableField(name, selector = this.SELECTOR_ID) {
         $(selector + name).removeAttr("disabled")
     }
+
+    setAuthHeader(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("jwt"));
+    }
+
 }
 

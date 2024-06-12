@@ -12,31 +12,37 @@ public abstract class ImportCSV
 
     protected ImportCSV(Stream dataSource, ObservableTransaction scope)
     {
-        if (dataSource is null)
-        {
-            throw new ArgumentNullException(nameof(dataSource));
-        }
-        if (scope is null)
-        {
-            throw new ArgumentNullException(nameof(scope));
-        }
+        ArgumentNullException.ThrowIfNull(dataSource);
+        ArgumentNullException.ThrowIfNull(scope);
         _dataSource = dataSource;
         _scope = scope;
     }
 
     protected Result<IEnumerable<T>> Read<T>(Func<T> factory, out List<CSVRow> rows) where T : IFromCSV<T>
     {
-        int length = (int)_dataSource.Length;
-        byte[] buffer = new byte[length];
-        _dataSource.Read(buffer, 0, length);
+        byte[] buffer = new byte[16 * 1024];
+        byte[] input;
+        using (var ms = new MemoryStream())
+        {
+            int read;
+            while ((read = _dataSource.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+            {
+                ms.Write(buffer, 0, read);
+            }
+            input = ms.ToArray();
+        }
         rows = new List<CSVRow>();
-        string csv = Encoding.UTF8.GetString(buffer);
+        string csv = Encoding.UTF8.GetString(input);
+        Console.WriteLine(csv);
         if (csv.Length != new StringInfo(csv).LengthInTextElements)
         {
             return Result<IEnumerable<T>>.Failure(new ImportValidationError("CSV файл содержит недопустимые символы"));
         }
         var header = ReadHeader(csv, out int end);
-        Console.WriteLine(header);
+        if (header is null)
+        {
+            return Result<IEnumerable<T>>.Failure(new ImportValidationError("Не удалось прочитать заголовок"));
+        }
         var row = new StringBuilder();
         while (csv.Length > end)
         {
@@ -72,7 +78,7 @@ public abstract class ImportCSV
         return Result<IEnumerable<T>>.Success(results);
     }
 
-    private static CSVHeader ReadHeader(string csv, out int offset)
+    private static CSVHeader? ReadHeader(string csv, out int offset)
     {
         string current = string.Empty;
         CSVHeader header = new CSVHeader();
@@ -93,6 +99,10 @@ public abstract class ImportCSV
         }
         offset++;
         header.AddColumn(columnIndex, current.Trim());
+        if (header.ColumnCount == 0)
+        {
+            return null;
+        }
         return header;
     }
     protected void FinishImport(bool commit)

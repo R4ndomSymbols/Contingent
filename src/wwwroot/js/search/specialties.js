@@ -1,10 +1,16 @@
-$(document).ready(function () {
+import { Utilities } from "../site.js";
+let utils = new Utilities();
+
+init();
+
+function init() {
     $("#search_button").on("click", function () {
         $.ajax({
             type: "POST",
-            url: "/specialities/search/query",
+            url: "/specialties/search/find",
             data: getSearchData(),
             contentType: "application/json",
+            beforeSend: utils.setAuthHeader,
             success: function (response) {
                 $("#search_result").empty();
                 $.each(response, function (indexInArray, valueOfElement) {
@@ -12,10 +18,8 @@ $(document).ready(function () {
                 });
             }
         });
-
     })
-});
-
+}
 
 function getSearchData() {
     let query = {

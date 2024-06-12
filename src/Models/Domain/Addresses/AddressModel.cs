@@ -86,7 +86,7 @@ public class AddressModel
     private AddressModel()
     {
     }
-    public static async Task<AddressModel?> GetAddressById(int? id)
+    public static async Task<AddressModel?> GetAddressById(int? id, ObservableTransaction? scope)
     {
         if (id is null || id.Value == Utils.INVALID_ID)
         {
@@ -97,7 +97,7 @@ public class AddressModel
         ProcessSubject(restored, address);
         return address;
     }
-    public static IEnumerable<string> GetNextSuggestions(string? request)
+    public static IEnumerable<string> GetNextSuggestions(string? request, ObservableTransaction? scope)
     {
         if (request is null)
         {
@@ -108,7 +108,7 @@ public class AddressModel
         {
             return new List<string>(); ;
         }
-        var split = request.Split(',').Select(x => x.Trim()).Where(x => x != string.Empty).ToArray();
+        var split = request.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
         var address = new AddressModel();
         AddressPartPointer found = new AddressPartPointer();
         ProcessSubject(0, address, split, found);
@@ -118,11 +118,11 @@ public class AddressModel
         }
         else
         {
-            var got = ((IAddressPart)found.PointTo).GetDescendants();
+            var got = ((IAddressPart)found.PointTo).GetDescendants(scope);
             return got.Select(p => p.ToString());
         }
     }
-    public static Result<AddressModel> Create(AddressInDTO? addressDTO, ObservableTransaction? scope = null)
+    public static Result<AddressModel> Create(AddressInDTO? addressDTO, ObservableTransaction? scope)
     {
         if (addressDTO is null)
         {
@@ -167,11 +167,11 @@ public class AddressModel
             return ResultWithoutValue.Failure(new ValidationError(nameof(AddressModel), "Адрес не может быть сохранен"));
         }
     }
-    public static async Task<IEnumerable<AddressRecord>> FindRecords(int? parentId, string name, int type, int level, ObservableTransaction? scope = null)
+    public static async Task<IEnumerable<AddressRecord>> FindRecords(int? parentId, AddressNameToken name, int type, int level, ObservableTransaction? scope)
     {
         var param = new SQLParameterCollection();
-        var p1 = parentId is null ? param.Add(DBNull.Value) : param.Add<int>((int)parentId);
-        var p2 = param.Add(name);
+        var p1 = parentId is null ? param.Add(DBNull.Value, NpgsqlTypes.NpgsqlDbType.Integer) : param.Add<int>((int)parentId);
+        var p2 = param.Add(name.UnformattedName);
         var p3 = param.Add(type);
         var p4 = param.Add(level);
         var filter1 = new ComplexWhereCondition(
@@ -201,11 +201,11 @@ public class AddressModel
             ), ComplexWhereCondition.ConditionRelation.AND
             );
         var final = new ComplexWhereCondition(filter1, filter2, ComplexWhereCondition.ConditionRelation.AND);
-        var found = await FindRecords(new QueryLimits(0, 200), final, param, scope);
+        var found = await FindRecords(new QueryLimits(0, 200), scope, final, param);
         return found;
     }
     // получает список всех адресов с указанным родителем
-    public static async Task<IEnumerable<AddressRecord>> FindRecords(int parentId, ObservableTransaction? scope = null)
+    public static async Task<IEnumerable<AddressRecord>> FindRecords(int parentId, ObservableTransaction? scope)
     {
         var param = new SQLParameterCollection();
         var p1 = param.Add<int>(parentId);
@@ -214,10 +214,10 @@ public class AddressModel
                 new Column("parent_id", "address_hierarchy"),
                 p1,
                 WhereCondition.Relations.Equal));
-        var found = await FindRecords(new QueryLimits(0, 200), filter, param, scope);
+        var found = await FindRecords(new QueryLimits(0, 200), scope, filter, param);
         return found;
     }
-    public static IEnumerable<AddressRecord> FindByAddressLevel(int addressLevel)
+    public static IEnumerable<AddressRecord> FindByAddressLevel(int addressLevel, ObservableTransaction? scope)
     {
         var param = new SQLParameterCollection();
         var p1 = param.Add<int>(addressLevel);
@@ -226,11 +226,11 @@ public class AddressModel
                 new Column("address_level", "address_hierarchy"),
                 p1,
                 WhereCondition.Relations.Equal));
-        var found = FindRecords(new QueryLimits(0, 200), filter, param, null).Result;
+        var found = FindRecords(new QueryLimits(0, 200), scope, filter, param).Result;
         return found;
     }
 
-    private static async Task<IEnumerable<AddressRecord>> FindRecords(QueryLimits limits, ComplexWhereCondition? condition = null, SQLParameterCollection? parameters = null, ObservableTransaction? scope = null)
+    private static async Task<IEnumerable<AddressRecord>> FindRecords(QueryLimits limits, ObservableTransaction? scope, ComplexWhereCondition? condition = null, SQLParameterCollection? parameters = null)
     {
         var mapper = new Mapper<AddressRecord>(
             (m) =>

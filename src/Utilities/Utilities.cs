@@ -7,7 +7,6 @@ namespace Contingent.Utilities;
 public static class Utils
 {
 
-    private static string? DatabaseConnectionString = null;
     public const int INVALID_ID = -1;
 
     public static bool IsValidId(int id)
@@ -90,11 +89,7 @@ public static class Utils
     }
     public static async Task<NpgsqlConnection> GetAndOpenConnectionFactory()
     {
-        if (DatabaseConnectionString == null)
-        {
-            DatabaseConnectionString = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["ConnectionString"];
-        }
-        var c = new NpgsqlConnection(DatabaseConnectionString);
+        var c = new NpgsqlConnection(Auth.Authentication.DatabaseConnectionString);
         await c.OpenAsync();
         return c;
     }

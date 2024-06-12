@@ -1,26 +1,31 @@
+import { Utilities } from "../site.js";
+let utils = new Utilities();
 let currentPage = 0;
 let pageSize = 20;
 
-$("#perform_search").on("click", function () {
-    currentPage = 0;
-    changePage(currentPage);
-    lastFound = undefined;
-    searchStudents();
-});
+init();
 
-$("#previous_page").on("click", function () {
-    moveBackwards();
-});
-$("#next_page").on("click", function () {
-    moveForward();
-});
+function init() {
+    $("#perform_search").on("click", function () {
+        currentPage = 0;
+        changePage(currentPage);
+        searchStudents();
+    });
+    $("#previous_page").on("click", function () {
+        moveBackwards();
+    });
+    $("#next_page").on("click", function () {
+        moveForward();
+    });
+}
 
 function searchStudents() {
     $.ajax({
         type: "POST",
-        url: "/students/search/query",
+        url: "/students/search/find",
         data: buildSearchQuery(),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             fillPage(response)
         }
@@ -30,7 +35,6 @@ function searchStudents() {
 
 function fillPage(studentsFound) {
     $("#students_found").empty();
-    lastFound = (studentsFound === undefined || studentsFound.length === 0) ? undefined : studentsFound;
 
     $.each(studentsFound, function (indexInArray, student) {
         $("#students_found").append(

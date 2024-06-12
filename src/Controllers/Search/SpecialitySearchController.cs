@@ -5,6 +5,8 @@ using Contingent.Controllers.DTO.Out;
 using Contingent.Models.Domain.Specialties;
 using Contingent.Models.Infrastructure;
 using Contingent.SQL;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 
 namespace Contingent.Controllers.Search;
 
@@ -18,15 +20,30 @@ public class SpecialtySearchController : Controller
     }
 
     [HttpGet]
-    [Route("specialities/search/menu")]
+    [AllowAnonymous]
+    [Route("/specialties/search")]
     public IActionResult GetMainPage()
     {
-        return View("Views/Search/Specialities.cshtml");
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/specialties/search",
+            RequestType = "GET",
+        });
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/specialties/search")]
+    public IActionResult GetMainPageProtected()
+    {
+        return View("Views/Search/Specialties.cshtml");
     }
 
     [HttpPost]
-    [Route("specialities/search/query")]
-    public async Task<IActionResult> SearchSpecialities()
+    [Authorize(Roles = "Admin")]
+    [Route("/specialties/search/find")]
+    public async Task<IActionResult> SearchSpecialties()
     {
         using var reader = new StreamReader(Request.Body);
         SpecialtySearchQueryDTO? dto = null;

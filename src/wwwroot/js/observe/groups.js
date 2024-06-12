@@ -4,7 +4,9 @@ let dateInput;
 let searchButton;
 let historyTable;
 
-$(document).ready(function () {
+init();
+
+function init() {
     dateInput = $("#date_input")
     searchButton = $("#search_students_button")
     historyTable = $("#group_history")
@@ -14,6 +16,7 @@ $(document).ready(function () {
             url: "/groups/history",
             data: getDataForSearchHistory(),
             contentType: "application/json",
+            beforeSend: utils.setAuthHeader,
             success: function (response) {
                 resetHistory();
                 $.each(response, function (indexInArray, valueOfElement) {
@@ -27,8 +30,7 @@ $(document).ready(function () {
             }
         });
     });
-});
-
+}
 
 function resetHistory() {
     historyTable.empty();

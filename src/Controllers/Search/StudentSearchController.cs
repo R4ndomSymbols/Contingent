@@ -9,6 +9,8 @@ using Contingent.SQL;
 using Contingent.Models.Domain.Citizenship;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Orders;
+using Microsoft.AspNetCore.Authorization;
+using Contingent.DTOs.Out;
 namespace Contingent.Controllers.Search;
 
 
@@ -23,16 +25,33 @@ public class StudentSearchController : Controller
         _logger = logger;
     }
     // головное меню поиска
+
     [HttpGet]
-    [Route("/students/search/menu")]
-    public IActionResult FindStudentsMainPage()
+    [AllowAnonymous]
+    [Route("/students/search")]
+    public IActionResult GetMainPage()
+    {
+
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/students/search",
+            RequestType = "GET",
+        });
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/students/search")]
+    public IActionResult GetMainPageProtected()
     {
         return View(@"Views/Search/Students.cshtml", new object());
-
     }
     // поиск студента по параметрам из тела запроса
+
     [HttpPost]
-    [Route("students/search/query")]
+    [Authorize(Roles = "Admin")]
+    [Route("/students/search/find")]
     public IActionResult FindStudents()
     {
         var stream = new StreamReader(Request.Body);

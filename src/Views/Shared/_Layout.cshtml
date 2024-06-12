@@ -20,38 +20,47 @@
         <header>
             <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white page-header shadow">
                 <div class="container-fluid">
-                    <a class="navbar-brand" href="~/home/index">Контингент (Заглавная)</a>
+                    <a class="navbar-brand" href="~/">Контингент (Заглавная)</a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                         data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent" aria-expanded="false"
                         aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
-                <div class="d-flex flex-row">
-                    <div class="dropdown me-3">
-                        <button class="btn btn-secondary dropdown-toggle" type="button" id="creating"
+                    <div class="d-flex flex-row">
+                        <div class="dropdown me-3">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="creating"
                                 data-bs-toggle="dropdown" aria-expanded="false" style="width: 150px;">
-                            Регистрация
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="creating">
-                            <li><a class="dropdown-item" href="~/students/modify/new">Студент</a></li>
-                            <li><a class="dropdown-item" href="~/groups/modify/new">Группа</a></li>
-                            <li><a class="dropdown-item" href="~/specialities/modify/new">Специальность</a></li>
-                            <li><a class="dropdown-item" href="~/orders/modify/new">Приказ</a></li>
-                        </ul>
-                    </div>
-                    <div class="dropdown me-3">
-                        <button class="btn btn-secondary dropdown-toggle" type="button" id="searhing"
+                                Регистрация
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="creating">
+                                <li><a class="dropdown-item" href="~/students/modify/new">Студент</a></li>
+                                <li><a class="dropdown-item" href="~/groups/modify/new">Группа</a></li>
+                                <li><a class="dropdown-item" href="~/specialties/modify/new">Специальность</a></li>
+                                <li><a class="dropdown-item" href="~/orders/modify/new">Приказ</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown me-3">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="searhing"
                                 data-bs-toggle="dropdown" aria-expanded="false" style="width: 150px;">
-                            Поиск
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="searhing">
-                            <li><a class="dropdown-item" href="~/orders/search">Приказы</a></li>
-                            <li><a class="dropdown-item" href="~/students/search/menu">Студенты</a></li>
-                            <li><a class="dropdown-item" href="~/specialities/search/menu">Специальности</a></li>
-                            <li><a class="dropdown-item" href="~/groups/search/menu">Группы</a></li>
+                                Поиск
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="searhing">
+                                <li><a class="dropdown-item" href="~/orders/search">Приказы</a></li>
+                                <li><a class="dropdown-item" href="~/students/search">Студенты</a></li>
+                                <li><a class="dropdown-item" href="~/specialties/search">Специальности</a></li>
+                                <li><a class="dropdown-item" href="~/groups/search">Группы</a></li>
 
-                        </ul>
-                    </div>
+                            </ul>
+                        </div>
+                        <div class="dropdown me-3">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="functions"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="width: 150px;">
+                                Функции
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="functions">
+                                <li><a class="dropdown-item" href="~/import">Импорт</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </nav>

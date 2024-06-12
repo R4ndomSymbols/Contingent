@@ -1,12 +1,18 @@
-$(document).ready(function () {
+import { Utilities } from "../site.js";
+let utils = new Utilities();
+
+init();
+
+function init() {
     $.ajax({
         type: "GET",
         url: "/studentflow/history/" + String($("#about_student").attr("student_id")),
         contentType: "application/json",
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             var tableContent = "";
-            $.each(response, function (index, move) { 
-                 tableContent += `
+            $.each(response, function (index, move) {
+                tableContent += `
                  <tr>
                     <td>${move.orderRussianTypeName}</td>
                     <td>${move.orderOrgId}</td>
@@ -19,5 +25,6 @@ $(document).ready(function () {
             document.getElementById("history").innerHTML = tableContent;
         }
     });
-});
+}
+
 

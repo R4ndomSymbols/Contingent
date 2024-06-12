@@ -73,6 +73,11 @@ public class ObservableTransaction : IAsyncDisposable, IDisposable
         await _underliedTransaction.RollbackAsync();
         RollbackEvent?.Invoke(this, new EventArgs());
     }
+    public void Rollback()
+    {
+        _underliedTransaction.Rollback();
+        RollbackEvent?.Invoke(this, new EventArgs());
+    }
 
     public ValueTask DisposeAsync()
     {
