@@ -366,7 +366,7 @@ public class HistoryExtractSettings
             {
                 // невозможно извлечь незарегистрированных студентов
                 // т.к. их никогда не будет в приказе
-                IncludeNotRegisteredStudents = false;
+                IncludeNotRegisteredStudents = value.Value.mode == OrderRelationMode.OnlyExcluded;
                 ExtractOrders = false;
             }
             _extractByOrder = value;

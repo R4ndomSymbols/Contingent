@@ -81,13 +81,33 @@ public class OrderSearchController : Controller
         if (dto.Type != -1)
         {
             where = where.Unite(
-                ComplexWhereCondition.ConditionRelation.OR,
+                ComplexWhereCondition.ConditionRelation.AND,
                 new ComplexWhereCondition(
                 new WhereCondition(
                     new Column("type", "orders"),
                     parameters.Add(dto.Type),
                     WhereCondition.Relations.Equal
                 )));
+        }
+        if (dto.Year != -1)
+        {
+            where = where.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                    new ComplexWhereCondition(
+                        new WhereCondition(
+                            new Column("specified_date", "orders"),
+                            parameters.Add(new DateTime(dto.Year, 1, 1)),
+                            WhereCondition.Relations.BiggerOrEqual
+                        ),
+                        new WhereCondition(
+                            new Column("specified_date", "orders"),
+                            parameters.Add(new DateTime(dto.Year, 12, 31)),
+                            WhereCondition.Relations.LessOrEqual
+                        ),
+                        ComplexWhereCondition.ConditionRelation.AND,
+                        true
+                    )
+                );
         }
 
         var found = Order.FindOrders(

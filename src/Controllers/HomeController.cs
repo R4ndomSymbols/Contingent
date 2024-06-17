@@ -62,4 +62,23 @@ public class HomeController : Controller
         }
         return Json(studentMovesHistoryRecords);
     }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/about")]
+    public IActionResult About()
+    {
+        return View("~/Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/about",
+            RequestType = "GET",
+        });
+    }
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/about")]
+    public IActionResult AboutProtected()
+    {
+        return View("~/Views/Home/About.cshtml");
+    }
 }

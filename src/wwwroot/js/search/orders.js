@@ -60,8 +60,8 @@ function getSearchRequestData() {
     return JSON.stringify(
         {
             SearchText: $("#order_name").val(),
-            Year: year === -1 ? null : year,
-            Type: type === -1 ? null : type,
+            Year: year,
+            Type: type,
             PageSize: Number($(`input[name = "record_count"]:checked`).val())
         }
     )
