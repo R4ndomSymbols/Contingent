@@ -139,7 +139,7 @@ public class OrderController : Controller
         {
             return BadRequest("Неверно указан id приказа");
         }
-        var transaction = ObservableTransaction.New;
+        using var transaction = ObservableTransaction.New;
         order.Close(transaction);
         transaction.Commit();
         return Ok();

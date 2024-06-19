@@ -5,3 +5,4 @@ tests/bin/*
 tests/obj/*
 .vscode/*
 .idea/*
+tests/PrivateTest.cs

@@ -25,6 +25,7 @@ public class Street : IAddressPart
         {StreetTypes.Square, new AddressNameFormatting("пл.", "Площадь", AddressNameFormatting.BEFORE)},
         {StreetTypes.Passage, new AddressNameFormatting("пр-д", "Проезд", AddressNameFormatting.BEFORE)},
         {StreetTypes.Highway, new AddressNameFormatting("ш.", "Шоссе", AddressNameFormatting.BEFORE)},
+        {StreetTypes.Lane, new AddressNameFormatting("пер.", "Шоссе", AddressNameFormatting.BEFORE)},
     };
     public enum StreetTypes
     {
@@ -37,6 +38,7 @@ public class Street : IAddressPart
         Square = 6, // площадь
         Passage = 7, // проезд 
         Highway = 8, // шоссе 
+        Lane = 9, // переулок
     }
     private int _id;
     private Settlement _parentSettlement;

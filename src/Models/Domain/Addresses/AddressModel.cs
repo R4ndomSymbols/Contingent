@@ -501,7 +501,6 @@ public class AddressModel
             var foundSingle = found.First();
             toMap._districtPart = District.Create(foundSingle, toMap._subjectPart!);
             ProcessSettlementArea(records, toMap);
-            ProcessSettlement(records, toMap);
         }
     }
     private static void ProcessSettlementArea(IEnumerable<AddressRecord> records, AddressModel toMap)
@@ -511,7 +510,12 @@ public class AddressModel
         {
             var foundSingle = found.First();
             toMap._settlementAreaPart = SettlementArea.Create(foundSingle, toMap._districtPart!);
+            ProcessSettlement(records, toMap);
         }
+        else{
+            ProcessSettlement(records, toMap);
+        }
+
     }
     private static void ProcessSettlement(IEnumerable<AddressRecord> records, AddressModel toMap)
     {
@@ -547,6 +551,7 @@ public class AddressModel
         {
             var foundSingle = found.First();
             toMap._buildingPart = Building.Create(foundSingle, toMap._streetPart!);
+            ProcessApartment(records,toMap);
         }
     }
     private static void ProcessApartment(IEnumerable<AddressRecord> records, AddressModel toMap)

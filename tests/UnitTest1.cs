@@ -8,12 +8,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using System.Security.Cryptography;
 using Contingent.DTOs.In;
+using Xunit.Abstractions;
 namespace Tests;
 
+public class ClientWConsole {
+        protected readonly ITestOutputHelper output;
 
-public class Tests
+        public ClientWConsole(ITestOutputHelper output) {
+            this.output = output;
+        }
+
+}
+public class Tests : ClientWConsole
 {
-    [Fact]
+    public Tests(ITestOutputHelper output) : base(output) { }
+
     public void MakeImportFile()
     {
         var csv = new CSVGenerator().GenerateOrders(100);
@@ -118,64 +127,6 @@ public class Tests
         }
 
     }
-    public void EncTest()
-    {
-        // ваш ключ здесь
-        byte[] _storageKey = new byte[32];
-
-        string rawDb = "****";
-        string rawJWT = "****";
-        string encDBBase64 = "";
-        string encJWTBase64 = "";
-        string decDb = "";
-        string decJWT = "";
-
-        using (var gen = Aes.Create())
-        {
-            gen.KeySize = 256;
-            gen.Padding = PaddingMode.ISO10126;
-            gen.Key = _storageKey;
-            // в доках написано, что это значение должно быть в длину 1/8 размера блока
-            gen.IV = Enumerable.Repeat((byte)0, gen.BlockSize / 8).ToArray();
-
-            // тестовый код для генерации шифротекста
-            encDBBase64 = Convert.ToBase64String(
-                gen.EncryptCbc(
-                    Encoding.Unicode.GetBytes(rawDb),
-                    gen.IV, gen.Padding)
-            );
-            encJWTBase64 = Convert.ToBase64String(
-                gen.EncryptCbc(
-                    Encoding.Unicode.GetBytes(rawJWT),
-                gen.IV, gen.Padding)
-            );
-            decDb = Encoding.Unicode.GetString(
-                gen.DecryptCbc(Convert.FromBase64String(encDBBase64), gen.IV, gen.Padding)
-            );
-            decJWT = Encoding.Unicode.GetString(
-                gen.DecryptCbc(Convert.FromBase64String(encJWTBase64), gen.IV, gen.Padding)
-            );
-            Console.WriteLine(rawDb);
-            Console.WriteLine(rawJWT);
-            Console.WriteLine(encDBBase64);
-            Console.WriteLine(encJWTBase64);
-            Console.WriteLine(decDb);
-            Console.WriteLine(decJWT);
-        }
-    }
-    public void RegisterTest()
-    {
-        ContingentUser.RegisterUser(
-            new RegisterDTO
-            {
-                Login = "****",
-                Username = "*****",
-                Password = "*****",
-                Role = (int)Roles.Admin
-            }
-        );
-    }
-
 }
 
 // moving to branch dev

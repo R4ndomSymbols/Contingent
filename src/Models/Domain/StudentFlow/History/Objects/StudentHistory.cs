@@ -113,11 +113,11 @@ public class StudentHistory
         return countTo - last.OrderNullRestrict.EffectiveDate;
     }
 
-    public void RevertHistory(Order startingPoint)
+    public void RevertHistory(Order startingPoint, ObservableTransaction scope)
     {
         List<int> _toRemove = new();
         _history.RemoveOlderOrEqualThan(startingPoint, (rec) => _toRemove.Add((int)rec.Id));
-        FlowHistory.DeleteRecords(_toRemove);
+        FlowHistory.DeleteRecords(_toRemove, scope);
     }
 
     // получает всю историю студента в приказах

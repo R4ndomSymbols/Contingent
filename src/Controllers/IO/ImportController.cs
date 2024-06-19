@@ -40,7 +40,7 @@ public class ImportController : Controller
     [Route("/import/upload/{importType:int}")]
     public IActionResult ProcessFile(int importType)
     {
-        var transaction = ObservableTransaction.New;
+        using var transaction = ObservableTransaction.New;
         var import = ImportTypeInfo.GetImporterByType(importType, Request.Body, transaction);
         if (import is null)
         {

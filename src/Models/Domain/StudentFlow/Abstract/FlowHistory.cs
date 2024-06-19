@@ -249,7 +249,7 @@ public static class FlowHistory
         return GetHistoryAggregate(limits: limits, queryParameters: settings, additionalFilter: specific, parameters: parameters).Result;
     }
 
-    public static void DeleteRecords(IEnumerable<int> ids)
+    public static void DeleteRecords(IEnumerable<int> ids, ObservableTransaction scope)
     {
         if (!ids.Any())
         {
@@ -257,7 +257,14 @@ public static class FlowHistory
         }
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "DELETE FROM student_flow WHERE id = ANY(@p1)";
-        var cmd = new NpgsqlCommand(cmdText, conn);
+        NpgsqlCommand cmd;
+        if (scope is not null){
+            cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
+        }
+        else{
+            cmd = new NpgsqlCommand(cmdText, conn);
+        }
+         
         var p = new NpgsqlParameter();
         p.ParameterName = "p1";
         p.Value = ids.ToArray();

@@ -2,6 +2,12 @@ import { Utilities } from "./site.js";
 let utils = new Utilities();
 
 $(document).ready(function () {
+    $("#login_input").on("click", function() {
+        $("#auth_err").empty();
+    });
+    $("#password_input").on("click", function() {
+        $("#auth_err").empty();
+    });
     $("#log_in_button").on("click", function () {
         $.ajax({
             type: "POST",

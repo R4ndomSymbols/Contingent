@@ -142,6 +142,10 @@
     setAuthHeader(xhr) {
         xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("jwt"));
     }
+    isValidId(id){
+        let number = Number(id)
+        return !isNaN(number) && number != undefined && number != null && number != this.INVALID_ID
+    }
 
 }
 

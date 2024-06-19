@@ -66,16 +66,19 @@ public class StudentFlowController : Controller
                 var conductionStatus = result.ResultObject.ConductByOrder(transaction);
                 if (conductionStatus.IsSuccess)
                 {
+                    transaction.Commit();
                     return Ok();
                 }
                 else
                 {
+                    transaction.Rollback();
                     return BadRequest(conductionStatus.Errors.AsErrorCollection());
                 }
 
             }
             else
             {
+                transaction.Rollback();
                 return BadRequest(result.Errors.AsErrorCollection());
             }
         }
@@ -120,15 +123,17 @@ public class StudentFlowController : Controller
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("Id приказа указан неверно"));
         }
-        var transaction = ObservableTransaction.New;
+        using var transaction = ObservableTransaction.New;
         if (studentId is not null)
         {
             var student = StudentModel.GetStudentById(studentId).Result;
             if (student is null)
             {
+                transaction.Rollback();
                 return BadRequest(ErrorCollectionDTO.GetGeneralError("Id студента указан неверно"));
             }
             order.RevertConducted(new StudentModel[] { student }, transaction);
+            transaction.Commit();
             return Ok();
         }
         order.RevertAllConducted(transaction);

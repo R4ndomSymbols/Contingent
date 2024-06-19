@@ -376,6 +376,7 @@ function closeOrder() {
     $.ajax({
         type: "GET",
         url: "/orders/close/" + String(currentOrderId),
+        beforeSend: utils.setAuthHeader,
         success: function (response) {
             alert("Приказ успешно закрыт")
             utils.disableField("close_order")

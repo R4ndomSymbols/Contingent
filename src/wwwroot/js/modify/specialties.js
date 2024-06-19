@@ -6,13 +6,16 @@ init();
 
 function init() {
     let possible = Number($("#id_section").attr("spec_id"));
-    if (possible !== NaN && possible !== 0 && possible !== undefined) {
+    if (utils.isValidId(possible)) {
         id = possible
         utils.disableField("CourseCount")
         utils.disableField("FgosPrefix")
         utils.disableField("QualificationPostfix")
         utils.disableField("EducationalLevelIn")
         utils.disableField("EducationalLevelOut")
+    }
+    else{
+        id = utils.INVALID_ID;
     }
 }
 

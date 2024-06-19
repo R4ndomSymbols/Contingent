@@ -82,7 +82,7 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
         {
             var history = move.Student.GetHistory(scope);
             var lastRecord = history.GetLastRecord();
-            var orderCheck = lastRecord is not null && ForbiddenPreviousOrderTypes.All(x => lastRecord.OrderNullRestrict.GetOrderTypeDetails().Type != x);
+            var orderCheck = lastRecord is null || ForbiddenPreviousOrderTypes.All(x => lastRecord.OrderNullRestrict.GetOrderTypeDetails().Type != x);
             // разница более чем в 5 лет между приказами является основанием для игнорирования статуса
             var timeCheck = history.GetTimeSinceLastAction(_effectiveDate) >= TimeSpan.FromDays(365 * 5);
             var group = move.GroupTo;

@@ -6,6 +6,7 @@ using Contingent.Models.Domain.Citizenship;
 using Contingent.SQL;
 using Contingent.Utilities;
 using Contingent.Utilities.Validation;
+using System.Globalization;
 
 namespace Contingent.Models.Domain.Students;
 
@@ -308,13 +309,12 @@ public class StudentModel
             model._dateOfBirth = birthDate;
         }
         if (errors.IsValidRule(
-            dto.AdmissionScore.CheckStringPatternD(ValidatorCollection.DecimalFormat) ||
-            dto.AdmissionScore.CheckStringPatternD(ValidatorCollection.OnlyDigits),
+            decimal.TryParse(dto.AdmissionScore, CultureInfo.GetCultureInfo("ru-RU"), out decimal result),
             message: "Неверный формат вступительного балла",
             propName: nameof(AdmissionScore)
         ))
         {
-            var admScore = Math.Round(decimal.Parse(dto.AdmissionScore), 2);
+            var admScore = Math.Round(result, 2);
             if (errors.IsValidRule(
                 admScore >= 3 && admScore <= 5,
                 message: "Неверное значение вступительного балла",

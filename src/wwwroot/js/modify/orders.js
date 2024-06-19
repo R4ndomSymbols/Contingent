@@ -6,7 +6,7 @@ init();
 
 function init() {
     id = $("#OrderOrgId").attr("orgid");
-    if (id === "" || id === undefined || id == null || id === "-1") {
+    if (!utils.isValidId(id)) {
         $(".identity_dependency").focusout(
             function () {
                 utils.registerScheduledQuery(

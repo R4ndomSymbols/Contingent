@@ -64,7 +64,7 @@ public class PaidOrderSequentialGuardian : OrderSequentialGuardian
 
     public override void Insert(Order toInsert, ObservableTransaction scope)
     {
-        var sequentialIndex = GetSequentialOrderNumber(toInsert, scope);
+        var sequentialIndex = GetSequentialOrderNumber(toInsert, scope) - 1;
         if (_foundPaid.Any(o => o.Equals(toInsert)))
         {
             return;

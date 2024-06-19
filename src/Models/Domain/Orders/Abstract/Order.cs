@@ -392,7 +392,7 @@ public abstract class Order : IFromCSV<Order>
             model._specifiedDate = specDate;
         }
         if (errors.IsValidRule(
-            ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || source.OrderDescription is null,
+            ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || string.IsNullOrEmpty(source.OrderDescription) ,
             message: "Описание приказа указано неверно",
             propName: nameof(OrderDescription))
         )
@@ -410,7 +410,7 @@ public abstract class Order : IFromCSV<Order>
         errors.IsValidRule(
             TryParseOrderType(source.OrderType),
             message: "Тип приказа указан неверно",
-            propName: "orderType"
+            propName: "OrderType"
         );
 
         if (errors.Any())
@@ -685,7 +685,7 @@ public abstract class Order : IFromCSV<Order>
 
         if (!TryParseOrderType(mapped.OrderType))
         {
-            return Result<Order>.Failure(new ValidationError("Неверно указан тип приказа"));
+            return Result<Order>.Failure(new ValidationError("Неверно указан тип приказа", "OrderType"));
         }
 
         OrderTypes type = (OrderTypes)mapped.OrderType;
@@ -696,7 +696,7 @@ public abstract class Order : IFromCSV<Order>
         }
         catch
         {
-            return Result<Order>.Failure(new ValidationError("Данный тип приказа не поддерживается"));
+            return Result<Order>.Failure(new ValidationError("Данный тип приказа не поддерживается", "OrderType"));
         }
         if (result.IsFailure)
         {
@@ -712,11 +712,11 @@ public abstract class Order : IFromCSV<Order>
         }
     }
 
-    private void Open()
+    private void Open(ObservableTransaction scope)
     {
         if (IsClosed)
         {
-            SetOpenCloseState(false, null);
+            SetOpenCloseState(false, scope);
         }
     }
 
@@ -738,7 +738,6 @@ public abstract class Order : IFromCSV<Order>
             cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
             cmd.Parameters.Add(new NpgsqlParameter<bool>("p2", closed));
             cmd.ExecuteNonQuery();
-            cmd.Dispose();
             _isClosed = closed;
         }
     }
@@ -838,16 +837,16 @@ public abstract class Order : IFromCSV<Order>
             {
                 throw new Exception("Студент в истории должен быть указан");
             }
-            student.GetHistory(scope).RevertHistory(this);
-            Open();
+            student.GetHistory(scope).RevertHistory(this, scope);
         }
+        Open(scope);
     }
     public virtual void RevertConducted(IEnumerable<StudentModel> student, ObservableTransaction scope)
     {
         foreach (var std in student)
         {
             var history = std.GetHistory(scope);
-            history.RevertHistory(this);
+            history.RevertHistory(this, scope);
         }
 
     }

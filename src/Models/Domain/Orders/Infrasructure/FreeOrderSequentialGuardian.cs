@@ -57,18 +57,18 @@ public class FreeOrderSequentialGuardian : OrderSequentialGuardian
             // приказ на дату, который создается, всегда будет хронологически последним среди
             // всех приказов с такой же датой
         }
-        // индекс остановки совпадает с номером
+        // индекс остановки совпадает с номером - 1 
         return ++orderNumber;
     }
 
     public override void Insert(Order toInsert, ObservableTransaction scope)
     {
-        var orderNumber = GetSequentialOrderNumber(toInsert, scope);
+        var orderIndex = GetSequentialOrderNumber(toInsert, scope) - 1;
         if (_foundFree.Any(o => o.Equals(toInsert)))
         {
             return;
         }
-        _foundFree.Insert(orderNumber - 1, (FreeContingentOrder)toInsert);
+        _foundFree.Insert(orderIndex, (FreeContingentOrder)toInsert);
     }
 
     public override void Save(ObservableTransaction scope)
