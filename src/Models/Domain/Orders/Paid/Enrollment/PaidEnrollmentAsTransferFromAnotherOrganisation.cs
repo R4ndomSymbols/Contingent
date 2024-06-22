@@ -59,19 +59,22 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidEnrollmentWithTransfer;
     }
-
+    // студент не зачислялся или отчислен
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _enrollers)
         {
             var history = move.Student.GetHistory(scope);
             var group = move.GroupTo;
-            var stateCheck = history.IsStudentDeducted() || history.IsStudentNotRecorded();
+            if (!(history.IsStudentDeducted() || history.IsStudentNotRecorded()))
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент имеет недопустимый статус (зачислен)", move.Student));
+            }
             var groupCheck = group.SponsorshipType.IsPaid() && group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student);
-            if (!stateCheck || !groupCheck)
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError(
-                    "студент имеет недопустимый статус или не соответствует критериям группы или группа бесплатная", move.Student)
+                    "студент не соответствует критериям специальности или группа бесплатная", move.Student)
                 );
             }
         }
@@ -80,7 +83,6 @@ public class PaidEnrollmentWithTransferOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(enroller);
         if (result.IsFailure)

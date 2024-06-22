@@ -66,10 +66,6 @@ function buildSearchQuery() {
 }
 
 function moveForward() {
-    if (lastFound == undefined ||
-        $.isEmptyObject(lastFound)) {
-        return
-    }
     currentPage++;
     changePage(currentPage);
     searchStudents();

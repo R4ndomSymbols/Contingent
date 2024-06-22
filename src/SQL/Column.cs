@@ -10,7 +10,9 @@ public class Column : IQueryPart
     private Func<string> _strategy;
     private Column()
     {
-
+        Name = string.Empty;
+        _strategy = () => Name;
+        TableName = string.Empty;
     }
 
     public Column(string name, string alias, string tableName)

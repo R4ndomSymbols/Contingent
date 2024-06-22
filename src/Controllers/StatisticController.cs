@@ -3,6 +3,11 @@ using Contingent.Models.Domain.Specialties;
 using Contingent.Statistics.Tables;
 using Microsoft.AspNetCore.Authorization;
 using Contingent.DTOs.Out;
+using Contingent.Controllers.DTO.Out;
+using Contingent.Utilities;
+using Contingent.DTOs.In;
+using System.Text.Json;
+using Contingent.Models.Infrastructure;
 
 namespace Contingent.Controllers;
 
@@ -17,12 +22,12 @@ public class StatisticController : Controller
 
     [HttpGet]
     [AllowAnonymous]
-    [Route("/statistics/{table}")]
+    [Route("/statistics")]
     public IActionResult GetMainPage(string table)
     {
         return View("Views/Auth/JWTHandler.cshtml", new RedirectOptions()
         {
-            DisplayURL = "/protected/statistics/" + table,
+            DisplayURL = "/protected/statistics",
             RequestType = "GET",
         });
     }
@@ -30,36 +35,66 @@ public class StatisticController : Controller
     // добавить уровень квалификации (специалист или квалифицированный рабочий)
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    [Route("/protected/statistics/{tableName?}")]
-    public IActionResult GetAgeStatistics(string tableName)
+    [Route("/protected/statistics")]
+    public IActionResult GetMainView(string tableName)
+    {
+        return View("Views/Statistics/BaseTableView.cshtml");
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [Route("/statistics/table/{tableName?}")]
+    public IActionResult GetTable(string tableName)
     {
         if (string.IsNullOrEmpty(tableName))
         {
-            return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");
+            return BadRequest(new ErrorCollectionDTO(new StatisticValidationError("Неверно указано название таблицы")));
+        }
+        PeriodDTO? onPeriod;
+        try
+        {
+            using var reader = new StreamReader(Request.Body);
+            string requestData = reader.ReadToEndAsync().Result;
+            onPeriod = JsonSerializer.Deserialize<PeriodDTO>(requestData);
+        }
+        catch
+        {
+            return BadRequest(new ErrorCollectionDTO(new StatisticValidationError("Неверно указан период")));
+        }
+        var result = Period.CreateFromDTO(onPeriod);
+        if (result.IsFailure)
+        {
+            return BadRequest(new ErrorCollectionDTO(new StatisticValidationError(result.Errors.First().ErrorMessage)));
         }
         ITable? table = null;
-        switch (tableName)
+        try
         {
-            case "age_qualified":
-                table = new AgeTable(TrainingProgramTypes.QualifiedWorker);
-                break;
-            case "age_specialist":
-                table = new AgeTable(TrainingProgramTypes.GenericSpecialist);
-                break;
-            case "specialty":
-                table = new GenericSpecialty();
-                break;
-            case "legalAddress":
-                table = new AddressTable();
-                break;
+            switch (tableName)
+            {
+                case "age_qualified":
+                    table = new AgeTable(TrainingProgramTypes.QualifiedWorker, result.ResultObject);
+                    break;
+                case "age_specialist":
+                    table = new AgeTable(TrainingProgramTypes.GenericSpecialist, result.ResultObject);
+                    break;
+                case "specialty":
+                    table = new GenericSpecialty(result.ResultObject);
+                    break;
+                case "legalAddress":
+                    table = new AddressTable(result.ResultObject);
+                    break;
+            }
+        }
+        catch //(Exception e)
+        {
+            return BadRequest(new ErrorCollectionDTO(new StatisticValidationError("Таблица использует другую периодизацию, вероятно, вы указали лишнюю дату")));
         }
         if (table is null)
         {
-            return View("Views/Shared/Error.cshtml", "Неверно указан параметр запроса");
+            return BadRequest(new ErrorCollectionDTO(new StatisticValidationError("Неверно указано имя таблицы")));
         }
-        else
-        {
-            return View("Views/Statistics/BaseTableView.cshtml", table);
-        }
+        return Content(table.HtmlContent);
+
     }
+
 }

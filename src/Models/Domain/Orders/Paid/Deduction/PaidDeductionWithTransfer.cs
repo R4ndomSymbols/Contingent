@@ -60,17 +60,23 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidDeductionWithTransfer;
     }
-
+    // студент должен быть зачислен и не быть в академе
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _studentLeaving)
         {
-            if (!student.Student.GetHistory(scope).IsStudentEnlisted())
+            var history = student.Student.GetHistory(scope);
+            if (!history.IsStudentEnlisted())
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        "студент  должен быть зачислен прежде, чем быть отчисленным", student.Student)
-                    );
+                        "студент должен быть зачислен прежде, чем быть отчисленным", student.Student
+                    )
+                );
+            }
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(student.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -78,7 +84,6 @@ public class PaidDeductionWithTransferOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var graduate = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentGroupNullifyMove.Create(graduate);
         if (result.IsFailure)

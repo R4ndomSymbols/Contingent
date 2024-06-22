@@ -72,17 +72,14 @@ public class FreeDeductionWithAcademicVacationNoReturnOrder : FreeContingentOrde
         // но в течении x дней не вышел из него
         foreach (var leaver in _leavers)
         {
-            var history = leaver.Student.GetHistory(scope);
-            if (history.IsStudentSentInAcademicVacation())
+            var history = leaver.Student.GetHistory(scope, _effectiveDate);
+            if (!history.IsStudentSentInAcademicVacation())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент на находится в академическом отпуске", leaver.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не находится в академическом отпуске", leaver.Student));
             }
-            var lastRecord = history.GetLastRecord()!;
-            if (!lastRecord.StatePeriod.IsEndedNow())
-            {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент все еще находится в академическом отпуске", leaver.Student));
-            }
-            if (lastRecord.StatePeriod.GetEndedDaysAgoCount() < _daysBeforeDeduction)
+            var period = history.GetCurrentAcademicVacationPeriod()
+            ?? throw new Exception("Ошибка инициализации приказа об академе или записи данных");
+            if (period.GetEndedDaysAgoCount() < _daysBeforeDeduction)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("еще не прошло достаточное количество времени для отчисления", leaver.Student));
             }

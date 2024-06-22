@@ -365,7 +365,7 @@ public class GroupModel
                 WhereCondition.Relations.Equal
             )
         );
-        var found = FindGroups(new QueryLimits(0, 1), additionalConditions: where, addtitionalParameters: parameters).Result;
+        var found = FindGroups(new QueryLimits(0, 1), additionalConditions: where, additionalParameters: parameters).Result;
         return found.FirstOrDefault(x => true, null);
     }
 
@@ -528,7 +528,7 @@ public class GroupModel
         return result;
     }
 
-    public static async Task<IReadOnlyCollection<GroupModel>> FindGroups(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? addtitionalParameters = null, OrderByCondition? additionalOrderBy = null)
+    public static async Task<IReadOnlyCollection<GroupModel>> FindGroups(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? additionalParameters = null, OrderByCondition? additionalOrderBy = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper(null);
@@ -536,7 +536,7 @@ public class GroupModel
         .AddMapper(mapper)
         .AddJoins(mapper.PathTo.AppendJoin(additionalJoins))
         .AddWhereStatement(additionalConditions)
-        .AddParameters(addtitionalParameters)
+        .AddParameters(additionalParameters)
         .AddOrderByStatement(additionalOrderBy)
         .Finish();
         if (buildResult.IsFailure)
@@ -559,7 +559,7 @@ public class GroupModel
             ComplexWhereCondition.ConditionRelation.AND,
             GetFilterForGroup(strict ? correct : "%" + correct + "%", ref parameters)
         );
-        return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
+        return FindGroups(limits, additionalConditions: where, additionalParameters: parameters).Result;
     }
     public static IReadOnlyCollection<GroupModel> FindGroupsByThread(QueryLimits limits, int threadId, int? courseOn = null)
     {
@@ -584,7 +584,7 @@ public class GroupModel
                     )
                 )
         );
-        return FindGroups(limits, additionalConditions: where, addtitionalParameters: parameters).Result;
+        return FindGroups(limits, additionalConditions: where, additionalParameters: parameters).Result;
     }
 
     public static ComplexWhereCondition GetFilterForGroup(string name, ref SQLParameterCollection parameters)
@@ -727,6 +727,15 @@ public class GroupModel
         cmd.Parameters.Add(new NpgsqlParameter("p2", groupSequence));
         using var reader = cmd.ExecuteReader();
         return !reader.HasRows;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj is not GroupModel)
+        {
+            return false;
+        }
+        return ((GroupModel)obj)._id == _id;
     }
 }
 

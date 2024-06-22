@@ -60,20 +60,27 @@ public class PaidTransferBetweenSpecialtiesOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidTransferBetweenSpecialties;
     }
-
+    // группы одного курса
+    // разные потоки
+    // студент зачислен
+    // группа платная
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _transfer)
         {
             var history = move.Student.GetHistory(scope);
+            if (!history.IsStudentEnlisted())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", move.Student));
+            }
             var group = move.GroupTo;
-            var currentGroup = history.GetCurrentGroup();
+            var currentGroup = history.GetLastGroup();
             var groupCheck = currentGroup is not null && !currentGroup.IsOnTheSameThread(group) && group.SponsorshipType.IsPaid() && group.CourseOn == currentGroup.CourseOn;
             if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        "студент не может быть переведен в эту группу (не зачислен/группа не удовлетворяет условиям)", move.Student)
+                        "студент не может быть переведен в эту группу (группа не удовлетворяет условиям)", move.Student)
                 );
             }
         }
@@ -82,7 +89,6 @@ public class PaidTransferBetweenSpecialtiesOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var transferer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(transferer);
         if (result.IsFailure)

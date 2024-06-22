@@ -44,6 +44,14 @@ public class RussianCitizenship : Citizenship
         }
         return mapper;
     }
+
+    public static OrderByCondition GetSortByNameAsc()
+    {
+        var orderBy = new OrderByCondition(new Column("lower", "surname", "rus_citizenship", null), OrderByCondition.OrderByTypes.ASC);
+        orderBy.AddColumn(new Column("lower", "name", "rus_citizenship", null), OrderByCondition.OrderByTypes.ASC);
+        orderBy.AddColumn(new Column("lower", "patronymic", "rus_citizenship", null), OrderByCondition.OrderByTypes.ASC);
+        return orderBy;
+    }
     public static ComplexWhereCondition GetFilterClause(RussianCitizenshipInDTO parameters, ref SQLParameterCollection paramCollection)
     {
         var where = ComplexWhereCondition.Empty;

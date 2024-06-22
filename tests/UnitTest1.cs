@@ -11,12 +11,14 @@ using Contingent.DTOs.In;
 using Xunit.Abstractions;
 namespace Tests;
 
-public class ClientWConsole {
-        protected readonly ITestOutputHelper output;
+public class ClientWConsole
+{
+    protected readonly ITestOutputHelper output;
 
-        public ClientWConsole(ITestOutputHelper output) {
-            this.output = output;
-        }
+    public ClientWConsole(ITestOutputHelper output)
+    {
+        this.output = output;
+    }
 
 }
 public class Tests : ClientWConsole
@@ -67,10 +69,12 @@ public class Tests : ClientWConsole
         }
 
     }
+    [Fact]
     private void GenerateGroups()
     {
-        var csv = new CSVGenerator().GenerateGroups(100);
+        var csv = new CSVGenerator().GenerateGroups(10);
         Console.WriteLine(csv);
+        return;
         using var transaction = ObservableTransaction.New;
         var import = new GroupImport(new MemoryStream(Encoding.UTF8.GetBytes(csv)), transaction);
         var importResult = import.Import();

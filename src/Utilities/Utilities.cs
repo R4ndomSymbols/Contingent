@@ -21,7 +21,11 @@ public static class Utils
 
     public static string FormatDateTime(DateTime? date, bool expand = false)
     {
-        var correctDate = date == null ? DateTime.Now : (DateTime)date;
+        if (date is null)
+        {
+            return "";
+        }
+        var correctDate = (DateTime)date;
         if (expand)
         {
             return string.Format("{0} {1} {2}",
@@ -29,26 +33,7 @@ public static class Utils
             correctDate.ToString("MMMM", CultureInfo.CreateSpecificCulture("ru")),
             correctDate.Year.ToString() + " года");
         }
-        return string.Format("{0}.{1}.{2}", correctDate.Day, correctDate.Month, correctDate.Year);
-    }
-    public static DateTime ParseDate(string? date)
-    {
-        if (date == null)
-        {
-            throw new ArgumentNullException();
-        }
-        else
-        {
-            var parts = date.Split('.');
-            if (parts.Length != 3)
-            {
-                throw new ArgumentException("Неверный формат даты");
-            }
-            int day = Convert.ToInt32(parts[0]);
-            int month = Convert.ToInt32(parts[1]);
-            int year = Convert.ToInt32(parts[2]);
-            return new DateTime(year, month, day);
-        }
+        return correctDate.ToString("dd.MM.yyyy");
     }
     public static bool TryParseDate(string? date, out DateTime parsed)
     {

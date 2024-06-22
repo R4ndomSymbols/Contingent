@@ -38,7 +38,7 @@ public class TeachingDepth
             return (int)TeachingDepthLevels.NotMentioned;
         }
         var lower = name.ToLower();
-        var found = Levels.FirstOrDefault(t => t.RussianName.ToLower() == lower, null);
+        var found = Levels.FirstOrDefault(t => t!.RussianName.Equals(lower, StringComparison.CurrentCultureIgnoreCase), null);
         if (found is null)
         {
             return (int)TeachingDepthLevels.NotMentioned;

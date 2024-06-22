@@ -70,6 +70,7 @@ public class FreeDeductionWithTransferOrder : FreeContingentOrder
     }
     // приказ об отчислении в связи с переводом
     // студент должен быть зачислен
+    // TODO: спросить
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var left in _toBeLeftForAnotherOrg)

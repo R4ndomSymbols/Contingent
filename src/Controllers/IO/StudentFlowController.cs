@@ -57,39 +57,37 @@ public class StudentFlowController : Controller
             return BadRequest(ErrorCollectionDTO.GetGeneralError("неверный номер приказа"));
         }
         using var transaction = ObservableTransaction.New;
-        using (var stream = new StreamReader(Request.Body))
+        using var stream = new StreamReader(Request.Body);
+        var jsonString = await stream.ReadToEndAsync();
+        var result = await Order.GetOrderForConduction(orderId, jsonString);
+        if (result.IsSuccess)
         {
-            var jsonString = await stream.ReadToEndAsync();
-            var result = await Order.GetOrderForConduction(orderId, jsonString);
-            if (result.IsSuccess)
+            var conductionStatus = result.ResultObject.ConductByOrder(transaction);
+            if (conductionStatus.IsSuccess)
             {
-                var conductionStatus = result.ResultObject.ConductByOrder(transaction);
-                if (conductionStatus.IsSuccess)
-                {
-                    transaction.Commit();
-                    return Ok();
-                }
-                else
-                {
-                    transaction.Rollback();
-                    return BadRequest(conductionStatus.Errors.AsErrorCollection());
-                }
-
+                transaction.Commit();
+                return Ok();
             }
             else
             {
                 transaction.Rollback();
-                return BadRequest(result.Errors.AsErrorCollection());
+                return BadRequest(conductionStatus.Errors.AsErrorCollection());
             }
+
+        }
+        else
+        {
+            transaction.Rollback();
+            return BadRequest(result.Errors.AsErrorCollection());
         }
     }
     // получение истории студента
     [HttpGet]
     [Authorize(Roles = "Admin")]
     [Route("/studentflow/history/{id:int?}")]
-    public async Task<IActionResult> GetHistory(int id)
+    public IActionResult GetHistory(int id)
     {
-        var student = await StudentModel.GetStudentById(id);
+        var student = StudentModel.GetStudentById(id);
         if (student is null)
         {
             return BadRequest(ErrorCollectionDTO.GetGeneralError("такого студента не существует"));
@@ -104,7 +102,8 @@ public class StudentFlowController : Controller
                 student,
                 rec.GroupTo,
                 previous,
-                rec.OrderNullRestrict
+                rec.OrderNullRestrict,
+                rec.StatePeriod
             ));
             previous = rec.GroupTo;
 
@@ -126,13 +125,21 @@ public class StudentFlowController : Controller
         using var transaction = ObservableTransaction.New;
         if (studentId is not null)
         {
-            var student = StudentModel.GetStudentById(studentId).Result;
+            // удаление одного студента
+            // если приказ помечен как запрещенный на удаление - удаляется последняя запись
+            // по факту, явления тождественные
+            var student = StudentModel.GetStudentById(studentId);
             if (student is null)
             {
                 transaction.Rollback();
                 return BadRequest(ErrorCollectionDTO.GetGeneralError("Id студента указан неверно"));
             }
-            order.RevertConducted(new StudentModel[] { student }, transaction);
+            var result = order.RevertConducted(new StudentModel[] { student }, transaction);
+            if (result.IsFailure)
+            {
+                transaction.Rollback();
+                return BadRequest(result.Errors.AsErrorCollection());
+            }
             transaction.Commit();
             return Ok();
         }

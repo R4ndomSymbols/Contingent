@@ -11,14 +11,6 @@ namespace Contingent.Models.Domain.Orders;
 public class PaidEnrollmentOrder : AdditionalContingentOrder
 {
     private StudentToGroupMoveList _enrollers;
-    private OrderTypes[] ForbiddenPreviousOrderTypes =>
-        new OrderTypes[] {
-            OrderTypes.FreeDeductionWithOwnDesire,
-            OrderTypes.FreeDeductionWithAcademicDebt,
-            OrderTypes.PaidDeductionWithOwnDesire,
-            OrderTypes.PaidDeductionWithAcademicDebt
-        };
-
     protected PaidEnrollmentOrder() : base()
     {
         _enrollers = StudentToGroupMoveList.Empty;
@@ -76,26 +68,24 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
     // первый курс не обязателен
     // TODO: спросить, можно ли зачислять студента, отчислившегося по собственному желанию на другую специальность
     // без приказа о восстановлении
+    // либо студент не зачислялся, либо отчислен
+    // группа внебюджет и специальность доступна
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _enrollers)
         {
             var history = move.Student.GetHistory(scope);
-            var lastRecord = history.GetLastRecord();
-            var orderCheck = lastRecord is null || ForbiddenPreviousOrderTypes.All(x => lastRecord.OrderNullRestrict.GetOrderTypeDetails().Type != x);
-            // разница более чем в 5 лет между приказами является основанием для игнорирования статуса
-            var timeCheck = history.GetTimeSinceLastAction(_effectiveDate) >= TimeSpan.FromDays(365 * 5);
+            if (!(history.IsStudentDeducted() || history.IsStudentNotRecorded()))
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент имеет недопустимый статус (зачислен)", move.Student));
+            }
             var group = move.GroupTo;
             var groupCheck = group.EducationProgram.IsStudentAllowedByEducationLevel(move.Student) && group.SponsorshipType.IsPaid();
 
-            if ((orderCheck || timeCheck) && groupCheck)
-            {
-                continue;
-            }
-            else
+            if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError(
-                    "студент имеет недопустимый статус или не соответствует критериям группы или группа бесплатная", move.Student)
+                    "студент не соответствует критериям специальности или группа бесплатная", move.Student)
                 );
             }
         }
@@ -105,7 +95,6 @@ public class PaidEnrollmentOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(enroller);
         if (result.IsFailure)

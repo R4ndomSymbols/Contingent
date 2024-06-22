@@ -32,7 +32,7 @@ public class OrderConductionDataSource : IRowSource
 
     static OrderConductionDataSource()
     {
-        students = new List<StudentModel>(StudentModel.FindUniqueStudents(new QueryLimits(0, 1000)).Result);
+        students = new List<StudentModel>(StudentModel.FindStudents(new QueryLimits(0, 1000)).Result);
         groups = new List<GroupModel>(GroupModel.FindGroups(new QueryLimits(0, 1000)).Result);
         orders = new List<Order>(Order.FindOrders(new QueryLimits(0, 1000)).Result);
     }

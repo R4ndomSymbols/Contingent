@@ -10,6 +10,7 @@ using Contingent.Models.Domain.Students;
 namespace Contingent.Models.Domain.Orders;
 public class FreeReEnrollmentOrder : FreeContingentOrder
 {
+    private static readonly TimeSpan REENROLL_TIME_LIMIT = TimeSpan.FromDays(365 * 5 + 1);
     private StudentToGroupMoveList _enrollers;
 
     private FreeReEnrollmentOrder() : base()
@@ -71,26 +72,30 @@ public class FreeReEnrollmentOrder : FreeContingentOrder
         foreach (var move in _enrollers)
         {
             var history = move.Student.GetHistory(scope);
-            var lastOrder = history.GetLastRecord()?.ByOrder;
-            var orderCheck = lastOrder is not null && lastOrder.GetOrderTypeDetails().CanBePreviousToReEnrollment();
+            if (!history.IsStudentDeducted() || history.GetLastRecord() is null)
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент не отчислялся", move.Student));
+            }
+            var lastRecord = history.GetLastRecord();
+            if (!lastRecord!.ByOrder!.GetOrderTypeDetails().CanBePreviousToReEnrollment())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Студента нельзя восстановить", move.Student));
+            }
             var deductionGroup = history.GetGroupFromStudentWasDeducted();
-            var groupCheck = move.GroupTo.SponsorshipType.IsFree()
-            && deductionGroup is not null && deductionGroup.CourseOn == move.GroupTo.CourseOn;
+            var group = move.GroupTo;
+            if (group.CourseOn != deductionGroup!.CourseOn)
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Студента нельзя восстановить на другой курс", move.Student));
+            }
+            if (!group.SponsorshipType.IsFree())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Группа студента должна быть бесплатной", move.Student));
+            }
             var timeSinceDeduction = history.GetTimeSinceLastAction(_effectiveDate);
-            var timeCheck = timeSinceDeduction is not null && timeSinceDeduction.Value.TotalDays / 365 <= 5;
-            if (orderCheck && groupCheck && timeCheck)
+            if (timeSinceDeduction is null || timeSinceDeduction.Value.TotalDays > REENROLL_TIME_LIMIT.TotalDays)
             {
-                continue;
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент не может быть восстановлен, если отчислен более 5 лет назад", move.Student));
             }
-            else
-            {
-                return ResultWithoutValue.Failure(
-                new OrderValidationError(
-                    "не может быть восстановлен из-за несоблюдения условий восстановления", move.Student
-                ));
-            }
-
-
         }
         return ResultWithoutValue.Success();
 
@@ -98,7 +103,6 @@ public class FreeReEnrollmentOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(enroller);
         if (result.IsFailure)

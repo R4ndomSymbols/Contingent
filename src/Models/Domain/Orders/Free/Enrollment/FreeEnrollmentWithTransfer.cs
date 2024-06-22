@@ -77,7 +77,7 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
     {
         return OrderTypes.FreeEnrollmentFromAnotherOrg;
     }
-    // 
+
     // приказ о переводе с другой организации
     // бесплатная группа, студент незачислен
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
@@ -85,13 +85,19 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
         foreach (var rec in _toEnroll)
         {
             var history = rec.Student.GetHistory(scope);
-            var groupCheck = rec.GroupTo.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student)
-                && rec.GroupTo.SponsorshipType.IsFree();
-            if (history.IsStudentEnlisted() || !groupCheck)
+            if (history.IsStudentEnlisted())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Переводящийся студент либо переводится не в ту группу, либо не соотвествует критериям зачисления на специальность", rec.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент уже зачислен", rec.Student));
             }
-
+            var group = rec.GroupTo;
+            if (!group.SponsorshipType.IsFree())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Группа студента должна быть бесплатной", rec.Student));
+            }
+            if (!group.EducationProgram.IsStudentAllowedByEducationLevel(rec.Student))
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Специальность должна быть доступной по уровню образования", rec.Student));
+            }
         }
         return ResultWithoutValue.Success();
 
@@ -99,7 +105,6 @@ public class FreeEnrollmentWithTransferOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var enroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(enroller);
         if (result.IsFailure)

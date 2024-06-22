@@ -12,10 +12,8 @@ public static class Authentication
     // ваш ключ тут
     private static readonly byte[] _storageKey =
     {
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0
+        9,   182,  41, 145,  24, 209, 136, 109, 154, 104,  96,   2, 121, 105,  90, 189,
+        141,  40, 193,   3, 225, 175,  54, 228,  39,  82,  79, 212,  20, 243, 247, 146
     };
     public const string DatabaseConnectionStringFieldName = "ConnectionString";
     public const string JWTKeyFieldName = "JWTKey";
@@ -35,7 +33,7 @@ public static class Authentication
             gen.KeySize = 256;
             gen.Padding = PaddingMode.ISO10126;
             gen.Key = _storageKey;
-            // в доках написано, что это значение должно быть в длину 1/8 размера блока
+            // в документации написано, что это значение должно быть в длину 1/8 размера блока
             gen.IV = Enumerable.Repeat((byte)0, gen.BlockSize / 8).ToArray();
 
             var connectionStringEncrypted = Convert.FromBase64String(builder[DatabaseConnectionStringFieldName]!);
@@ -47,7 +45,4 @@ public static class Authentication
         }
 
     }
-
-
-
 }

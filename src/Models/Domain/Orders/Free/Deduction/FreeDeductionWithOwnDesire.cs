@@ -69,6 +69,7 @@ public class FreeDeductionWithOwnDesireOrder : FreeContingentOrder
     {
         return OrderTypes.FreeDeductionWithOwnDesire;
     }
+    // академ не играет роли
     // приказ об отчислении по собственному желанию
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
     // проверка на бесплатную группу не нужна, т.к. студент не может быть зачислен в такую группу

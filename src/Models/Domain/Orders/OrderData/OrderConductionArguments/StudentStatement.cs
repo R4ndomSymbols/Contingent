@@ -14,7 +14,7 @@ public static class OrderDataExtractions
         {
             return Result<StudentModel>.Failure(new ValidationError("Источник данных (dto) должен быть указан"));
         }
-        var student = StudentModel.GetStudentById(dto.StudentId).Result;
+        var student = StudentModel.GetStudentById(dto.StudentId);
         if (student is null)
         {
             var paramCollection = new SQLParameterCollection();
@@ -26,7 +26,7 @@ public static class OrderDataExtractions
                 Patronymic = nameSplit.ElementAtOrDefault(2)
             },
             ref paramCollection);
-            var foundBy = StudentModel.FindUniqueStudents(
+            var foundBy = StudentModel.FindStudents(
                 new QueryLimits(0, 2),
                 null,
                 whereClauseForCitizenship.Unite(

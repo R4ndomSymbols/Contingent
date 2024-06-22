@@ -8,7 +8,7 @@ namespace Contingent.Statistics.Tables.Headers;
 
 public static class TemplateHeaders
 {
-    public static TableRowHeader<T> GetSpecialityRowHeader<T>(
+    public static TableRowHeader<T> GetSpecialtyRowHeader<T>(
         Func<T, SpecialtyModel?> getter,
         TableColumnHeader<T> vertical,
         RowHeaderCell<T>? root = null)

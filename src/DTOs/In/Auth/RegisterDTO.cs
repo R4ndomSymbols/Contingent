@@ -8,4 +8,11 @@ public class RegisterDTO
     public string Username { get; set; }
     public int Role { get; set; }
 
+    public RegisterDTO()
+    {
+        Login = string.Empty;
+        Password = string.Empty;
+        Username = string.Empty;
+    }
+
 }

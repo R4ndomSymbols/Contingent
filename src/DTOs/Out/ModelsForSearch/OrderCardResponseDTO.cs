@@ -21,24 +21,24 @@ public class OrderSearchDTO
     public string OrderInputPolicy { get; init; }
     public bool IsClosed { get; set; }
     public string OrderDescription { get; set; }
+    public int OrderType { get; set; }
 
     public OrderSearchDTO(Order order)
     {
         OrderId = order.Id;
         OrderInputPolicy = order.GetOrderTypeDetails().FrontendGroupBehavior.ToString();
-        IsClosed = order.IsClosed;
+        IsClosed = order.IsClosedForDeletion;
         if (!IsClosed)
         {
-            OrderFlowLink = "/studentflow/" + OrderId.ToString();
             OrderModifyLink = "/orders/modify/" + OrderId.ToString();
             OrderCloseLink = "/orders/close/" + OrderId.ToString();
         }
         else
         {
-            OrderFlowLink = null;
             OrderModifyLink = null;
             OrderCloseLink = null;
         }
+        OrderFlowLink = "/studentflow/" + OrderId.ToString();
         OrderDescription = order.OrderDescription;
         OrderViewLink = "/orders/view/" + OrderId.ToString();
         OrderFullName = order.OrderDisplayedName;
@@ -48,7 +48,7 @@ public class OrderSearchDTO
         OrderEnumTypeName = details.Type.ToString();
         OrderEffectiveDate = Utils.FormatDateTime(order.EffectiveDate);
         OrderSpecifiedDate = Utils.FormatDateTime(order.SpecifiedDate);
-
+        OrderType = (int)details.Type;
     }
 
 

@@ -41,7 +41,7 @@ public class TrainingProgram
 
     public static bool TryGetByType(int type, out TrainingProgram? result)
     {
-        result = Types.FirstOrDefault(t => (int)t.Type == type, null);
+        result = Types.FirstOrDefault(t => (int)t!.Type == type, null);
         return result is not null;
     }
     public static TrainingProgram GetByType(int type)
@@ -63,7 +63,7 @@ public class TrainingProgram
             return (int)TrainingProgramTypes.NotMentioned;
         }
         var lower = programName.ToLower();
-        var found = Types.FirstOrDefault(t => t.Name.ToLower() == lower || t._aliases.Any(x => x.ToLower() == lower), null);
+        var found = Types.FirstOrDefault(t => t!.Name.ToLower() == lower || t._aliases.Any(x => x.ToLower() == lower), null);
         if (found is null)
         {
             return (int)TrainingProgramTypes.NotMentioned;
@@ -74,6 +74,16 @@ public class TrainingProgram
     public bool IsDefined()
     {
         return Type != TrainingProgramTypes.NotMentioned;
+    }
+
+    public bool IsQualifiedWorker()
+    {
+        return Type == TrainingProgramTypes.QualifiedWorker;
+    }
+
+    public bool IsGenericSpecialist()
+    {
+        return Type == TrainingProgramTypes.GenericSpecialist;
     }
 
 }

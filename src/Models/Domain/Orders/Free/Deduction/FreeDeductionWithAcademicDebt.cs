@@ -71,13 +71,19 @@ public class FreeDeductionWithAcademicDebtOrder : FreeContingentOrder
     // приказ об отчислении в связи с неуспеваемостью
     // не имеет ограничений вообще, главное, чтобы студент был зачислен
     // не нужна проверка группы
+    // не может быть издан, если студент в академическом отпуске
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var debtHolder in _debtHolders)
         {
-            if (debtHolder.Student.GetHistory(scope).IsStudentEnlisted())
+            var history = debtHolder.Student.GetHistory(scope);
+            if (history.IsStudentNotRecorded() || history.IsStudentDeducted())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть отчислен раньше своего зачисления", debtHolder.Student));
+            }
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(debtHolder.Student));
             }
         }
         return ResultWithoutValue.Success();

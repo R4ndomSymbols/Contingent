@@ -26,6 +26,8 @@ public abstract class OrderedHistory : IEnumerable<StudentFlowRecord>
 
     public abstract void Add(StudentFlowRecord record);
     public abstract StudentFlowRecord Last();
+    // запись, которая соответствует состоянию на дату
+    public abstract StudentFlowRecord? On(DateTime onDate);
 
 
 }

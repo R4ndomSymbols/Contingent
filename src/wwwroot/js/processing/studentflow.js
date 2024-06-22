@@ -7,6 +7,8 @@ const identityExcludedPostfix = "_ex_id";
 const studentPinnedGroupInputPostfix = "_n_group"
 const startDateInputPostfix = "_st_date";
 const endDateInputPostfix = "_end_date"
+let orderState = undefined;
+let isClosedForDeletion = undefined;
 let currentDisplayingPolicy = undefined;
 let currentOrderId = undefined;
 let pinnedTable = undefined;
@@ -23,8 +25,10 @@ let studentsInOrder = [];
 init();
 
 function init() {
-    currentOrderId = Number($("#current_order").attr("order_id"));
-    currentDisplayingPolicy = String($("#current_order").attr("group_behavior"))
+    orderState = $("#current_order");
+    currentOrderId = Number(orderState.attr("order_id"));
+    currentDisplayingPolicy = String(orderState.attr("group_behavior"))
+    isClosedForDeletion = orderState.attr("is_closed_for_deletion") === "True";
     if (currentDisplayingPolicy === "PeriodInput") {
         $("#input_title").text("Период отпуска");
     }
@@ -74,7 +78,7 @@ function getPinFunc(student) {
         $("#" + closure.studentId + identityExcludedPostfix).remove();
         // функция добавления в таблицу
         let header = `<tr id="${rowId}"> <td>${fullName}</td>`;
-        let buttonPart = `<td><button id="${removeButtonId}">-</button></td></tr>`
+        let buttonPart = `<td><button id="${removeButtonId}" class="standard-button-sec">-</button></td></tr>`
         let content = undefined;
         let callback = undefined;
         if (currentDisplayingPolicy === "MustChange") {
@@ -130,7 +134,7 @@ function getUnPinFunc(student) {
                     ${student.groupName}
                 </td>
                 <td>
-                    <button id="${student.studentId + includePostfix}">
+                    <button id="${student.studentId + includePostfix}" class="standard-button-sec">
                     +
                     </button>
                 </td>
@@ -144,20 +148,8 @@ function getUnPinFunc(student) {
 // поиск и добавление студентов, которые уже находятся в приказе
 function setStudentsInOrder() {
     $.ajax({
-        type: "POST",
-        url: "/students/search/find",
-        data: JSON.stringify(
-            {
-                Name: "",
-                GroupName: "",
-                Source: {
-                    OrderId: currentOrderId,
-                    OrderMode: "OnlyIncluded"
-                },
-                PageSkipCount: 0,
-                PageSize: 30
-            }
-        ),
+        type: "GET",
+        url: "/orders/history/" + String(currentOrderId),
         contentType: "application/json",
         beforeSend: utils.setAuthHeader,
         success: function (response) {
@@ -165,8 +157,9 @@ function setStudentsInOrder() {
                 const studentClosure = student;
                 studentsInOrder.push(studentClosure);
                 let stdId = String(student["studentId"])
-                pinnedTable.append(
-                    `
+                student.groupName = student.groupNameTo,
+                    pinnedTable.append(
+                        `
                     <tr> 
                         <td>
                             ${student["studentFullName"]}
@@ -175,21 +168,27 @@ function setStudentsInOrder() {
                             ${student["groupName"]}
                         </td>
                         <td id ="${stdId + identityExcludedPostfix}">
-                            <button id ="${stdId + excludePostfix}">
+                            <button id ="${stdId + excludePostfix}" class="standard-button-sec">
                                 Исключить
                             </button>
                         </td>
                     </tr>
                     `
-                );
-                $("#" + stdId + excludePostfix).on("click", function () {
-                    let studentAssociated = studentClosure;
-                    this.remove();
-                    $("#" + stdId + identityExcludedPostfix).append(
-                        "<p>Будет исключен<p>"
-                    )
-                    studentAssociated.removed = true;
-                });
+                    );
+                if (isClosedForDeletion) {
+                    $("#" + stdId + identityExcludedPostfix).remove();
+                }
+                else {
+                    // нужно не создавать ноду, а не удалять кнопку после создания
+                    $("#" + stdId + excludePostfix).on("click", function () {
+                        let studentAssociated = studentClosure;
+                        this.remove();
+                        $("#" + stdId + identityExcludedPostfix).append(
+                            "<p>Будет исключен<p>"
+                        )
+                        studentAssociated.removed = true;
+                    });
+                }
             });
         }
     });
@@ -281,7 +280,9 @@ $("#save_changes").on("click", function () {
             alert("Сохранение новых студентов прошло успешно")
         },
         error: function (response, a, b) {
-            utils.readAndSetErrors(response)
+            if (!studentsInOrder.find(x => x.removed)) {
+                utils.readAndSetErrors(response)
+            }
         }
     });
 

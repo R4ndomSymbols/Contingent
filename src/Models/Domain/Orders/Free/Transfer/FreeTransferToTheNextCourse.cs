@@ -77,7 +77,16 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
         {
 
             var history = move.Student.GetHistory(scope);
-            var currentGroup = history.GetCurrentGroup();
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(move.Student));
+            }
+            if (!history.IsStudentEnlisted())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", move.Student));
+            }
+
+            var currentGroup = history.GetLastGroup();
             if (currentGroup is null)
             {
                 return ResultWithoutValue.Failure(
@@ -87,9 +96,7 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
                 );
             }
             var targetGroup = move.GroupTo;
-            var groupCheck = targetGroup.GetRelationTo(currentGroup) == Groups.GroupRelations.DirectChild
-            && targetGroup.SponsorshipType.IsFree();
-            if (!groupCheck)
+            if (!(targetGroup.GetRelationTo(currentGroup) == Groups.GroupRelations.DirectChild))
             {
                 return ResultWithoutValue.Failure(new OrderValidationError(
                     string.Format(
@@ -104,7 +111,6 @@ public class FreeTransferToTheNextCourseOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var transfer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(transfer);
         if (result.IsFailure)

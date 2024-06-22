@@ -18,7 +18,7 @@ function init() {
     russianCitizenshipId = Number($("#RussianCitizenshipId").attr("assigned_id"))
     legalAddress = Number($("#RussianLegalAddressId").attr("assigned_id"))
     // получает все уровни образования, имеющиеся у студента
-    if (studentId != utils.INVALID_ID) {
+    if (utils.isValidId(studentId)) {
         utils.disableField("PaidAgreementType");
     }
 

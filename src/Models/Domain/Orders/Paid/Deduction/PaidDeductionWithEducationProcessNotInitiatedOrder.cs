@@ -62,7 +62,7 @@ public class PaidDeductionWithEducationProcessNotInitiatedOrder : AdditionalCont
     {
         return OrderTypes.PaidDeductionWithEducationProcessNotInitiated;
     }
-
+    // достаточно того, что студент зачислен
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var record in _whoDisregard)

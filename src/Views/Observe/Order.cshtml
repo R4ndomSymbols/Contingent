@@ -1,17 +1,21 @@
 @using Contingent.Models.Domain;
 @using Contingent.Models.Domain.Orders.OrderData;
+@using Contingent.Models.Domain.Orders;
 @using Contingent.Utilities;
 @model Contingent.Controllers.DTO.Out.OrderSearchDTO;
 
 @{
     ViewData["Title"] = "Просмотр приказа";
-    IEnumerable<OrderTypeInfo> types = OrderTypeInfo.GetAllTypes();
+    OrderTypeInfo type = OrderTypeInfo.GetByType((OrderTypes)Model.OrderType);
+    string typeName = type.FrontendGroupBehavior.ToString();
 }
 
 <div class="page-layout-container d-flex flex-column">
-    <div id="order_info" order_id="@Model.OrderId"></div>
+    <div id="order_info" order_id="@Model.OrderId" is_closed_for_deletion="@Model.IsClosed" display_type="@typeName">
+    </div>
     @{
         string orderOrgId = "№" + Model.OrderOrgId + " от " + Model.OrderSpecifiedDate;
+
     }
     <div class="d-flex flex-row">
         <h3 class="group-title">
@@ -23,7 +27,7 @@
         <div>
             @if (Model.IsClosed)
             {
-                <h4 class="text-danger">Закрыт</h4>
+                <h4 class="text-danger">Закрыт для удаления</h4>
             }
             else
             {
@@ -75,16 +79,25 @@
 
         </div>
         <button class="standard-button-prim" id="delete_history">
-            УДАЛИТЬ ИСТОРИЮ ПРИКАЗА
+            УДАЛИТЬ ИСТОРИЮ ПРИКАЗА И ОТКРЫТЬ
         </button>
     </div>
     <div class="d-flex">
         <table class="table flex-fill">
             <thead>
-                <th scope="col" style="width: 20%;">Номер в поименной книге</th>
-                <th scope="col" class="width: 60%">ФИО</th>
-                <th scope="col" style="width: 10%">Группа откуда</th>
-                <th scope="col" style="width: 10%">Группа куда</th>
+                <th scope="col">Номер в поименной книге</th>
+                <th scope="col">ФИО</th>
+                <th scope="col">Группа откуда</th>
+                @if (type.FrontendGroupBehavior == OrderTypeInfo.GroupDisplayBehavior.MustChange)
+                {
+                    <th scope="col">Группа куда</th>
+                }
+                @if (type.FrontendGroupBehavior == OrderTypeInfo.GroupDisplayBehavior.PeriodInput)
+                {
+                    <th scope="col">С</th>
+                    <th scope="col">До</th>
+                }
+                <th scope="col">Действие</th>
             </thead>
             <tbody id="students_in_order">
 

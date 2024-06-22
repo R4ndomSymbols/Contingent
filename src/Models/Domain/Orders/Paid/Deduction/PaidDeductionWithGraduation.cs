@@ -62,12 +62,22 @@ public class PaidDeductionWithGraduationOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidDeductionWithGraduation;
     }
-
+    // студент должен быть зачислен
+    // его группа должна быть выпускной
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _graduates)
         {
-            var group = student.Student.GetHistory(scope).GetCurrentGroup();
+            var history = student.Student.GetHistory(scope);
+            if (!history.IsStudentEnlisted())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", student.Student));
+            }
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(student.Student));
+            }
+            var group = history.GetLastGroup();
             var check = group is not null && group.IsGraduationGroup();
             if (!check)
             {

@@ -65,16 +65,21 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
     {
         foreach (var move in _transfer)
         {
+
             var history = move.Student.GetHistory(scope);
+            if (!history.IsStudentEnlisted())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", move.Student));
+            }
             var group = move.GroupTo;
-            var groupCheck = group.GetRelationTo(history.GetCurrentGroup()) == Groups.GroupRelations.DirectChild;
+            var groupCheck = group.GetRelationTo(history.GetLastGroup()) == Groups.GroupRelations.DirectChild;
             // группа студента элиминирует почти все проверки:
             // она null, если он не зачислен
             if (!groupCheck)
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        "студент имеет недопустимый статус или группа указана неверно", move.Student)
+                        "группа указана неверно", move.Student)
                     );
             }
         }
@@ -83,7 +88,6 @@ public class PaidTransferNextCourseOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var transferer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(transferer);
         if (result.IsFailure)

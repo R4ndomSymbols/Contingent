@@ -4,6 +4,7 @@ using Contingent.SQL;
 using Contingent.Utilities;
 using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
+using Contingent.Models.Domain.Citizenship;
 
 
 namespace Contingent.Models.Domain.Flow;
@@ -57,8 +58,7 @@ public static class FlowHistory
         QueryLimits limits,
         HistoryExtractSettings queryParameters,
         ComplexWhereCondition? additionalFilter = null,
-        SQLParameterCollection? parameters = null,
-        DateTime? before = null
+        SQLParameterCollection? parameters = null
         )
     {
         string alias = "stdflow";
@@ -144,7 +144,7 @@ public static class FlowHistory
 
         ComplexWhereCondition basicFilter = ComplexWhereCondition.Empty;
         var sqlParameters = parameters ?? new SQLParameterCollection();
-        if (queryParameters.ExtractAbsoluteLastState)
+        if (queryParameters.ExtractOnlyLastState)
         {
             basicFilter = basicFilter.Unite(ComplexWhereCondition.ConditionRelation.AND,
              new ComplexWhereCondition(
@@ -222,26 +222,43 @@ public static class FlowHistory
         var historyMapper = StudentFlowRecord.GetMapper(
             orderMapper, groupMapper, studentMapper
         );
+        OrderByCondition? orderBy = null;
+        if (queryParameters.OverallHistorical)
+        {
+            orderBy = new OrderByCondition(
+                new Column("id", "student_flow"),
+                OrderByCondition.OrderByTypes.DESC, false
+            );
+        }
+        if (queryParameters.SortByStudentNames)
+        {
+            orderBy = RussianCitizenship.GetSortByNameAsc();
+        }
+        if (queryParameters.ExtractOnDate is not null)
+        {
+            basicFilter = basicFilter.Unite(
+                ComplexWhereCondition.ConditionRelation.AND,
+                new ComplexWhereCondition(
+                    new WhereCondition(
+                        new Column("effective_date", "orders"),
+                        sqlParameters.Add(queryParameters.ExtractOnDate.Value),
+                        WhereCondition.Relations.LessOrEqual
+                    )
+                )
+            );
+        }
 
         var query =
         // последнее состояние исключает неуникальность студентов
-        (queryParameters.ExtractStudentUnique ?
-        SelectQuery<StudentFlowRecord>.Init("student_flow", new Column("id", "students"))
-        : SelectQuery<StudentFlowRecord>.Init("student_flow"))
+        SelectQuery<StudentFlowRecord>.Init("student_flow")
         .AddMapper(historyMapper)
         .AddJoins(historyMapper.PathTo)
         .AddWhereStatement(basicFilter)
-        .AddOrderByStatement(
-            queryParameters.OverallHistorical ?
-            new OrderByCondition(
-                new Column("id", "student_flow"),
-                OrderByCondition.OrderByTypes.DESC, false
-            ) : null
-        )
+        .AddOrderByStatement(orderBy)
         .AddParameters(sqlParameters)
         .Finish().ResultObject;
         using var conn = await Utils.GetAndOpenConnectionFactory();
-        return await query.Execute(conn, limits, queryParameters.Transaction, queryParameters.SuppressLogs);
+        return await query.Execute(conn, limits, queryParameters.Transaction, false);
     }
 
     public static IEnumerable<StudentFlowRecord> GetRecordsByFilter(QueryLimits limits, HistoryExtractSettings settings, ComplexWhereCondition? specific = null, SQLParameterCollection? parameters = null)
@@ -258,13 +275,15 @@ public static class FlowHistory
         using var conn = Utils.GetAndOpenConnectionFactory().Result;
         string cmdText = "DELETE FROM student_flow WHERE id = ANY(@p1)";
         NpgsqlCommand cmd;
-        if (scope is not null){
+        if (scope is not null)
+        {
             cmd = new NpgsqlCommand(cmdText, scope.Connection, scope.Transaction);
         }
-        else{
+        else
+        {
             cmd = new NpgsqlCommand(cmdText, conn);
         }
-         
+
         var p = new NpgsqlParameter();
         p.ParameterName = "p1";
         p.Value = ids.ToArray();
@@ -285,8 +304,7 @@ public enum OrderRelationMode
 
 public class HistoryExtractSettings
 {
-    private bool _extractLastState;
-    private bool _extractStudentUnique;
+    private bool _extractOnlyLastState;
     private (Order model, OrderRelationMode mode)? _extractByOrder;
     private StudentModel? _extractByStudent;
     private GroupModel? _extractByGroup;
@@ -294,21 +312,37 @@ public class HistoryExtractSettings
     private bool _extractGroups;
     private bool _extractStudent;
     private bool _overallHistorical;
+    private bool _orderByStudentName;
+    // получение истории на дату
+    // использовать этот параметр как условие для поиска без максимума даты, т.е. вся история
+    private DateTime? _onDate;
     // последнее состояние студента
-    public bool ExtractAbsoluteLastState
+    public bool ExtractOnlyLastState
     {
-        get => _extractLastState;
+        get => _extractOnlyLastState;
         set
         {
-            _extractLastState = value;
+            if (value)
+            {
+                // невозможно получить последнее состояние с ограничением по дате
+                ExtractOnDate = null;
+            }
+            _extractOnlyLastState = value;
         }
     }
-    public bool ExtractStudentUnique
+
+    public DateTime? ExtractOnDate
     {
-        get => _extractStudentUnique;
+        get => _onDate;
         set
         {
-            _extractStudentUnique = value;
+            if (value is not null)
+            {
+                ExtractOrders = true;
+                ExtractByOrder = null;
+                ExtractOnlyLastState = false;
+            }
+            _onDate = value;
         }
     }
 
@@ -403,18 +437,32 @@ public class HistoryExtractSettings
         }
     }
 
+    public bool SortByStudentNames
+    {
+        get => _orderByStudentName;
+        set
+        {
+            if (value)
+            {
+                OverallHistorical = false;
+                ExtractByStudent = null;
+            }
+            _orderByStudentName = value;
+        }
+    }
+
     public ObservableTransaction? Transaction { get; set; }
     public bool SuppressLogs;
     public HistoryExtractSettings()
     {
         SuppressLogs = false;
-        _extractLastState = false;
-        _extractStudentUnique = false;
+        ExtractOnlyLastState = false;
         ExtractByOrder = null;
         ExtractAddress = (false, false);
         ExtractOrders = false;
         ExtractByStudent = null;
         IncludeNotRegisteredStudents = false;
+        SortByStudentNames = false;
     }
 
 }

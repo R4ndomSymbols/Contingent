@@ -77,7 +77,7 @@ public class FlowImport : ImportCSV
         // по дате, чтобы импортировать последовательно
         // в добавок, из-за механизма кеширования истории студентов, все студенты в приказах должны быть разными
         // даже если у них один и тот же ID
-        _ordersToConduct.Sort(Order.OrderByEffectiveDateComparison);
+        _ordersToConduct.Sort(Order.OrderByEffectiveDateComparisonAsc);
         Console.WriteLine("ЧИСЛО ПРИКАЗОВ " + _ordersToConduct.Count);
         foreach (var order in _ordersToConduct)
         {

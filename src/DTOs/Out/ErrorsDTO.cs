@@ -16,10 +16,7 @@ public class ErrorCollectionDTO
 
     public ErrorCollectionDTO(IEnumerable<ValidationError>? errors)
     {
-        if (errors is null)
-        {
-            throw new ArgumentNullException(nameof(errors));
-        }
+        ArgumentNullException.ThrowIfNull(errors);
         var transform = new List<ErrorDTO>();
         foreach (var e in errors)
         {
@@ -62,7 +59,7 @@ public static class ErrorCollectionDTOExtensions
         return new ErrorCollectionDTO(error);
     }
 
-    public static ErrorCollectionDTO AsErrorCollection(this IEnumerable<ValidationError?> errors)
+    public static ErrorCollectionDTO AsErrorCollection(this IEnumerable<ValidationError> errors)
     {
         return new ErrorCollectionDTO(errors);
     }

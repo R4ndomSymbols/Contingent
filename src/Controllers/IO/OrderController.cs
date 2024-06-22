@@ -162,7 +162,7 @@ public class OrderController : Controller
             var history = record.StudentNullRestrict.GetHistory(transaction);
             var byAnchor = history.GetByOrder(order);
             var previous = history.GetClosestBefore(order);
-            studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.StudentNullRestrict, byAnchor?.GroupTo, previous?.GroupTo, order));
+            studentMovesHistoryRecords.Add(new StudentHistoryMoveDTO(record.StudentNullRestrict, byAnchor?.GroupTo, previous?.GroupTo, order, record.StatePeriod));
         }
         return Json(studentMovesHistoryRecords);
     }

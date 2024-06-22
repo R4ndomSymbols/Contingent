@@ -4,52 +4,61 @@ using Contingent.Models.Domain.Address;
 using Contingent.Models.Domain.Flow;
 using Contingent.SQL;
 using Contingent.Statistics.Tables.Headers;
+using Contingent.Models.Infrastructure;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Domain.Orders.OrderData;
 
 namespace Contingent.Statistics.Tables;
 
 
 public class AddressTable : ITable
 {
-    private StatisticTable<StudentFlowRecord> _model;
+    private StatisticTable<StudentModel> _model;
     public string DisplayedName => _model.TableName;
-    public string Html => _model.ToHtmlTable();
+    public string HtmlContent => _model.ToHtmlTable();
+    public Period StatisticPeriod { get; set; }
 
-    public AddressTable()
+    public AddressTable(Period statsPeriod)
     {
+        if (!statsPeriod.IsOneMoment())
+        {
+            throw new Exception("Адресация возможна только на дату");
+        }
+        StatisticPeriod = statsPeriod;
         // горизонтальная шапка таблицы
-        var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
-        var addressHeader1 = new ColumnHeaderCell<StudentFlowRecord>(
+        var verticalRoot = new ColumnHeaderCell<StudentModel>();
+        var addressHeader1 = new ColumnHeaderCell<StudentModel>(
             "Субъект федерации (прописка)",
             verticalRoot
 
         );
-        var addressHeader2 = new ColumnHeaderCell<StudentFlowRecord>(
+        var addressHeader2 = new ColumnHeaderCell<StudentModel>(
             "Район субъекта (прописка)",
             verticalRoot
 
         );
         for (int i = 1; i <= 4; i++)
         {
-            var courseBlock = TemplateHeaders.GetBaseCourseHeader<StudentFlowRecord>(
+            var courseBlock = TemplateHeaders.GetBaseCourseHeader<StudentModel>(
                 i,
-                (StudentFlowRecord s) => s.Student,
-                (StudentFlowRecord s) => s.GroupTo,
+                (StudentModel s) => s,
+                (StudentModel s) => s.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.End),
                 verticalRoot
             );
         }
         // вертикальная шапка таблицы
-        var horizontalRoot = new RowHeaderCell<StudentFlowRecord>();
+        var horizontalRoot = new RowHeaderCell<StudentModel>();
         var allRegions = AddressModel.FindByAddressLevel(FederalSubject.ADDRESS_LEVEL, null).Select(x => FederalSubject.Create(x));
         foreach (var reg in allRegions)
         {
-            var regHeader = new RowHeaderCell<StudentFlowRecord>(
+            var regHeader = new RowHeaderCell<StudentModel>(
                 reg.ToString(),
                 horizontalRoot,
-                new Filter<StudentFlowRecord>(
+                new Filter<StudentModel>(
                     (source) => source.Where(
                         model =>
                         {
-                            var got = model?.Student?.RussianCitizenship?.LegalAddress;
+                            var got = model?.RussianCitizenship?.LegalAddress;
                             if (got is null)
                             {
                                 return false;
@@ -61,22 +70,23 @@ public class AddressTable : ITable
             );
             // добавление к дерево происходит неявно
             TemplateHeaders.GetAddressRowHeader(
-                (StudentFlowRecord s) => s.Student?.RussianCitizenship?.LegalAddress,
+                (StudentModel s) => s?.RussianCitizenship?.LegalAddress,
                 reg.GetDescendants(null),
                 regHeader
             );
         }
-        var horizontalHeader = new TableColumnHeader<StudentFlowRecord>(
+        var horizontalHeader = new TableColumnHeader<StudentModel>(
             verticalRoot, false
         );
-        var verticalHeader = new TableRowHeader<StudentFlowRecord>(
+        var verticalHeader = new TableRowHeader<StudentModel>(
             horizontalRoot,
             horizontalHeader,
             false
         );
-        var source = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000), (false, true));
-        _model = new StatisticTable<StudentFlowRecord>(horizontalHeader, verticalHeader, source, "Распределение студентов по прописке");
+        var source = StudentHistory.GetStudentByOrderState(StatisticPeriod.End,
+        OrderTypeInfo.EnrollmentTypes,
+        OrderTypeInfo.DeductionTypes,
+        null);
+        _model = new StatisticTable<StudentModel>(horizontalHeader, verticalHeader, source, "Распределение студентов по прописке");
     }
-
-
 }

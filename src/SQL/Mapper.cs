@@ -36,7 +36,7 @@ public class Mapper<T> : Mapper, IQueryPart
         {
             return _replacer.Invoke();
         }
-        return _map.Invoke(reader);
+        return _map!.Invoke(reader);
     }
 
     public string AsSQLText(Column distinctOn)

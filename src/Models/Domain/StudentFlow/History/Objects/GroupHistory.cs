@@ -39,7 +39,8 @@ public class GroupHistory
             {
                 ExtractByGroup = _historySubject,
                 ExtractOrders = true,
-                ExtractStudents = true
+                ExtractStudents = true,
+                SortByStudentNames = true
             }
         );
         return found.ToList();

@@ -64,15 +64,24 @@ public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
     {
         return OrderTypes.FreeTransferFromPaidToFree;
     }
-
+    // для этого приказа необходимо
+    // студент должен быть зачислен
+    // студент не должен быть в академе
+    // группа куда - бесплатная
+    // группа откуда - платная
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var move in _transfer)
         {
             var history = move.Student.GetHistory(scope);
-            var groupNow = history.GetCurrentGroup();
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(move.Student));
+            }
+            var groupNow = history.GetLastGroup();
             var groupTo = move.GroupTo;
             var groupCheck =
+                //группы не должны быть связаны
                 groupNow is not null && groupNow.GetRelationTo(groupTo) == Groups.GroupRelations.None
                 && groupTo.CreationYear == groupNow.CreationYear
                 && groupTo.CourseOn == groupNow.CourseOn
@@ -83,7 +92,7 @@ public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
             {
                 return ResultWithoutValue.Failure(
                     new OrderValidationError(
-                        "студента нельзя перевести на бесплатное либо группа указана неверно", move.Student)
+                        "студента нельзя перевести на бюджет либо группа указана неверно", move.Student)
                     );
             }
         }
@@ -92,7 +101,6 @@ public class FreeTransferFromPaidToFreeOrder : FreeContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var transferer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(transferer);
         if (result.IsFailure)

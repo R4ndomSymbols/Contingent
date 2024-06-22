@@ -102,9 +102,9 @@ public class StudentSearchController : Controller
                 ExtractGroups = true,
                 ExtractOrders = false,
                 ExtractStudents = true,
-                ExtractStudentUnique = true,
-                ExtractAbsoluteLastState = true,
+                ExtractOnlyLastState = true,
                 IncludeNotRegisteredStudents = true,
+                SortByStudentNames = true,
                 // source никогда не будет null 
                 ExtractByOrder = (byOrder is null) ? null : (byOrder, dto.Source!.OrderMode == OrderRelationMode.OnlyIncluded.ToString() ? OrderRelationMode.OnlyIncluded : OrderRelationMode.OnlyExcluded),
 

@@ -52,12 +52,11 @@ public class FreeAcademicVacationSendOrder : FreeContingentOrder
     {
         throw new NotImplementedException();
     }
-
+    // для данного приказа студент должен быть зачислен
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _toSendToVacation)
         {
-            // для данного приказа студент должен быть зачислен
             var studentState = student.Student.GetHistory(scope);
             if (!studentState.IsStudentEnlisted())
             {

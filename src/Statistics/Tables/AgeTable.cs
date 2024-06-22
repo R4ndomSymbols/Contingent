@@ -3,17 +3,28 @@ using Contingent.Models.Domain.Students;
 using Contingent.Models.Domain.Groups;
 using Contingent.Models.Domain.Specialties;
 using Contingent.SQL;
+using Contingent.Models.Infrastructure;
+using Microsoft.AspNetCore.Http.Features;
+using Contingent.Models.Domain.Orders.OrderData;
 
 namespace Contingent.Statistics.Tables;
 
+// таблица возрастов
 public class AgeTable : ITable
 {
-    private StatisticTable<StudentFlowRecord> _model;
+    private StatisticTable<StudentModel> _model;
     public string DisplayedName => _model.TableName;
-    public string Html => _model.ToHtmlTable();
-    public AgeTable(TrainingProgramTypes type)
+    public string HtmlContent => _model.ToHtmlTable();
+    public Period StatisticPeriod { get; set; }
+    public AgeTable(TrainingProgramTypes type, Period statsPeriod)
     {
-        var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
+        if (!statsPeriod.IsOneMoment())
+        {
+            Console.WriteLine(statsPeriod.ToString());
+            throw new Exception("Возраст считается на день");
+        }
+        StatisticPeriod = statsPeriod;
+        var verticalRoot = new ColumnHeaderCell<StudentModel>();
         /*
         var specialitiesFilter = new ConstrainedColumnHeaderCell("Программы подготовки специалистов среднего звена",
             new ComplexWhereCondition(
@@ -21,70 +32,69 @@ public class AgeTable : ITable
             new Column("specialities", "specialities"),  WhereCondition.Relations.Equal,))
         */
         // 1 уровень
-        var parameterNameCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+        var parameterNameCell1 = new ColumnHeaderCell<StudentModel>(
             "Наименование показателей",
             verticalRoot
         );
-        var rowNumberCell = new ColumnHeaderCell<StudentFlowRecord>(
+        var rowNumberCell = new ColumnHeaderCell<StudentModel>(
             "№ строки",
             verticalRoot
         );
 
-        var trTypeFilter1 = new Filter<StudentFlowRecord>(
+        var trTypeFilter1 = new Filter<StudentModel>(
             (recs) =>
                 recs.Where(
-                    rec =>
+                    student =>
                     {
 
-                        var result = rec.GroupTo?.EducationProgram;
+                        var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.End);
                         if (result is null)
                         {
                             return false;
                         }
-                        return result.ProgramType.Type == TrainingProgramTypes.QualifiedWorker;
+                        return result.EducationProgram.ProgramType.Type == TrainingProgramTypes.QualifiedWorker;
                     }
                 )
         );
 
-
-        ColumnHeaderCell<StudentFlowRecord>? trTypeCell1 = null;
+        ColumnHeaderCell<StudentModel>? trTypeCell1 = null;
         switch (type)
         {
             case TrainingProgramTypes.QualifiedWorker:
-                trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+                trTypeCell1 = new ColumnHeaderCell<StudentModel>(
                     "Квалифицированные рабочие, служащие",
                     verticalRoot,
-                    new Filter<StudentFlowRecord>(
+                    new Filter<StudentModel>(
                     (recs) =>
                         recs.Where(
-                            rec =>
+                            student =>
                             {
 
-                                var result = rec.GroupTo?.EducationProgram;
+                                var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
                                 if (result is null)
                                 {
                                     return false;
                                 }
-                                return result.ProgramType.Type == TrainingProgramTypes.QualifiedWorker;
+                                return result.EducationProgram.ProgramType.IsQualifiedWorker();
                             }
                         )));
                 break;
             case TrainingProgramTypes.GenericSpecialist:
-                trTypeCell1 = new ColumnHeaderCell<StudentFlowRecord>(
+                trTypeCell1 = new ColumnHeaderCell<StudentModel>(
                      "Специалисты среднего звена",
                      verticalRoot,
-                     new Filter<StudentFlowRecord>(
+                     new Filter<StudentModel>(
                      (recs) =>
                          recs.Where(
-                             rec =>
+                             student =>
                              {
 
-                                 var result = rec.GroupTo?.EducationProgram;
+                                 var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
                                  if (result is null)
                                  {
                                      return false;
                                  }
-                                 return result.ProgramType.Type == TrainingProgramTypes.GenericSpecialist;
+                                 return result.EducationProgram.ProgramType.IsGenericSpecialist();
                              }
                          )));
                 break;
@@ -92,11 +102,12 @@ public class AgeTable : ITable
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
         // 2 уровень
-        var baseEduFilter2 = new Filter<StudentFlowRecord>(
+        var baseEduFilter2 = new Filter<StudentModel>(
             (students) => students.Where((std) =>
             {
 
-                var result = std.GroupTo?.EducationProgram;
+                var result = std.GetHistory(null, statsPeriod.End).
+                    GetGroupOnDate(StatisticPeriod.Start)?.EducationProgram;
                 if (result is null)
                 {
                     return false;
@@ -104,16 +115,18 @@ public class AgeTable : ITable
                 return result.EducationalLevelIn.LevelCode == LevelsOfEducation.BasicGeneralEducation;
             })
         );
-        var baseEduCell2 = new ColumnHeaderCell<StudentFlowRecord>(
+        var baseEduCell2 = new ColumnHeaderCell<StudentModel>(
             "На базе основного общего образования",
             trTypeCell1,
             baseEduFilter2
         );
-        var midEduFilter2 = new Filter<StudentFlowRecord>(
+        var midEduFilter2 = new Filter<StudentModel>(
             (students) => students.Where((std) =>
             {
 
-                var result = std.GroupTo?.EducationProgram;
+                var result = std.GetHistory(null, statsPeriod.End)
+                    .GetGroupOnDate(StatisticPeriod.Start)?
+                    .EducationProgram;
                 if (result is null)
                 {
                     return false;
@@ -121,7 +134,7 @@ public class AgeTable : ITable
                 return result.EducationalLevelIn.LevelCode == LevelsOfEducation.SecondaryGeneralEducation;
             })
         );
-        var midEduCell2 = new ColumnHeaderCell<StudentFlowRecord>(
+        var midEduCell2 = new ColumnHeaderCell<StudentModel>(
             "На базе среднего общего образования",
             trTypeCell1,
             midEduFilter2
@@ -129,112 +142,96 @@ public class AgeTable : ITable
 
         // 3 уровень
         // на базе основного общего
-        var enlistedFilter3 = new Filter<StudentFlowRecord>(
+        var womanFilter3 = new Filter<StudentModel>(
             (students) => students.Where(std =>
             {
-                return std.StudentNullRestrict.GetHistory(null).IsStudentEnlisted();
+                return std.IsFemale;
             })
         );
-        var enlistedWomanFilter3 = new Filter<StudentFlowRecord>(
-            (students) => students.Where(std =>
-            {
-                return std.StudentNullRestrict.Gender == Genders.GenderCodes.Female;
-            })
-        ).Include(enlistedFilter3);
 
-        var studyingFilter3 = new Filter<StudentFlowRecord>(
-            (students) => students.Where(std =>
-            {
-                return std.StudentNullRestrict.GetHistory(null).IsStudentEnlisted() && std.GroupTo?.FormatOfEducation.FormatType == GroupEducationFormatTypes.FullTime;
-            })
-        );
-        var studyingWomanFilter3 = new Filter<StudentFlowRecord>(
-            (students) => students.Where(std =>
-            {
-                return std.StudentNullRestrict.Gender == Genders.GenderCodes.Female;
-            })
-        ).Include(studyingFilter3);
-
-        var enlistedCell3 = new ColumnHeaderCell<StudentFlowRecord>(
-            "Принято",
-            baseEduCell2,
-            enlistedFilter3
-        );
-        var enlistedWomanCell3 = new ColumnHeaderCell<StudentFlowRecord>(
-            "Из них женщины",
-            baseEduCell2,
-            enlistedWomanFilter3
-        );
-        var studyingCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var studyingCell3 = new ColumnHeaderCell<StudentModel>(
             "Численность студентов",
             baseEduCell2,
-            studyingFilter3
+            Filter<StudentModel>.Empty
         );
-        // студенты выпускных курсов
-        var graduatesFilter3 = new Filter<StudentFlowRecord>(
-            (students) => students.Where(
+        var enlistedWomanCell3 = new ColumnHeaderCell<StudentModel>(
+            "Из них женщины",
+            baseEduCell2,
+            womanFilter3
+        );
 
-                std => std.GroupTo?.CourseOn == std.GroupTo?.EducationProgram.CourseCount
+        // студенты выпускных курсов
+        var graduatesFilter3 = new Filter<StudentModel>(
+            (students) => students.Where(
+                (std) =>
+                {
+                    var group = std.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
+                    if (group is null)
+                    {
+                        return false;
+                    }
+                    return group.EducationProgram.CourseCount == group.CourseOn;
+                }
             )
         );
-        var graduatesFemaleFilter3 = new Filter<StudentFlowRecord>(
+        var graduatesFemaleFilter3 = new Filter<StudentModel>(
             (students) => students.Where(
-                std => std.StudentNullRestrict.IsFemale
+                std => std.IsFemale
             )
         ).Include(graduatesFilter3);
 
-        var graduatedCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var graduatedCell3 = new ColumnHeaderCell<StudentModel>(
             "Планируемый выпуск",
             baseEduCell2,
             graduatesFilter3
         );
-        var graduatedFemaleCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var graduatedFemaleCell3 = new ColumnHeaderCell<StudentModel>(
             "Из них женщины",
             baseEduCell2,
             graduatesFemaleFilter3
         );
 
         // 2 часть 3 уровень
-        var elnistedSecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var enlistedSecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Принято",
             midEduCell2,
-            enlistedFilter3
+            Filter<StudentModel>.Empty
         );
-        var enlistedWomanSecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var enlistedWomanSecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Из них женщины",
             midEduCell2,
-            enlistedWomanFilter3
+            womanFilter3
         );
-        var studySecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var studySecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Численность студентов",
             midEduCell2,
-            studyingFilter3
+            Filter<StudentModel>.Empty
         );
-        var studyingFemaleSecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var studyingFemaleSecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Из них женщины",
             midEduCell2,
-            graduatesFilter3
+            womanFilter3
         );
-        var graduatedSecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var graduatedSecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Планируемый выпуск",
             midEduCell2,
             graduatesFilter3
         );
-        var graduatedFemaleSecondCell3 = new ColumnHeaderCell<StudentFlowRecord>(
+        var graduatedFemaleSecondCell3 = new ColumnHeaderCell<StudentModel>(
             "Из них женщины",
             midEduCell2,
             graduatesFemaleFilter3
         );
 
-        var horizontalRoot = new RowHeaderCell<StudentFlowRecord>();
-        var ageDate = new DateTime(DateTime.Now.Year, 1, 1);
-        var youngerThan13Filter = new Filter<StudentFlowRecord>(
+        var horizontalRoot = new RowHeaderCell<StudentModel>();
+        var ageDate = StatisticPeriod.End;
+        var youngerThan13Filter = new Filter<StudentModel>(
             (students) => students.Where(std =>
             {
-                return std.StudentNullRestrict.GetAgeOnDate(ageDate) < 13;
+                return std.GetAgeOnDate(ageDate) < 13;
             })
         );
-        var youngerThan13Cell = new RowHeaderCell<StudentFlowRecord>(
+        var youngerThan13Cell = new RowHeaderCell<StudentModel>(
             "Моложе 13 лет",
             horizontalRoot,
             youngerThan13Filter
@@ -242,29 +239,31 @@ public class AgeTable : ITable
         for (int i = 14; i <= 30; i++)
         {
             var scoped = i;
-            var ageFilter = new Filter<StudentFlowRecord>(
+            var ageFilter = new Filter<StudentModel>(
                 (students) => students.Where(std =>
                 {
-                    return std.StudentNullRestrict.GetAgeOnDate(ageDate) == scoped;
+                    return std.GetAgeOnDate(ageDate) == scoped;
                 })
             );
-            var ageCell = new RowHeaderCell<StudentFlowRecord>(
+            var ageCell = new RowHeaderCell<StudentModel>(
                 scoped.ToString() + " лет",
                 horizontalRoot,
                 ageFilter
             );
         }
-        var finalAgeCell = new RowHeaderCell<StudentFlowRecord>(
+        var finalAgeCell = new RowHeaderCell<StudentModel>(
             "Старше 30 лет",
             horizontalRoot,
-            new Filter<StudentFlowRecord>(
-                (students) => students.Where(std => std.StudentNullRestrict.GetAgeOnDate(ageDate) > 30)
+            new Filter<StudentModel>(
+                (students) => students.Where(std => std.GetAgeOnDate(ageDate) > 30)
             )
         );
-        var found = StudentHistory.GetLastRecordsForManyStudents(new QueryLimits(0, 2000), (false, false));
-        var verticalHeader = new TableColumnHeader<StudentFlowRecord>(verticalRoot, true);
-        var horizontalHeader = new TableRowHeader<StudentFlowRecord>(horizontalRoot, verticalHeader, true);
-        _model = new StatisticTable<StudentFlowRecord>(verticalHeader, horizontalHeader, found, "Характеристика контингента");
+        var source = StudentHistory.GetStudentByOrderState(statsPeriod.End,
+            OrderTypeInfo.EnrollmentTypes,
+            OrderTypeInfo.DeductionTypes,
+        null);
+        var verticalHeader = new TableColumnHeader<StudentModel>(verticalRoot, true);
+        var horizontalHeader = new TableRowHeader<StudentModel>(horizontalRoot, verticalHeader, true);
+        _model = new StatisticTable<StudentModel>(verticalHeader, horizontalHeader, source, "Характеристика контингента");
     }
-
 }

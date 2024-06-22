@@ -66,14 +66,20 @@ public class FreeDeductionWithGraduationOrder : FreeContingentOrder
         base.Save(scope);
     }
     // выпускная группа
+    // не академический отпуск
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var graduate in _graduates)
         {
-            var group = graduate.Student.GetHistory(scope).GetCurrentGroup();
+            var history = graduate.Student.GetHistory(scope);
+            if (!history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(graduate.Student));
+            }
+            var group = history.GetLastGroup();
             if (group is null || !group.IsGraduationGroup())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент не учится в выпуской группе", graduate.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не учится в выпускной группе", graduate.Student));
             }
         }
         return ResultWithoutValue.Success();

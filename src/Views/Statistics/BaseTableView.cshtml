@@ -1,16 +1,66 @@
 @using Contingent.Statistics.Tables;
 @using Contingent.Models.Domain.Flow;
-
-@model ITable;
-
 @{
-    ViewData["Title"] = Model.DisplayedName;
-    string tableAges = Model.Html;
+    ViewData["Title"] = "Статистика";
+    string startOnly = "start_only";
+    string bothDates = "both_dates";
 }
-<h1 class="text-center">
-    @Model.DisplayedName
-</h1>
+<div class="page-layout-container d-flex flex-column">
+    <div class="d-flex flex-row">
+        <h3 class=".group-title">
+            Просмотр статистики
+        </h3>
+        <div class="flex-grow-1">
 
-<div class="table-responsive">
-    @Html.Raw(@tableAges)
+        </div>
+        <button class="standard-button-prim" id="load">
+            Загрузить
+        </button>
+    </div>
+    <div class="item-input-group">
+        <div class="d-flex flex-row mb-2">
+            <div class="d-flex flex-column flex-fill">
+                <h5 class="field-title">
+                    Дата начала периода (обязательно)
+                </h5>
+                <input id="start_date" type="text" class="standard-input error_reset" />
+            </div>
+            <div class="d-flex flex-column flex-fill">
+                <h5 class="field-title">
+                    Дата окончания (только для таблиц по приказам)
+                </h5>
+                <input id="end_date" type="text" class="standard-input error_reset" />
+            </div>
+        </div>
+        <div class="d-flex flex-column">
+            <h5 class="field-title">
+                Тип статистики:
+            </h5>
+            <select class="standard-select error_reset" id="statistic_type">
+                <option value="@startOnly" table_name="undefined">
+                    Не выбрано
+                </option>
+                <option value="@startOnly" table_name="age_qualified">
+                    Половозрастной состав, рабочие и служащие (контингент)
+                </option>
+                <option value="@startOnly" table_name="age_specialist">
+                    Половозрастной состав, специалисты (контингент)
+                </option>
+                <option value="@startOnly" table_name="specialty">
+                    Распределение по специальностям (контингент)
+                </option>
+                <option value="@startOnly" table_name="legalAddress">
+                    Распределение по прописке (контингент)
+                </option>
+            </select>
+        </div>
+        <small class="error-box" id="STATISTIC_ERROR_err">
+
+        </small>
+    </div>
+    <div class="table-responsive mt-2" id="table_view">
+
+    </div>
 </div>
+
+<script type="module" src="~/js/statistics.js"></script>

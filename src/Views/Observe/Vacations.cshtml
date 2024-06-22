@@ -1,0 +1,52 @@
+@using Contingent.Controllers.DTO.Out;
+@using Contingent.Models.Infrastructure;
+@model IEnumerable<StudentHistoryMoveDTO>
+@{
+    var now = DateTime.Now;
+}
+
+<div class="page-layout-container">
+    <h3 class="group-title">
+        Текущие академические отпуска:
+    </h3>
+    <p class="mb-2">
+        Красным отмечены закончившиеся, зеленым - действующие
+    </p>
+    <table class="table">
+        <thead>
+            <th>Номер зачетки</th>
+            <th>ФИО студента</th>
+            <th>Приказ</th>
+            <th>Дата приказа</th>
+            <th>Начало</th>
+            <th>Конец</th>
+        </thead>
+        <tbody>
+            @foreach (var record in Model)
+            {
+                string colorClass = "";
+                Period vacation = record.StatePeriod;
+                @if (vacation.IsWithin(now))
+                {
+                    colorClass = "bg-success";
+                }
+                else if (vacation.Start > now)
+                {
+                    colorClass = "bg-light";
+                }
+                else if (vacation.End < now)
+                {
+                    colorClass = "bg-danger";
+                }
+                <tr class="@colorClass">
+                    <td>@record.GradeBookNumber</td>
+                    <td>@record.StudentFullName</td>
+                    <td>@record.OrderOrgId</td>
+                    <td>@record.OrderSpecifiedDate</td>
+                    <td>@record.StartDate</td>
+                    <td>@record.EndDate</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

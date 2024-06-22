@@ -1,4 +1,6 @@
+using Contingent.DTOs.In;
 using Contingent.Models.Domain.Orders;
+using Contingent.Utilities;
 
 namespace Contingent.Models.Infrastructure;
 
@@ -33,6 +35,11 @@ public class Period
         Start = start;
         End = end;
     }
+    public Period(DateTime start)
+    {
+        Start = start;
+        End = start;
+    }
 
     public static Period GetReportingPeriodByYear(int startYear)
     {
@@ -56,19 +63,63 @@ public class Period
     {
         return date >= Start && date <= End;
     }
+    public bool IsEndedByDate(DateTime date)
+    {
+        return End < date;
+    }
 
     public bool IsEndedNow()
     {
-        return End < DateTime.Now;
+        return IsEndedByDate(DateTime.Now);
     }
     // -1 если не закончился,
     // +n, если закончился в определенном времени в прошлом
     public int GetEndedDaysAgoCount()
     {
-        if (!IsEndedNow())
+        return EndedDaysAgoCount(DateTime.Today);
+    }
+
+    public int EndedDaysAgoCount(DateTime onDate)
+    {
+        if (!IsEndedByDate(onDate))
         {
             return -1;
         }
-        return (DateTime.Now - End).Days;
+        return (onDate - End).Days;
+    }
+
+    public bool IsOneMoment()
+    {
+        return Start.Date == End.Date;
+    }
+
+    public static Result<Period> CreateFromDTO(PeriodDTO? dto)
+    {
+        if (dto is null)
+        {
+            return Result<Period>.Failure(new ValidationError(nameof(dto), "Период не указан"));
+        }
+        if (!Utils.TryParseDate(dto.StartDate, out DateTime start))
+        {
+            return Result<Period>.Failure(new ValidationError(nameof(Start), "Неверно указана дата начала периода"));
+        };
+        if (dto.EndDate is not null)
+        {
+            if (!Utils.TryParseDate(dto.EndDate, out DateTime end))
+            {
+                return Result<Period>.Failure(new ValidationError(nameof(End), "Неверно указана дата окончания периода"));
+            }
+            if (start > end)
+            {
+                return Result<Period>.Failure(new ValidationError(nameof(End), "Дата окончания периода не может быть меньше даты начала"));
+            }
+            return Result<Period>.Success(new Period(start, end));
+        }
+        return Result<Period>.Success(new Period(start));
+    }
+
+    public override string ToString()
+    {
+        return string.Format("{0} - {1}", Start.ToString("dd.MM.yyyy"), End.ToString("dd.MM.yyyy"));
     }
 }

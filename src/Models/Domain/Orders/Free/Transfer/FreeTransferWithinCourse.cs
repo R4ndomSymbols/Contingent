@@ -76,7 +76,16 @@ public class FreeTransferWithinCourseOrder : FreeContingentOrder
     {
         foreach (var move in _moves)
         {
-            var currentStudentGroup = move.Student.GetHistory(scope).GetCurrentGroup();
+            var history = move.Student.GetHistory(scope);
+            if (history.IsStudentSentInAcademicVacation())
+            {
+                return ResultWithoutValue.Failure(new OrderAcademicVacationValidationError(move.Student));
+            }
+            if (!history.IsStudentEnlisted())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", move.Student));
+            }
+            var currentStudentGroup = move.Student.GetHistory(scope).GetLastGroup();
             var conditionsSatisfied = currentStudentGroup is not null &&
                 currentStudentGroup.CourseOn == move.GroupTo.CourseOn
                 && currentStudentGroup.CreationYear == move.GroupTo.CreationYear && move.GroupTo.SponsorshipType.IsFree();
@@ -91,7 +100,6 @@ public class FreeTransferWithinCourseOrder : FreeContingentOrder
     }
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var transfer = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(transfer);
         if (result.IsFailure)

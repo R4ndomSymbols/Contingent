@@ -23,7 +23,7 @@ public abstract class Order : IFromCSV<Order>
     protected string? _orderDescription;
     protected string _orderDisplayedName;
     private OrderConductionStatus _conductionStatus;
-    protected bool _isClosed;
+    protected bool _isClosedForDeletion;
     // время создания приказа пользователем
     protected DateTime _creationTimestamp;
 
@@ -31,13 +31,13 @@ public abstract class Order : IFromCSV<Order>
     {
         get => _id;
     }
-    public bool IsClosed
+    public bool IsClosedForDeletion
     {
-        get => _isClosed;
+        get => _isClosedForDeletion;
     }
-    public bool IsOpen
+    public bool IsOpenForDeletion
     {
-        get => !_isClosed;
+        get => !_isClosedForDeletion;
     }
     // дата вступления в силу
     public DateTime EffectiveDate
@@ -392,7 +392,7 @@ public abstract class Order : IFromCSV<Order>
             model._specifiedDate = specDate;
         }
         if (errors.IsValidRule(
-            ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || string.IsNullOrEmpty(source.OrderDescription) ,
+            ValidatorCollection.CheckStringPattern(source.OrderDescription, ValidatorCollection.OnlyText) || string.IsNullOrEmpty(source.OrderDescription),
             message: "Описание приказа указано неверно",
             propName: nameof(OrderDescription))
         )
@@ -413,7 +413,7 @@ public abstract class Order : IFromCSV<Order>
             propName: "OrderType"
         );
 
-        if (errors.Any())
+        if (errors.Count != 0)
         {
             return Result<T>.Failure(errors);
         }
@@ -431,7 +431,7 @@ public abstract class Order : IFromCSV<Order>
         {
             return QueryResult<T?>.NotFound();
         }
-        model._isClosed = (bool)reader["is_closed"];
+        model._isClosedForDeletion = (bool)reader["is_closed"];
         model._effectiveDate = (DateTime)reader["effective_date"];
         model._specifiedDate = (DateTime)reader["specified_date"];
         var description = reader["description"];
@@ -452,16 +452,16 @@ public abstract class Order : IFromCSV<Order>
     protected static Result<T> MapFromDbBaseForConduction<T>(int id) where T : Order
     {
         var got = GetOrderById(id);
-        if (got is null || got.IsClosed)
+        if (got is null || got.IsClosedForDeletion)
         {
-            return Result<T>.Failure(new ValidationError(nameof(IsClosed), "Невозможно получить уже закрытый приказ для проведения, либо приказа не существует"));
+            return Result<T>.Failure(new ValidationError(nameof(IsClosedForDeletion), "Невозможно получить уже закрытый приказ для проведения, либо приказа не существует"));
         }
         return Result<T>.Success((T)got);
     }
     // все проводимые приказы всегда будут хронологически последними на каждого из студентов, входящих в приказ
     protected void ConductBase(IEnumerable<StudentFlowRecord>? records, ObservableTransaction? scope)
     {
-        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || IsClosed)
+        if (records is null || !records.Any() || _conductionStatus != OrderConductionStatus.ConductionReady || IsClosedForDeletion)
         {
             throw new Exception("Ошибка при записи в таблицу движения: данные приказа или приказ не соотвествуют форме или приказ закрыт");
         }
@@ -505,7 +505,7 @@ public abstract class Order : IFromCSV<Order>
         {
             cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _orderDescription));
         }
-        cmd.Parameters.Add(new NpgsqlParameter<bool>("p8", _isClosed));
+        cmd.Parameters.Add(new NpgsqlParameter<bool>("p8", _isClosedForDeletion));
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p9", _creationTimestamp));
 
         using (conn)
@@ -528,28 +528,26 @@ public abstract class Order : IFromCSV<Order>
         {
             return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Приказ не может быть проведен без указания студентов"));
         }
-        if (IsClosed)
-        {
-            return ResultWithoutValue.Failure(new ValidationError("OrderGenericError", "Проведение для закрытого приказа невозможно"));
-        }
+        // проведение для закрытого на удаление приказа возможно
         foreach (var student in toCheck)
         {
             var record = student.GetHistory(scope).GetLastRecord();
             if (record is not null)
             {
+                Console.WriteLine("Проверка на время");
                 var order = record.OrderNullRestrict;
-                // если предыдущий приказ открыт, то проведение невозможно
-                if (order.IsOpen)
+                // если предыдущий приказ открыт для удаления, то проведение невозможно
+                // это может привести к нарушению последовательности истории студента
+                if (order.IsOpenForDeletion)
                 {
                     return ResultWithoutValue.Failure(new OrderValidationError(string.Format("зарегистрирован в незакрытом приказе {0}", order.OrderDisplayedName), student));
                 }
                 // проверка хронологичности приказа, на студента
+                // текущий приказ должен быть последним
                 // если последний приказ на студента есть этот же самый приказ, то проведение невозможно
-                if (order._effectiveDate > _effectiveDate
-                    || (order._effectiveDate == _effectiveDate && order._creationTimestamp >= _creationTimestamp)
-                )
+                if (OrderByEffectiveDateComparisonAsc.Invoke(this, order) != 1)
                 {
-                    ResultWithoutValue.Failure(
+                    return ResultWithoutValue.Failure(
                         new OrderValidationError(
                             string.Format("Приказ {0} от {1} не является хронологически последовательным для студента, ему предшествует приказ {2} от {3}",
                                 this.OrderDisplayedName, Utils.FormatDateTime(this.SpecifiedDate), order.OrderDisplayedName, Utils.FormatDateTime(order.SpecifiedDate))
@@ -694,8 +692,9 @@ public abstract class Order : IFromCSV<Order>
         {
             result = _orderTypeMappings[type].fromDTO(mapped);
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
             return Result<Order>.Failure(new ValidationError("Данный тип приказа не поддерживается", "OrderType"));
         }
         if (result.IsFailure)
@@ -706,7 +705,7 @@ public abstract class Order : IFromCSV<Order>
     }
     public void Close(ObservableTransaction scope)
     {
-        if (IsOpen)
+        if (IsOpenForDeletion)
         {
             SetOpenCloseState(true, scope);
         }
@@ -714,7 +713,7 @@ public abstract class Order : IFromCSV<Order>
 
     private void Open(ObservableTransaction scope)
     {
-        if (IsClosed)
+        if (IsClosedForDeletion)
         {
             SetOpenCloseState(false, scope);
         }
@@ -738,7 +737,7 @@ public abstract class Order : IFromCSV<Order>
             cmd.Parameters.Add(new NpgsqlParameter<int>("p1", _id));
             cmd.Parameters.Add(new NpgsqlParameter<bool>("p2", closed));
             cmd.ExecuteNonQuery();
-            _isClosed = closed;
+            _isClosedForDeletion = closed;
         }
     }
 
@@ -832,22 +831,32 @@ public abstract class Order : IFromCSV<Order>
         var history = new OrderHistory(this);
         foreach (var rec in history.History)
         {
-            var student = rec.Student;
-            if (student is null)
-            {
-                throw new Exception("Студент в истории должен быть указан");
-            }
+            var student = rec.StudentNullRestrict;
             student.GetHistory(scope).RevertHistory(this, scope);
         }
+        // после удаления всех студентов приказ снова можно сделать открытым
         Open(scope);
     }
-    public virtual void RevertConducted(IEnumerable<StudentModel> student, ObservableTransaction scope)
+    public virtual ResultWithoutValue RevertConducted(IEnumerable<StudentModel> student, ObservableTransaction scope)
     {
+        var orderHistory = new OrderHistory(this);
+        int count = 0;
         foreach (var std in student)
         {
+            if (!orderHistory.History.Any(rec => rec.StudentNullRestrict.Equals(std)))
+            {
+                return ResultWithoutValue.Failure(new ValidationError(string.Format("Студент {0} не найден в истории приказа", std.GetName())));
+            }
             var history = std.GetHistory(scope);
             history.RevertHistory(this, scope);
+            count++;
         }
+        // если все студенты были удалены, то приказ снова открыт
+        if (count == orderHistory.History.Count)
+        {
+            Open(scope);
+        }
+        return ResultWithoutValue.Success();
 
     }
     public override bool Equals(object? obj)
@@ -865,8 +874,11 @@ public abstract class Order : IFromCSV<Order>
     }
 
     public abstract Result<Order> MapFromCSV(CSVRow row);
-
-    public readonly static Comparison<Order> OrderByEffectiveDateComparison = (orderLeft, orderRight) =>
+    // сортировка по возрастанию 
+    // -1 - левый более ранний
+    // 0 - равны
+    // 1 - левый более поздний
+    public readonly static Comparison<Order> OrderByEffectiveDateComparisonAsc = (orderLeft, orderRight) =>
     {
 
         if (orderLeft.Equals(orderRight))

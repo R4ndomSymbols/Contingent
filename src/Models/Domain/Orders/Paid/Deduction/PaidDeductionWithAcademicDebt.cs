@@ -60,7 +60,8 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidDeductionWithAcademicDebt;
     }
-
+    // студент должен быть зачислен
+    // и не быть в академическом отпуске
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _studentLeaving)
@@ -78,7 +79,6 @@ public class PaidDeductionWithAcademicDebtOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var debtHolder = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentGroupNullifyMove.Create(debtHolder);
         if (result.IsFailure)

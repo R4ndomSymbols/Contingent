@@ -29,6 +29,7 @@ public class OrderHistory
                 ExtractByOrder = (_byOrder, OrderRelationMode.OnlyIncluded),
                 ExtractGroups = true,
                 ExtractStudents = true,
+                SortByStudentNames = true
             }
         );
         return found.ToList();

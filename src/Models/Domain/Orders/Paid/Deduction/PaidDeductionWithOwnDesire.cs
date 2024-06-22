@@ -59,7 +59,7 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
     {
         return OrderTypes.PaidDeductionWithOwnDesire;
     }
-
+    // студенту достаточно быть зачисленным
     protected override ResultWithoutValue CheckTypeSpecificConductionPossibility(ObservableTransaction scope)
     {
         foreach (var student in _studentLeaving)
@@ -78,7 +78,6 @@ public class PaidDeductionWithOwnDesireOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var graduate = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentGroupNullifyMove.Create(graduate);
         if (result.IsFailure)

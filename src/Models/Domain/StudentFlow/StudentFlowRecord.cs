@@ -16,7 +16,7 @@ public class StudentFlowRecord
 {
     private RawStudentFlowRecord _record;
     public int Id => _record.Id;
-    public Period StatePeriod { get; private set; }
+    public Period? StatePeriod { get; private set; }
     public Order? ByOrder { get; private set; }
     public StudentModel? Student { get; private set; }
     public GroupModel? GroupTo { get; private set; }
@@ -33,7 +33,8 @@ public class StudentFlowRecord
         RawStudentFlowRecord record,
         Order? order,
         StudentModel? student,
-        GroupModel? group
+        GroupModel? group,
+        Period? statePeriod
     )
     {
         var rec = new StudentFlowRecord();
@@ -41,6 +42,7 @@ public class StudentFlowRecord
         rec.ByOrder = order;
         rec.Student = student;
         rec.GroupTo = group;
+        rec.StatePeriod = statePeriod;
         return rec;
     }
 
@@ -99,10 +101,11 @@ public class StudentFlowRecord
                 var studentResult = studentMapper.Map(m);
                 var groupResult = groupMapper.Map(m);
                 var orderResult = orderMapper.Map(m);
+                var dateResult = raw.StartStatusDate is not null && raw.EndStatusDate is not null ? new Period(raw.StartStatusDate.Value, raw.EndStatusDate.Value) : null;
                 var group = groupResult.IsFound ? groupResult.ResultObject : null;
                 var student = studentResult.IsFound ? studentResult.ResultObject : null;
                 var order = orderResult.IsFound ? orderResult.ResultObject : null;
-                return QueryResult<StudentFlowRecord>.Found(FromDatabase(raw, order, student, group));
+                return QueryResult<StudentFlowRecord>.Found(FromDatabase(raw, order, student, group, dateResult));
             },
             usedCols
         );

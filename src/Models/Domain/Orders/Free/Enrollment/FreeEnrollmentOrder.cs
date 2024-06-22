@@ -62,7 +62,6 @@ public class FreeEnrollmentOrder : FreeContingentOrder
     // условия приказа о зачислении
     // Студент должен не иметь статуса вообще 
     // либо он должен быть отчислен в связи с выпуском
-    // приказ после должен быть любым приказом, кроме приказа о зачислении (любой)
     // зачисление возможно только на ту специальность, которой соответствует уровень 
     // образования студента
     // группа должна быть бесплатной
@@ -73,17 +72,15 @@ public class FreeEnrollmentOrder : FreeContingentOrder
         foreach (var stm in _moves.Moves)
         {
             var history = stm.Student.GetHistory(scope);
-            var studentCheck = !history.IsStudentEnlisted();
-            if (!studentCheck)
+            if (history.IsStudentEnlisted())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError(
-                    string.Format("Студент уже зачислен по приказу: {0}", history.GetLastRecord()!.OrderNullRestrict.OrderDisplayedName), stm.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент уже зачислен", stm.Student));
             }
             var targetGroup = stm.GroupTo;
             var groupCheck = targetGroup.EducationProgram.IsStudentAllowedByEducationLevel(stm.Student) && targetGroup.SponsorshipType.IsFree();
             if (!groupCheck)
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("Не соблюдены критерии по одной из позиций зачисления", stm.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("Группа студента должна быть бесплатной и специальность должна быть доступной по уровню образования", stm.Student));
             }
 
         }

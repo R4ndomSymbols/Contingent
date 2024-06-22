@@ -1,26 +1,27 @@
 using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Orders.OrderData;
+using Contingent.Models.Domain.Students;
+using Contingent.Models.Infrastructure;
 using Contingent.Statistics.Tables.Headers;
 
 namespace Contingent.Statistics.Tables;
 
 public class GenericSpecialty : ITable
 {
-    private StatisticTable<StudentFlowRecord> _model;
+    private StatisticTable<StudentModel> _model;
     public string DisplayedName => _model.TableName;
-    public string Html => _model.ToHtmlTable();
+    public string HtmlContent => _model.ToHtmlTable();
+    public Period StatisticPeriod { get; set; }
 
-
-    /*
-
-
-
-    */
-
-
-    public GenericSpecialty()
+    public GenericSpecialty(Period statsPeriod)
     {
-        var verticalRoot = new ColumnHeaderCell<StudentFlowRecord>();
-        var rowHeaderColHeader = new ColumnHeaderCell<StudentFlowRecord>(
+        if (!statsPeriod.IsOneMoment())
+        {
+            throw new Exception("Распределение по специальностям считается на день");
+        }
+        StatisticPeriod = statsPeriod;
+        var verticalRoot = new ColumnHeaderCell<StudentModel>();
+        var rowHeaderColHeader = new ColumnHeaderCell<StudentModel>(
             "Специальности",
             verticalRoot
         );
@@ -28,18 +29,22 @@ public class GenericSpecialty : ITable
         {
             var first = TemplateHeaders.GetBaseCourseHeader(
             i,
-            (StudentFlowRecord s) => s.Student,
-            (StudentFlowRecord s) => s.GroupTo,
+            (StudentModel s) => s,
+            (StudentModel s) => s.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.End),
             verticalRoot
             );
         }
-        var verticalHeader = new TableColumnHeader<StudentFlowRecord>(verticalRoot, false);
-        var horizontalHeader = TemplateHeaders.GetSpecialityRowHeader(
-            (StudentFlowRecord s) => s.GroupTo?.EducationProgram,
+        var verticalHeader = new TableColumnHeader<StudentModel>(verticalRoot, false);
+        var horizontalHeader = TemplateHeaders.GetSpecialtyRowHeader(
+            (StudentModel s) => s.GetHistory(null, statsPeriod.End)
+            .GetGroupOnDate(StatisticPeriod.End)?.EducationProgram,
             verticalHeader
         );
-        var source = StudentHistory.GetLastRecordsForManyStudents(new SQL.QueryLimits(0, 2000), (false, false));
-        _model = new StatisticTable<StudentFlowRecord>(
+        var source = StudentHistory.GetStudentByOrderState(StatisticPeriod.End,
+        OrderTypeInfo.EnrollmentTypes,
+        OrderTypeInfo.DeductionTypes,
+        null);
+        _model = new StatisticTable<StudentModel>(
             verticalHeader,
             horizontalHeader,
             source,

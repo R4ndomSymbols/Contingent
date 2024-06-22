@@ -60,26 +60,18 @@ public class FreeAcademicVacationReturnOrder : FreeContingentOrder
         // группа должна быть бюджетной и того же курса
         foreach (var move in _returners)
         {
-            var studentState = move.Student.GetHistory(scope);
-            var lastState = studentState.GetLastRecord();
-            if (lastState is null)
-            {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент не зачислен", move.Student));
-            }
-            var lastOrderType = lastState.OrderNullRestrict.GetOrderTypeDetails();
-            if (!(studentState.IsStudentSentInAcademicVacation() && lastOrderType.Type == OrderTypes.FreeAcademicVacationSend))
+            var history = move.Student.GetHistory(scope);
+            var lastGroup = history.GetLastGroup();
+            var groupTo = move.GroupTo;
+            if (!history.IsStudentSentInAcademicVacation())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не находится в академическом отпуске", move.Student));
             }
-            if (!lastState.StatePeriod.IsEndedNow())
-            {
-                return ResultWithoutValue.Failure(new OrderValidationError("академический отпуск у студента еще не закончился", move.Student));
-            }
-            if (move.GroupTo.SponsorshipType.IsPaid())
+            if (!groupTo.SponsorshipType.IsFree())
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть восстановлен во внебюджетную группу по К приказу", move.Student));
             }
-            if (move.GroupTo.CourseOn != lastState.GroupToNullRestrict.CourseOn)
+            if (groupTo.CourseOn != lastGroup!.CourseOn)
             {
                 return ResultWithoutValue.Failure(new OrderValidationError("студент не может быть восстановлен в группу другого курса", move.Student));
             }

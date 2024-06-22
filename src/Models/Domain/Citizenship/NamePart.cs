@@ -19,7 +19,7 @@ public class NamePart
         {
             return Result<NamePart>.Failure(new ValidationError("Нарушение формата имени"));
         }
-        return Result<NamePart>.Success(new NamePart(name));
+        return Result<NamePart>.Success(new NamePart(name!));
 
     }
 

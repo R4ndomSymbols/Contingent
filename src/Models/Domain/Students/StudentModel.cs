@@ -7,6 +7,7 @@ using Contingent.SQL;
 using Contingent.Utilities;
 using Contingent.Utilities.Validation;
 using System.Globalization;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Contingent.Models.Domain.Students;
 
@@ -120,11 +121,14 @@ public class StudentModel
             return _education;
         }
     }
-    public StudentHistory GetHistory(ObservableTransaction? transaction)
+    public StudentHistory GetHistory(ObservableTransaction? transaction, DateTime? onDate = null)
     {
-        if (_history is null || (_history.CurrentTransaction != transaction && transaction is not null))
+        if (_history is null
+        || (_history.CurrentTransaction != transaction && transaction is not null)
+        || (_history.HistoryOnDate is not null && _history.HistoryOnDate != onDate)
+        )
         {
-            _history = new StudentHistory(this, transaction);
+            _history = new StudentHistory(this, transaction, onDate);
         }
         return _history;
     }
@@ -207,7 +211,7 @@ public class StudentModel
         var errors = new List<ValidationError>();
         if (dto.Id != null && dto.Id.Value != Utils.INVALID_ID)
         {
-            model = GetStudentById(dto.Id).Result;
+            model = GetStudentById(dto.Id);
             errors.IsValidRule(
                 model is not null,
                 "Несуществующий id модели",
@@ -389,12 +393,12 @@ public class StudentModel
         }
     }
 
-    // по умолчанию возвращает только уникальных студентов
-    public static async Task<IReadOnlyCollection<StudentModel>> FindUniqueStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? additionalParameters = null)
+    // может вернуть дубликаты
+    public static async Task<IReadOnlyCollection<StudentModel>> FindStudents(QueryLimits limits, JoinSection? additionalJoins = null, ComplexWhereCondition? additionalConditions = null, SQLParameterCollection? additionalParameters = null)
     {
         using var conn = await Utils.GetAndOpenConnectionFactory();
         var mapper = GetMapper((false, false), null);
-        var buildResult = SelectQuery<StudentModel>.Init("students", new Column("id", "students"))
+        var buildResult = SelectQuery<StudentModel>.Init("students")
         .AddMapper(mapper)
         .AddJoins(mapper.PathTo.AppendJoin(additionalJoins))
         .AddWhereStatement(additionalConditions)
@@ -408,22 +412,13 @@ public class StudentModel
     }
 
 
-    public static async Task<StudentModel?> GetStudentById(int? id)
+    public static StudentModel? GetStudentById(int? id)
     {
         if (!Utils.IsValidId(id))
         {
             return null;
         }
-        var sParams = new SQLParameterCollection();
-        var p1 = sParams.Add((int)id);
-        var where = new ComplexWhereCondition(
-            new WhereCondition(
-                new Column("id", "students"),
-                p1,
-                WhereCondition.Relations.Equal
-            )
-        );
-        var found = await FindUniqueStudents(new QueryLimits(0, 1), additionalConditions: where, additionalParameters: sParams);
+        var found = GetManyStudents(new int[] { (int)id! });
         if (found.Any())
         {
             return found.First();
@@ -432,6 +427,25 @@ public class StudentModel
         {
             return null;
         }
+    }
+
+    public static IEnumerable<StudentModel> GetManyStudents(IEnumerable<int> ids)
+    {
+        if (!ids.Any() || !ids.All(Utils.IsValidId))
+        {
+            return new List<StudentModel>();
+        }
+        var sParams = new SQLParameterCollection();
+        var p1 = sParams.Add(ids.Select(x => (int)x!).ToArray(), NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer);
+        p1.UseBrackets = true;
+        var where = new ComplexWhereCondition(
+            new WhereCondition(
+                new Column("id", "students"),
+                p1,
+                WhereCondition.Relations.InArray
+            )
+        );
+        return FindStudents(new QueryLimits(0, ids.Count()), additionalConditions: where, additionalParameters: sParams).Result;
     }
 
     public string GetName()
@@ -551,7 +565,7 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter<string>("p1", _snils));
         cmd.Parameters.Add(new NpgsqlParameter("p3", ActualAddress is null ? DBNull.Value : ActualAddress.Id));
         cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p4", _dateOfBirth));
-        cmd.Parameters.Add(new NpgsqlParameter("p5", (int)_russianCitizenship.Id));
+        cmd.Parameters.Add(new NpgsqlParameter("p5", (int)_russianCitizenship!.Id!));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p6", (int)_gender));
         cmd.Parameters.Add(new NpgsqlParameter<string>("p7", _gradeBookNumber));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p8", (int)_targetAgreementType.AgreementType));
@@ -559,7 +573,7 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter("p10", _giaDemoExamMark is null ? DBNull.Value : (int)_giaDemoExamMark));
         cmd.Parameters.Add(new NpgsqlParameter<decimal>("p11", _admissionScore));
         // cmd.Parameters.Add(new NpgsqlParameter<int>("p12", (int)_paidAgreementType.AgreementType));
-        cmd.Parameters.Add(new NpgsqlParameter<int>("p13", (int)_id));
+        cmd.Parameters.Add(new NpgsqlParameter<int>("p13", (int)_id!));
         using (cmd)
         {
             await cmd.ExecuteNonQueryAsync();
@@ -583,6 +597,15 @@ public class StudentModel
         cmd.Parameters.Add(new NpgsqlParameter<int>("p1", (int)_paidAgreementType.AgreementType));
         cmd.Parameters.Add(new NpgsqlParameter<int>("p2", (int)_id!));
         cmd.ExecuteNonQuery();
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj is not StudentModel)
+        {
+            return false;
+        }
+        return ((StudentModel)obj)._id == this._id;
     }
 
 }

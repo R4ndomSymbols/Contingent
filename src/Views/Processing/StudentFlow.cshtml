@@ -1,10 +1,11 @@
 @model Contingent.Controllers.DTO.Out.OrderSearchDTO;
 @{
     ViewData["Title"] = "Движение студентов";
+    var closed = Model.IsClosed.ToString();
 }
 <div class="page-layout-container">
     <div order_id="@Model.OrderId" group_behavior="@Model.OrderInputPolicy" order_type="@Model.OrderEnumTypeName"
-        id="current_order"></div>
+        is_closed_for_deletion="@closed" id="current_order"></div>
     @{
         string fullName = "Проведение по приказу: " + Model.OrderOrgId + " от " + Model.OrderSpecifiedDate;
     }

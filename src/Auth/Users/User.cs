@@ -11,7 +11,7 @@ namespace Contingent.Auth;
 
 public class ContingentUser
 {
-    private static string salt = "******";
+    private static string salt = "9k0sgGgLEJBzhS8yEZdf5gTJfLJiMxfm";
     public int Id { get; private set; }
     public string Login { get; private set; }
     public string Username { get; private set; }

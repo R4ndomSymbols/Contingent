@@ -5,37 +5,20 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Статистика</h1>
+    <h1 class="display-4">Текущий период:</h1>
     <p class="text-center" style="font-size:30px">
-        За период с
+        С
         @Utils.FormatDateTime(Period.CurrentOrderPeriod.Start, true)
         по
         @Utils.FormatDateTime(Period.CurrentOrderPeriod.End, true)
     </p>
 </div>
-<div class="d-flex flex-column">
-    <ul>
-        <li>
-            <a href="~/statistics/age_specialist">
-                Студенты по возрастам (специалисты)
-            </a>
-        </li>
-        <li>
-            <a href="~/statistics/age_qualified">
-                Студенты по возрастам (квалифицированные рабочие)
-            </a>
-        </li>
-        <li>
-            <a href="~/statistics/specialty">
-                Студенты по специальностям
-            </a>
-        </li>
-        <li>
-            <a href="~/statistics/legalAddress">
-                Студенты по прописке
-            </a>
-        </li>
-    </ul>
+<div class="d-flex flex-column text-center">
+    <h5>
+        <a href="~/statistics">
+            Перейти к статистике
+        </a>
+    </h5>
 </div>
 <div class="text-center">
     <h6>Последние действия (движения)</h6>

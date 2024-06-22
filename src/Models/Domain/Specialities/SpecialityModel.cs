@@ -4,7 +4,6 @@ using Contingent.SQL;
 using Contingent.Utilities;
 using Contingent.Utilities.Validation;
 using Contingent.Models.Domain.Students;
-using Contingent.Utilities;
 
 namespace Contingent.Models.Domain.Specialties;
 

@@ -19,6 +19,8 @@ function init() {
                     <td>${move.orderSpecifiedDate}</td>
                     <td>${move.groupNameFrom}</td>
                     <td>${move.groupNameTo}</td>
+                    <td>${move.startDate}</td>
+                    <td>${move.endDate}</td>
                  </tr>
                  `
             });

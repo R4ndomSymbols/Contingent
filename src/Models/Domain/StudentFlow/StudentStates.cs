@@ -2,8 +2,8 @@ namespace Contingent.Models.Domain.Flow;
 // статусы студента, связанные с отношением к колледжу
 public enum StudentStates
 {
-    CycleRecorded = 0,
+    NotRecorded = 0,
     Enlisted = 1,
     Deducted = 2,
-    NotRecorded = 3
+    EnlistedInAcademicVacation = 3
 }

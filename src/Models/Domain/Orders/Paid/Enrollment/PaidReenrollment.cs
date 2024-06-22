@@ -9,6 +9,7 @@ namespace Contingent.Models.Domain.Orders;
 
 public class PaidReEnrollmentOrder : AdditionalContingentOrder
 {
+    private static readonly TimeSpan REENROLLMENT_TIME_LIMIT = TimeSpan.FromDays(365 * 5 + 1);
     private StudentToGroupMoveList _reEnrollers;
     protected PaidReEnrollmentOrder() : base()
     {
@@ -64,23 +65,29 @@ public class PaidReEnrollmentOrder : AdditionalContingentOrder
         foreach (var move in _reEnrollers)
         {
             var history = move.Student.GetHistory(scope);
-            var lastOrder = history.GetLastRecord()?.ByOrder;
-            var orderCheck = lastOrder is not null && lastOrder.GetOrderTypeDetails().CanBePreviousToReEnrollment();
-            var deductionGroup = history.GetGroupFromStudentWasDeducted();
-            var groupCheck = move.GroupTo.SponsorshipType.IsPaid()
-            && deductionGroup is not null && deductionGroup.CourseOn == move.GroupTo.CourseOn;
-            var timeSinceDeduction = history.GetTimeSinceLastAction(_effectiveDate);
-            var timeCheck = timeSinceDeduction is not null && timeSinceDeduction.Value.TotalDays / 365 <= 5;
-            if (orderCheck && groupCheck && timeCheck)
+            if (!history.IsStudentDeducted() || history.GetLastRecord() is null)
             {
-                continue;
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент не отчислялся", move.Student));
             }
-            else
+            var lastRecord = history.GetLastRecord();
+            if (!lastRecord!.ByOrder!.GetOrderTypeDetails().CanBePreviousToReEnrollment())
             {
-                return ResultWithoutValue.Failure(
-                new OrderValidationError(
-                    "не может быть восстановлен из-за несоблюдения условий восстановления", move.Student
-                ));
+                return ResultWithoutValue.Failure(new OrderValidationError("Студента нельзя восстановить", move.Student));
+            }
+            var deductionGroup = history.GetGroupFromStudentWasDeducted();
+            var group = move.GroupTo;
+            if (group.CourseOn != deductionGroup!.CourseOn)
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Студента нельзя восстановить на другой курс", move.Student));
+            }
+            if (!group.SponsorshipType.IsPaid())
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Группа студента должна быть бесплатной", move.Student));
+            }
+            var timeSinceDeduction = history.GetTimeSinceLastAction(_effectiveDate);
+            if (timeSinceDeduction is null || timeSinceDeduction.Value.TotalDays > REENROLLMENT_TIME_LIMIT.TotalDays)
+            {
+                return ResultWithoutValue.Failure(new OrderValidationError("Студент не может быть восстановлен, если отчислен более 5 лет назад", move.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -88,7 +95,6 @@ public class PaidReEnrollmentOrder : AdditionalContingentOrder
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var reEnroller = new StudentToGroupMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentToGroupMove.Create(reEnroller);
         if (result.IsFailure)

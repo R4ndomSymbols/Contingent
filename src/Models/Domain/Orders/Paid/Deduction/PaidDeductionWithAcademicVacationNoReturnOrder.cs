@@ -65,21 +65,18 @@ public class PaidDeductionWithAcademicVacationNoReturnOrder : AdditionalContinge
     {
         // предыдущий приказ - это приказ об академическом отпуске
         // академ закончился, в добавок прошло еще x дней
-        foreach (var record in _leftForReason)
+        foreach (var leaver in _leftForReason)
         {
-            var history = record.Student.GetHistory(scope);
+            var history = leaver.Student.GetHistory(scope, _effectiveDate);
             if (!history.IsStudentSentInAcademicVacation())
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент не находится в академическом отпуске", record.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("студент не находится в академическом отпуске", leaver.Student));
             }
-            var lastRecord = history.GetLastRecord()!;
-            if (!lastRecord.StatePeriod.IsEndedNow())
+            var period = history.GetCurrentAcademicVacationPeriod()
+            ?? throw new Exception("Ошибка инициализации приказа об академе или записи данных");
+            if (period.GetEndedDaysAgoCount() < _daysBeforeDeduction)
             {
-                return ResultWithoutValue.Failure(new OrderValidationError("студент все еще находится в академическом отпуске", record.Student));
-            }
-            if (lastRecord.StatePeriod.GetEndedDaysAgoCount() < _daysBeforeDeduction)
-            {
-                return ResultWithoutValue.Failure(new OrderValidationError("еще не прошло достаточное количество времени для отчисления", record.Student));
+                return ResultWithoutValue.Failure(new OrderValidationError("еще не прошло достаточное количество времени для отчисления", leaver.Student));
             }
         }
         return ResultWithoutValue.Success();
@@ -87,7 +84,6 @@ public class PaidDeductionWithAcademicVacationNoReturnOrder : AdditionalContinge
 
     public override Result<Order> MapFromCSV(CSVRow row)
     {
-        Save(null);
         var debtHolder = new StudentGroupNullifyMoveDTO().MapFromCSV(row).ResultObject;
         var result = StudentGroupNullifyMove.Create(debtHolder);
         if (result.IsFailure)

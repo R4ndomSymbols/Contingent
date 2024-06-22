@@ -123,10 +123,29 @@ public class OrderValidationError : ValidationError
     }
 }
 
+public class OrderAcademicVacationValidationError : OrderValidationError
+{
+    public OrderAcademicVacationValidationError(StudentModel student)
+        : base("Студент находится в академическом отпуске", student)
+    {
+
+    }
+}
+
+
 public class ImportValidationError : ValidationError
 {
     public const string ImportErrorName = "IMPORT_ERROR";
     public ImportValidationError(string exceptionMessage) : base(ImportErrorName, exceptionMessage)
+    {
+
+    }
+}
+
+public class StatisticValidationError : ValidationError
+{
+    public const string StatisticErrorName = "STATISTIC_ERROR";
+    public StatisticValidationError(string exceptionMessage) : base(StatisticErrorName, exceptionMessage)
     {
 
     }

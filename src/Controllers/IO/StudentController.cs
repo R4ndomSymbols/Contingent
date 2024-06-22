@@ -8,6 +8,8 @@ using Contingent.Models.Domain.Specialties;
 using Contingent.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Contingent.DTOs.Out;
+using Contingent.Models.Domain.Flow;
+using Contingent.Models.Domain.Orders.OrderData;
 
 namespace Contingent.Controllers;
 public class StudentController : Controller
@@ -36,7 +38,7 @@ public class StudentController : Controller
     [HttpGet]
     [Authorize(Roles = "Admin")]
     [Route("/protected/students/modify/{query}")]
-    public async Task<IActionResult> GetStudentPageModifyProtected(string query)
+    public IActionResult GetStudentPageModifyProtected(string query)
     {
         if (query == "new")
         {
@@ -44,7 +46,7 @@ public class StudentController : Controller
         }
         if (int.TryParse(query, out int id))
         {
-            StudentModel? student = await StudentModel.GetStudentById(id);
+            StudentModel? student = StudentModel.GetStudentById(id);
             if (student == null)
             {
                 return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
@@ -73,9 +75,9 @@ public class StudentController : Controller
     [HttpGet]
     [Authorize(Roles = "Admin")]
     [Route("/protected/students/view/{id:int}")]
-    public async Task<IActionResult> ViewStudent(int id)
+    public IActionResult ViewStudent(int id)
     {
-        StudentModel? student = await StudentModel.GetStudentById(id);
+        StudentModel? student = StudentModel.GetStudentById(id);
         if (student == null)
         {
             return View(@"Views/Shared/Error.cshtml", "Такого студента не существует");
@@ -145,6 +147,45 @@ public class StudentController : Controller
     {
         var tags = LevelOfEducation.ListOfLevels.Select(x => new EducationalLevelRecordDTO(x));
         return Json(tags);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("/students/vacations")]
+    public IActionResult ViewVacations()
+    {
+        return View(@"Views/Auth/JWTHandler.cshtml", new RedirectOptions()
+        {
+            DisplayURL = "/protected/students/vacations",
+            RequestType = "GET",
+        });
+
+    }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [Route("/protected/students/vacations")]
+    public IActionResult GetCurrentVacations()
+    {
+        var current = StudentHistory.GetStudentByOrderState(
+            DateTime.Now.AddYears(5),
+            OrderTypeInfo.AcademicVacationSendTypes,
+            OrderTypeInfo.AcademicVacationCloseTypes,
+            null
+        );
+        var dtos = current.Select(x =>
+        {
+            var last = x.GetHistory(null).GetLastRecord() ?? throw new Exception("По каким-то причинам нет записей");
+            return new StudentHistoryMoveDTO(
+                last.StudentNullRestrict,
+                null,
+                null,
+                last.OrderNullRestrict,
+                last.StatePeriod
+            );
+        });
+        return View(@"Views/Observe/Vacations.cshtml", dtos);
     }
 
 }
