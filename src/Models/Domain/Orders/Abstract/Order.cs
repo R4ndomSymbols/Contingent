@@ -683,19 +683,18 @@ public abstract class Order : IFromCSV<Order>
 
         if (!TryParseOrderType(mapped.OrderType))
         {
-            return Result<Order>.Failure(new ValidationError("Неверно указан тип приказа", "OrderType"));
+            return Result<Order>.Failure(new ValidationError(nameof(OrderTypeInfo), "Неверно указан тип приказа"));
         }
 
         OrderTypes type = (OrderTypes)mapped.OrderType;
         Utilities.IResult? result = null;
-        try
+        if (_orderTypeMappings.TryGetValue(type, out var mappings))
         {
-            result = _orderTypeMappings[type].fromDTO(mapped);
+            result = mappings.fromDTO(mapped);
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine(ex);
-            return Result<Order>.Failure(new ValidationError("Данный тип приказа не поддерживается", "OrderType"));
+            return Result<Order>.Failure(new ValidationError(nameof(OrderTypeInfo), "Данный тип приказа не поддерживается"));
         }
         if (result.IsFailure)
         {

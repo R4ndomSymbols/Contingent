@@ -20,10 +20,13 @@ public class AgeTable : ITable
     {
         if (!statsPeriod.IsOneMoment())
         {
-            Console.WriteLine(statsPeriod.ToString());
-            throw new Exception("Возраст считается на день");
+            StatisticPeriod = new Period(statsPeriod.End, statsPeriod.End);
         }
-        StatisticPeriod = statsPeriod;
+        else
+        {
+            StatisticPeriod = statsPeriod;
+        }
+
         var verticalRoot = new ColumnHeaderCell<StudentModel>();
         /*
         var specialitiesFilter = new ConstrainedColumnHeaderCell("Программы подготовки специалистов среднего звена",
@@ -47,7 +50,7 @@ public class AgeTable : ITable
                     student =>
                     {
 
-                        var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.End);
+                        var result = student.GetHistory(null, StatisticPeriod.End).GetGroupOnDate(StatisticPeriod.End);
                         if (result is null)
                         {
                             return false;
@@ -70,7 +73,7 @@ public class AgeTable : ITable
                             student =>
                             {
 
-                                var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
+                                var result = student.GetHistory(null, StatisticPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
                                 if (result is null)
                                 {
                                     return false;
@@ -89,7 +92,7 @@ public class AgeTable : ITable
                              student =>
                              {
 
-                                 var result = student.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
+                                 var result = student.GetHistory(null, StatisticPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
                                  if (result is null)
                                  {
                                      return false;
@@ -106,7 +109,7 @@ public class AgeTable : ITable
             (students) => students.Where((std) =>
             {
 
-                var result = std.GetHistory(null, statsPeriod.End).
+                var result = std.GetHistory(null, StatisticPeriod.End).
                     GetGroupOnDate(StatisticPeriod.Start)?.EducationProgram;
                 if (result is null)
                 {
@@ -124,7 +127,7 @@ public class AgeTable : ITable
             (students) => students.Where((std) =>
             {
 
-                var result = std.GetHistory(null, statsPeriod.End)
+                var result = std.GetHistory(null, StatisticPeriod.End)
                     .GetGroupOnDate(StatisticPeriod.Start)?
                     .EducationProgram;
                 if (result is null)
@@ -165,7 +168,7 @@ public class AgeTable : ITable
             (students) => students.Where(
                 (std) =>
                 {
-                    var group = std.GetHistory(null, statsPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
+                    var group = std.GetHistory(null, StatisticPeriod.End).GetGroupOnDate(StatisticPeriod.Start);
                     if (group is null)
                     {
                         return false;
@@ -258,7 +261,7 @@ public class AgeTable : ITable
                 (students) => students.Where(std => std.GetAgeOnDate(ageDate) > 30)
             )
         );
-        var source = StudentHistory.GetStudentByOrderState(statsPeriod.End,
+        var source = StudentHistory.GetStudentByOrderState(StatisticPeriod.End,
             OrderTypeInfo.EnrollmentTypes,
             OrderTypeInfo.DeductionTypes,
         null);

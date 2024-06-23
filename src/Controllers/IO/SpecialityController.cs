@@ -79,7 +79,7 @@ public class SpecialtyController : Controller
             var result = SpecialtyModel.Build(dto);
             if (result.IsFailure)
             {
-                return Json(new ErrorCollectionDTO(result.Errors));
+                return BadRequest(new ErrorCollectionDTO(result.Errors));
             }
             else
             {

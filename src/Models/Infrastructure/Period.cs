@@ -92,30 +92,26 @@ public class Period
     {
         return Start.Date == End.Date;
     }
-
+    // если период не указан, преобразует его в допустимый (т.к. на фронте верхнее и нижнее значение)
+    // могут не указываться
+    // а содержать там предметную логику слишком накладно
     public static Result<Period> CreateFromDTO(PeriodDTO? dto)
     {
         if (dto is null)
         {
             return Result<Period>.Failure(new ValidationError(nameof(dto), "Период не указан"));
         }
-        if (!Utils.TryParseDate(dto.StartDate, out DateTime start))
+        DateTime start = Period.OrganizationLifetime.Start;
+        DateTime end = Period.OrganizationLifetime.End;
+        if (Utils.TryParseDate(dto.StartDate, out DateTime startSet))
         {
-            return Result<Period>.Failure(new ValidationError(nameof(Start), "Неверно указана дата начала периода"));
-        };
-        if (dto.EndDate is not null)
-        {
-            if (!Utils.TryParseDate(dto.EndDate, out DateTime end))
-            {
-                return Result<Period>.Failure(new ValidationError(nameof(End), "Неверно указана дата окончания периода"));
-            }
-            if (start > end)
-            {
-                return Result<Period>.Failure(new ValidationError(nameof(End), "Дата окончания периода не может быть меньше даты начала"));
-            }
-            return Result<Period>.Success(new Period(start, end));
+            start = startSet;
         }
-        return Result<Period>.Success(new Period(start));
+        if (Utils.TryParseDate(dto.EndDate, out DateTime endSet))
+        {
+            end = endSet;
+        }
+        return Result<Period>.Success(new Period(start, end));
     }
 
     public override string ToString()

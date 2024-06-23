@@ -142,7 +142,7 @@ public class StudentHistory
                 ExtractOrders = true,
                 IncludeNotRegisteredStudents = false,
                 Transaction = _scope,
-                SuppressLogs = true,
+                SuppressLogs = false,
                 ExtractOnDate = _historyBeforeDate,
             }
         ).ToList();
@@ -263,7 +263,7 @@ public class StudentHistory
     }
     // метод получает студентов по статусу, исходя из множества открывающих студентов
     public static IEnumerable<StudentModel> GetStudentByOrderState(
-        DateTime onDate,
+        DateTime beforeDate,
         IEnumerable<OrderTypeInfo> openOrders,
         IEnumerable<OrderTypeInfo> closingOrders,
         ObservableTransaction? scope)
@@ -294,7 +294,7 @@ public class StudentHistory
             Value = closingOrders.Select(x => (int)x.Type).ToArray(),
             NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer
         });
-        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p3", onDate));
+        cmd.Parameters.Add(new NpgsqlParameter<DateTime>("p3", beforeDate));
         var ids = new List<int>();
         using (cmd)
         {

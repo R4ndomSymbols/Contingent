@@ -19,27 +19,27 @@ public class SpecialtyInDTO : IFromCSV<SpecialtyInDTO>
     public const string TeachingDepthFieldName = "глубина образовательной программы";
     public const string ProgramTypeFieldName = "тип образовательной программы";
 
-    public int Id { get; set; }
+    public int? Id { get; set; }
 
-    [JsonInclude]
+    [JsonRequired]
     public string FgosCode { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public string FgosName { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public string Qualification { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public string FgosPrefix { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public string? QualificationPostfix { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public int CourseCount { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public int EducationalLevelIn { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public int EducationalLevelOut { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public int TeachingDepthCode { get; set; }
-    [JsonInclude]
+    [JsonRequired]
     public int ProgramType { get; set; }
 
     public SpecialtyInDTO()

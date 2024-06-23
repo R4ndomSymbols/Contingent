@@ -17,9 +17,12 @@ public class GenericSpecialty : ITable
     {
         if (!statsPeriod.IsOneMoment())
         {
-            throw new Exception("Распределение по специальностям считается на день");
+            StatisticPeriod = new Period(statsPeriod.End, statsPeriod.End);
         }
-        StatisticPeriod = statsPeriod;
+        else
+        {
+            StatisticPeriod = statsPeriod;
+        }
         var verticalRoot = new ColumnHeaderCell<StudentModel>();
         var rowHeaderColHeader = new ColumnHeaderCell<StudentModel>(
             "Специальности",

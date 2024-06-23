@@ -217,7 +217,7 @@ public class SpecialtyModel
         if (
             errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(dto.FgosName, ValidatorCollection.OnlyText),
-            message: "Название ФГОС не соответствует формату или не указан",
+            message: "Название ФГОС не соответствует формату или не указано",
             propName: nameof(FgosName)
         ))
         {
@@ -227,7 +227,7 @@ public class SpecialtyModel
         if (
             errors.IsValidRule(
             ValidatorCollection.CheckStringPattern(dto.Qualification, ValidatorCollection.OnlyText),
-            message: "Квалификация указана или указана неверно",
+            message: "Квалификация не указана или указана неверно",
             propName: nameof(Qualification)
         ))
         {
@@ -235,12 +235,12 @@ public class SpecialtyModel
         }
 
         if (errors.IsValidRule(
-            TeachingDepth.TryGetByTypeCode(dto.TeachingDepthCode),
+            TeachingDepth.TryGetByTypeCode(dto.TeachingDepthCode, out TeachingDepth? teachingDepth),
             message: "Уровень программы подготовки указан неверно",
             propName: nameof(TeachingLevel)
         ))
         {
-            model._teachingDepth = TeachingDepth.GetByTypeCode(dto.TeachingDepthCode);
+            model._teachingDepth = teachingDepth!;
         }
         if (errors.IsValidRule(
             TrainingProgram.TryGetByType(dto.ProgramType, out TrainingProgram? result),

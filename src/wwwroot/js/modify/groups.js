@@ -34,7 +34,7 @@ function onGenerationChange(checkBoxValue) {
 function saveCommon(jsonObject) {
 
     if (created) {
-        alert("Обновление не предусмотрено, обновите страну")
+        alert("Обновление не предусмотрено, обновите страницу")
         return;
     }
 
@@ -51,7 +51,6 @@ function saveCommon(jsonObject) {
         },
         error: function (response, a, b) {
             utils.readAndSetErrors(response, undefined, utils.SELECTOR_CLASS)
-            alert("Сохранение провалилось");
         }
     });
 }
@@ -86,6 +85,11 @@ let selectedSpecialtyAutoGen = undefined;
 function makeAutoGenReady() {
     showAutoGen();
     $(".data_changer").blur(
+        function () {
+            utils.registerScheduledQuery(() => updateName());
+        }
+    );
+    $(".data_changer").on("change",
         function () {
             utils.registerScheduledQuery(() => updateName());
         }
@@ -144,6 +148,9 @@ function findSpecialtiesAutoGen() {
             }
         ),
         change: function (event, ui) {
+            if (ui.item === null) {
+                return;
+            }
             selectedSpecialtyAutoGen = specialties.find(x => x.id == ui.item.value)
             updateName();
         },

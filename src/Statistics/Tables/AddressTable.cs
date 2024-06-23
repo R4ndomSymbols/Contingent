@@ -22,9 +22,12 @@ public class AddressTable : ITable
     {
         if (!statsPeriod.IsOneMoment())
         {
-            throw new Exception("Адресация возможна только на дату");
+            StatisticPeriod = new Period(statsPeriod.End, statsPeriod.End);
         }
-        StatisticPeriod = statsPeriod;
+        else
+        {
+            StatisticPeriod = statsPeriod;
+        }
         // горизонтальная шапка таблицы
         var verticalRoot = new ColumnHeaderCell<StudentModel>();
         var addressHeader1 = new ColumnHeaderCell<StudentModel>(

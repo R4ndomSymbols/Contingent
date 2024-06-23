@@ -57,16 +57,20 @@
                             <option value="@code">@i.RussianName </option>
                         }
                     </select>
+                    <small class="SponsorshipType_err error-box mt-1"></small>
                 </div>
                 <div class="d-flex flex-column flex-fill">
                     <h5 class="field-title">Форма обучения</h5>
-                    <select id="auto_gen_education_form" class="EducationalForm data_changer standard-select">
+                    <select id="auto_gen_education_form" class="FormatOfEducation data_changer standard-select">
                         @foreach (var i in GroupEducationFormat.ListOfFormats)
                         {
                             int code = (int)i.FormatType;
                             <option value="@code">@i.RussianName </option>
                         }
                     </select>
+                    <small class="FormatOfEducation_err error-box mt-1">
+
+                    </small>
                 </div>
             </div>
         </div>
@@ -106,16 +110,18 @@
                             <option value="@code">@i.RussianName </option>
                         }
                     </select>
+                    <small class="SponsorshipType_err error-box mt-1"></small>
                 </div>
                 <div class="d-flex flex-column flex-grow-1">
                     <h5 class="field-title">Форма обучения</h5>
-                    <select id="no_gen_education_form" class="EducationalForm data_changer standard-select">
+                    <select id="no_gen_education_form" class="FormatOfEducation data_changer standard-select">
                         @foreach (var i in GroupEducationFormat.ListOfFormats)
                         {
                             int code = (int)i.FormatType;
                             <option value="@code">@i.RussianName </option>
                         }
                     </select>
+                    <small class="FormatOfEducation_err error-box mt-1"></small>
                 </div>
             </div>
         </div>

@@ -37,17 +37,17 @@ function getData(periodType) {
     var startDate = $("#start_date").val();
     var endDate = $("#end_date").val();
     switch (periodType) {
-        case "start_only":
+        case "end_only":
             return JSON.stringify(
                 {
-                    StartDate: startDate
+                    EndDate: endDate
                 }
             );
         case "both_dates":
             return JSON.stringify(
                 {
-                    StartDate: startDate,
-                    EndDate: endDate === "" ? null : endDate
+                    StartDate: startDate === "" ? null : startDate,
+                    EndDate: endDate
                 }
             );
     }

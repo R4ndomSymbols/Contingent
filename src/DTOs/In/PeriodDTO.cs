@@ -4,14 +4,14 @@ namespace Contingent.DTOs.In;
 
 public class PeriodDTO
 {
+    public string? StartDate { get; set; }
     [JsonRequired]
-    public string StartDate { get; set; }
-    public string? EndDate { get; set; }
+    public string EndDate { get; set; }
 
     public PeriodDTO()
     {
-        StartDate = "";
-        EndDate = null;
+        StartDate = null;
+        EndDate = "";
     }
 
 }

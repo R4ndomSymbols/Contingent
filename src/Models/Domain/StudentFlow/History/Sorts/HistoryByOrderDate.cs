@@ -103,8 +103,12 @@ public class HistoryByOrderEffectiveDateAsc : OrderedHistory
         _history.Sort(_defaultComparer);
     }
 
-    public override StudentFlowRecord Last()
+    public override StudentFlowRecord? Last()
     {
+        if (_history.Count == 0)
+        {
+            return null;
+        }
         return _history.Last();
     }
     public StudentFlowRecord this[int index]
@@ -125,7 +129,7 @@ public class HistoryByOrderEffectiveDateAsc : OrderedHistory
                 return position > 0 ? rec : null;
             }
         }
-        return _history.Last();
+        return this.Last();
     }
 }
 

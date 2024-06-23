@@ -34,5 +34,22 @@ public static class Genders
         }
         return GenderCodes.Undefined;
     }
+
+    public static bool IsDefined(GenderCodes code)
+    {
+        return code != GenderCodes.Undefined;
+    }
+
+    public static bool TryParse(int code, out GenderCodes gender)
+    {
+        var found = Names.Select(x => (int)x.Key).FirstOrDefault(x => x == code, -1);
+        if (found != -1)
+        {
+            gender = (GenderCodes)found;
+            return IsDefined((GenderCodes)found);
+        }
+        gender = GenderCodes.Undefined;
+        return false;
+    }
 }
 

@@ -18,16 +18,17 @@ public class TeachingDepth
     public static IReadOnlyCollection<TeachingDepth> Levels => new List<TeachingDepth>{
         new TeachingDepth(TeachingDepthLevels.NotMentioned, "Не указано"),
         new TeachingDepth(TeachingDepthLevels.Common, "Базовый"),
-        new TeachingDepth(TeachingDepthLevels.Common, "Углубленный")
+        new TeachingDepth(TeachingDepthLevels.Advanced, "Углубленный")
     };
 
     public static TeachingDepth GetByTypeCode(int code)
     {
         return Levels.Where(x => (int)x.Level == code).First();
     }
-    public static bool TryGetByTypeCode(int code)
+    public static bool TryGetByTypeCode(int code, out TeachingDepth? type)
     {
-        return Levels.Any(x => (int)x.Level == code);
+        type = Levels.FirstOrDefault(x => (int)x.Level == code);
+        return type is not null && type.IsDefined();
 
     }
 
@@ -44,6 +45,11 @@ public class TeachingDepth
             return (int)TeachingDepthLevels.NotMentioned;
         }
         return (int)found.Level;
+    }
+
+    public bool IsDefined()
+    {
+        return Level != TeachingDepthLevels.NotMentioned;
     }
 }
 

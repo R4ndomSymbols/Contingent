@@ -214,7 +214,7 @@ public class GroupModel
             if (errors.IsValidRule(
                 GroupSponsorship.TryGetByTypeCode(dto.SponsorshipTypeCode, out GroupSponsorship? sponsorship) && sponsorship!.IsDefined(),
                 message: "Тип финансирования указан неверно",
-                propName: nameof(CreationYear)
+                propName: nameof(SponsorshipType)
              ))
             {
                 model._groupSponsorship = sponsorship!;

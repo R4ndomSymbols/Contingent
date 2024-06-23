@@ -121,14 +121,14 @@ public class StudentModel
             return _education;
         }
     }
-    public StudentHistory GetHistory(ObservableTransaction? transaction, DateTime? onDate = null)
+    public StudentHistory GetHistory(ObservableTransaction? transaction, DateTime? beforeDate = null)
     {
         if (_history is null
         || (_history.CurrentTransaction != transaction && transaction is not null)
-        || (_history.HistoryOnDate is not null && _history.HistoryOnDate != onDate)
+        || (_history.HistoryOnDate is not null && _history.HistoryOnDate != beforeDate)
         )
         {
-            _history = new StudentHistory(this, transaction, onDate);
+            _history = new StudentHistory(this, transaction, beforeDate);
         }
         return _history;
     }
@@ -339,12 +339,12 @@ public class StudentModel
             model._gradeBookNumber = dto.GradeBookNumber!;
         }
         if (errors.IsValidRule(
-            Enum.TryParse(typeof(Genders.GenderCodes), dto.Gender.ToString(), out object? t),
+            Genders.TryParse(dto.Gender, out Genders.GenderCodes gender),
             message: "Неверный пол",
             propName: nameof(Gender)
         ))
         {
-            model._gender = (Genders.GenderCodes)dto.Gender;
+            model._gender = gender;
         }
         if (errors.IsValidRule(
             TargetEduAgreement.TryGetByTypeCode(dto.TargetAgreementType),

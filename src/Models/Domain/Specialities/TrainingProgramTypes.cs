@@ -39,10 +39,10 @@ public class TrainingProgram
 
     }.AsReadOnly();
 
-    public static bool TryGetByType(int type, out TrainingProgram? result)
+    public static bool TryGetByType(int code, out TrainingProgram? type)
     {
-        result = Types.FirstOrDefault(t => (int)t!.Type == type, null);
-        return result is not null;
+        type = Types.FirstOrDefault(t => (int)t!.Type == code, null);
+        return type is not null && type.IsDefined();
     }
     public static TrainingProgram GetByType(int type)
     {

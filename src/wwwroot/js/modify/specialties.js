@@ -14,7 +14,7 @@ function init() {
         utils.disableField("EducationalLevelIn")
         utils.disableField("EducationalLevelOut")
     }
-    else{
+    else {
         id = utils.INVALID_ID;
     }
 }
@@ -54,7 +54,7 @@ function getData() {
             QualificationPostfix: qualPostfix.val(),
             EducationalLevelIn: Number(eduIn.val()),
             EducationalLevelOut: Number(eduOut.val()),
-            TeachingLevel: Number($("#TeachingLevel").val()),
+            TeachingDepthCode: Number($("#TeachingLevel").val()),
             ProgramType: Number($("#ProgramType").val())
         }
     )

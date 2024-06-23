@@ -2,7 +2,7 @@
 @using Contingent.Models.Domain.Flow;
 @{
     ViewData["Title"] = "Статистика";
-    string startOnly = "start_only";
+    string endOnly = "end_only";
     string bothDates = "both_dates";
 }
 <div class="page-layout-container d-flex flex-column">
@@ -21,13 +21,13 @@
         <div class="d-flex flex-row mb-2">
             <div class="d-flex flex-column flex-fill">
                 <h5 class="field-title">
-                    Дата начала периода (обязательно)
+                    Дата начала периода (только для таблиц по приказам)
                 </h5>
                 <input id="start_date" type="text" class="standard-input error_reset" />
             </div>
             <div class="d-flex flex-column flex-fill">
                 <h5 class="field-title">
-                    Дата окончания (только для таблиц по приказам)
+                    Дата окончания (обязательно)
                 </h5>
                 <input id="end_date" type="text" class="standard-input error_reset" />
             </div>
@@ -37,19 +37,19 @@
                 Тип статистики:
             </h5>
             <select class="standard-select error_reset" id="statistic_type">
-                <option value="@startOnly" table_name="undefined">
+                <option value="@endOnly" table_name="undefined">
                     Не выбрано
                 </option>
-                <option value="@startOnly" table_name="age_qualified">
+                <option value="@endOnly" table_name="age_qualified">
                     Половозрастной состав, рабочие и служащие (контингент)
                 </option>
-                <option value="@startOnly" table_name="age_specialist">
+                <option value="@endOnly" table_name="age_specialist">
                     Половозрастной состав, специалисты (контингент)
                 </option>
-                <option value="@startOnly" table_name="specialty">
+                <option value="@endOnly" table_name="specialty">
                     Распределение по специальностям (контингент)
                 </option>
-                <option value="@startOnly" table_name="legalAddress">
+                <option value="@endOnly" table_name="legalAddress">
                     Распределение по прописке (контингент)
                 </option>
             </select>

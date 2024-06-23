@@ -99,6 +99,6 @@ public class OrderConductionDataSource : IRowSource
         _data[3] = group.GroupName;
         _data[4] = order.OrderOrgId;
         _data[5] = order.SpecifiedDate.Year.ToString();
-        _data[6] = student.GetHistory(null).GetStudentState(out int cc).ToString();
+        _data[6] = "не определяется";
     }
 }
